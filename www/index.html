@@ -2283,8 +2283,13 @@ function renderLogement(){
 let LOGVB=null;
 
 /* ---------- Cuisine IKEA (système METOD) ---------- */
-const FACADES=[
-  {n:"VOXTORP blanc mat",c:"#f1efe9"},{n:"VOXTORP gris foncé",c:"#4b4d4f"},{n:"VOXTORP effet noyer",c:"#7a5a3e"},
+const FACADES=[ // gammes vues sur ikea.com (nov. 2026), puis anciennes gammes gardées pour les projets existants
+  {n:"VOXTORP blanc mat",c:"#f1efe9"},{n:"VOXTORP blanc brillant",c:"#fbfbfa"},{n:"VOXTORP motif chêne",c:"#c9a678"},{n:"VOXTORP gris-brun foncé brillant",c:"#4e463f"},
+  {n:"VALLSTENA blanc",c:"#f4f3ef"},{n:"VEDDINGE blanc",c:"#f5f5f2"},{n:"STENSUND blanc",c:"#f2f1ec"},
+  {n:"HAVSTORP gris clair",c:"#c9cbc8"},{n:"HAVSTORP vert profond",c:"#3f5a4b"},{n:"HAVSTORP brun-beige",c:"#a58f74"},
+  {n:"NICKEBO gris-vert mat",c:"#8a958a"},{n:"UPPLÖV anthracite mat",c:"#3e4042"},{n:"LERHYTTAN bleu",c:"#4a6680"},
+  {n:"FORSBACKA chêne",c:"#c49a68"},{n:"SINARP brun",c:"#7a5236"},
+  {n:"ASPUDDEN blanc mat",c:"#f0efea"},{n:"ASPUDDEN gris clair",c:"#cfd1ce"},{n:"ASPUDDEN gris-vert foncé",c:"#55625a"},{n:"VOXTORP gris foncé",c:"#4b4d4f"},{n:"VOXTORP effet noyer",c:"#7a5a3e"},
   {n:"AXSTAD blanc mat",c:"#f3f2ee"},{n:"AXSTAD gris-vert",c:"#8d998c"},
   {n:"ASKERSUND effet frêne clair",c:"#cdb79a"},{n:"BODBYN blanc cassé",c:"#eae5d8"},{n:"BODBYN gris",c:"#8f9592"},
   {n:"ENKÖPING effet bois blanc",c:"#e6dfd2"},{n:"ENKÖPING gris-vert",c:"#7f8d82"},{n:"HAVSTORP beige",c:"#d9cdb5"},
@@ -2292,7 +2297,15 @@ const FACADES=[
   {n:"RINGHULT blanc brillant",c:"#fafafa"},{n:"STENSUND vert clair",c:"#b8c6b1"},{n:"STENSUND beige",c:"#d8cdb8"},
   {n:"UPPLÖV beige foncé mat",c:"#b9a88e"},{n:"VEDHAMN chêne",c:"#b8946a"},{n:"TORHAMN frêne",c:"#c9b18c"}
 ];
-const PLANS=[
+const PLANS=[ // gammes vues sur ikea.com (nov. 2026) : stratifié 2,8 cm (EKBACKEN, JÄRSTORP), 3,8 cm (SÄLJAN), plaqué bois 3,8 cm
+  {n:"EKBACKEN stratifié effet marbre blanc vivant · 2,8 cm",c:"#eeebe6",v:"#9c9a98",tile:0,marb:1},{n:"EKBACKEN stratifié effet chêne clair · 2,8 cm",c:"#d4b48a"},
+  {n:"EKBACKEN stratifié effet noyer brun · 2,8 cm",c:"#6e4a32"},{n:"EKBACKEN stratifié effet pierre gris-beige · 2,8 cm",c:"#b8ad9c"},
+  {n:"EKBACKEN stratifié effet béton gris clair · 2,8 cm",c:"#b4b2ad"},{n:"EKBACKEN stratifié noir · 2,8 cm",c:"#1f1f20"},
+  {n:"EKBACKEN stratifié effet terracotta · 2,8 cm",c:"#b8714f"},{n:"EKBACKEN stratifié effet terrazzo gris · 2,8 cm",c:"#a9a8a3"},
+  {n:"JÄRSTORP stratifié blanc · 2,8 cm",c:"#f3f3f1"},{n:"JÄRSTORP stratifié gris · 2,8 cm",c:"#9a9c9b"},{n:"JÄRSTORP stratifié beige · 2,8 cm",c:"#d6c8b0"},{n:"JÄRSTORP stratifié vert · 2,8 cm",c:"#6f8570"},
+  {n:"SÄLJAN stratifié motif chêne · 3,8 cm",c:"#c39d6c"},{n:"SÄLJAN stratifié effet pierre gris foncé · 3,8 cm",c:"#4f5152"},{n:"SÄLJAN stratifié effet pierre blanc/gris clair · 3,8 cm",c:"#e1e0dc"},
+  {n:"KARLBY plaqué chêne · 3,8 cm",c:"#b88a57"},{n:"KARLBY plaqué noyer · 3,8 cm",c:"#6d4a33"},{n:"MÖLLEKULLA plaqué chêne · 3,8 cm",c:"#c4955f"},
+  {n:"BARKABODA plaqué noyer · 3,8 cm",c:"#5f402c"},{n:"VRENA plaqué chêne naturel · 2,8 cm",c:"#c9a375"},{n:"HOLMARED plaqué bambou · 2,8 cm",c:"#d8b98a"},
   {n:"EKBACKEN stratifié blanc",c:"#efefec"},{n:"EKBACKEN stratifié effet chêne",c:"#c79f6e"},{n:"EKBACKEN stratifié effet marbre",c:"#e9e6e1"},{n:"EKBACKEN stratifié anthracite",c:"#3f4143"},
   {n:"SÄLJAN stratifié effet béton",c:"#a9a7a2"},{n:"SÄLJAN stratifié noir",c:"#222"},
   {n:"KARLBY chêne plaqué",c:"#b88a57"},{n:"KARLBY noyer plaqué",c:"#6d4a33"},{n:"MÖLLEKULLA chêne massif",c:"#c4955f"},
@@ -2959,7 +2972,7 @@ function buildScene(){
         if(kk.f==="hotte") add(v3Box(s,x0,x1,d0,d1+30,b.z0-40,b.z0,M.steel));
       });
       if(K.on) kitRuns(room).filter(rn=>rn.w===w).forEach(rn=>{ const PL=planOf(K,room), pc=PL.c; let wt=v3Mat(pc,{roughness:.45});
-        if(PL.tile){ const t=marbleTex(PL).clone(); t.needsUpdate=true; t.repeat.set((rn.b-rn.a)/1200,1); wt=v3Mat("#ffffff",{map:t,roughness:.18}); }
+        if(PL.tile||PL.marb){ const t=marbleTex(PL).clone(); t.needsUpdate=true; t.repeat.set((rn.b-rn.a)/1200,1); wt=v3Mat("#ffffff",{map:t,roughness:.18}); }
         const m=v3Box(s,rn.a,rn.b,g.T,g.T+635,880,918,wt); m.userData={kind:"plan",room}; scene.add(m);
         K.items.filter(it=>it.wall===wid(w)).forEach(it=>{ const kk=kitItem(it); if(!kk||kk.t!=="bas") return; const mx=it.x+kk.w/2;
           if(kk.sink){ scene.add(v3Box(s,mx-kk.w*0.33,mx+kk.w*0.33,g.T+110,g.T+520,912,920,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50,g.T+80,918,1230,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50,g.T+230,1200,1230,M.steel)); }
