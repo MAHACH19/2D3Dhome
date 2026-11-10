@@ -3057,16 +3057,16 @@ function buildScene(){
       const c0=scene.children.length;
       const w=s.w, h=w.H, holes=w.openings.map(o=>({o,a:Math.max(0,o.x),b:Math.min(w.L,o.x+o.w),c:o.y,d:o.y+o.h}));
       const ext=(o)=>{ const E=g.endsAt(o)[k]; const t=p=>(p[0]-s.x0)*s.dx+(p[1]-s.y0)*s.dy; return [t(E.a),t(E.b)]; };
+      const ext2=(o0,o1)=>{ const A=ext(o0), B=ext(o1); return [Math.min(A[0],B[0]),Math.max(A[1],B[1])]; }; // bloc qui couvre l'angle (rentrant ou sortant) sans trou
       const tag={kind:"wall",i:s.i};
       const Ls=wallLayers().filter(l=>lay[l.k]!==false), n=Ls.length;
       const layered=cut==="ecorche"||LAY.some(l=>lay[l.k]===false)||V.couches;
       if(!layered){
-        const [a1,b1]=ext(-g.STN/2), [a2,b2]=ext(g.T/2), pc=paintColor(w);
+        const [a1,b1]=ext2(-g.STN,0), [a2,b2]=ext2(0,g.T), pc=paintColor(w);
         if(V.res){ const pl=12.5*S.pla.couches, oM=Math.max(2,g.T-pl-S.oss.g), [a3,b3]=ext(oM/2), mm=S.mem.on?null:v3Slab(s,a3,b3,0,oM,0,h,holes,[M.fibre,M.cap]); if(mm){ mm.userData=tag; scene.add(mm); } if(S.mem.on){ const f=v3Slab(s,a3,b3,0,oM-3,0,h,holes,[M.fibre,M.cap]); if(f) scene.add(f); v3MemLes(scene,pick,s,w,a3,b3,oM-3,oM,h,holes,M.memO,M.cap,tag); } v3Tapes(scene,s,w,oM,h,M.tape);
           const r=compute(w), dxs=r.adj.dx||0; r.studs.forEach(st=>{ const xa=st.x-dxs; if(st.y1>st.y0) scene.add(v3Box(s,xa,xa+FL,oM,g.T-pl,st.y0,st.y1,M.metal)); });
           r.rails.forEach(rl=>{ scene.add(v3Box(s,Math.max(a2,rl.x0-dxs),Math.min(b2,rl.x1-dxs),oM,g.T-pl,rl.y0,rl.y1,M.metal)); }); }
-        if(!(w.tile&&w.tile.on)&&!(typeof bcOnWall==="function"&&bcOnWall(w))) v3Joints(scene,s,w,g.T,h,a2,b2,holes);
-        if(V.real&&!V.res) v3AO(scene,s,a2,b2,g.T,h);
+        { const [fa,fb]=ext(g.T); if(!(w.tile&&w.tile.on)&&!(typeof bcOnWall==="function"&&bcOnWall(w))) v3Joints(scene,s,w,g.T,h,fa,fb,holes); if(V.real&&!V.res) v3AO(scene,s,fa,fb,g.T,h); }
         [v3Slab(s,a1,b1,-g.STN,0,0,h,holes,[M.stone,M.cap]), v3Slab(s,a2,b2,0,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } });
         if(w.tile&&w.tile.on){ const t=w.tile, sp=floorSpec({n:t.n,c:t.c,pose:t.pose}), ua=useRange(w), x0=Math.max(ua[0],t.x0||0), x1=Math.min(ua[1],t.x1||w.L), z0=t.z0||0, z1=Math.min(h,t.z1||1200);
           const c=document.createElement("canvas"), kk=Math.min(1,1500/Math.max(x1-x0,z1-z0)); c.width=Math.max(8,(x1-x0)*kk|0); c.height=Math.max(8,(z1-z0)*kk|0); const cx=c.getContext("2d"); cx.fillStyle="#aaa49a"; cx.fillRect(0,0,c.width,c.height);
@@ -3074,7 +3074,7 @@ function buildScene(){
           const tx=new T3.CanvasTexture(c); const m=v3Slab(s,x0,x1,g.T,g.T+8,z0,z1,holes,[v3Mat("#ffffff",{map:tx}),M.white]);
           if(m){ const uv=m.geometry.attributes.uv; for(let i=0;i<uv.count;i++){ uv.setXY(i,(uv.getX(i)*1000-x0)/(x1-x0),(uv.getY(i)*1000-z0)/(z1-z0)); } uv.needsUpdate=true; m.userData=tag; scene.add(m); pick.push(m); } }
       } else Ls.forEach((l,j)=>{
-        const ec=cut==="ecorche", hl=h, [a0,b]=ext((l.o0+l.o1)/2), a=ec?a0+(b-a0)*j/n:a0;
+        const ec=cut==="ecorche", hl=h, [a0,b]=ext2(l.o0,l.o1), a=ec?a0+(b-a0)*j/n:a0;
         if(ec&&s.i===S.cur&&j>0) v3Label(scene,s,(a+Math.min(b,a0+(b-a0)*(j+1)/n))/2,l.o1+40,Math.min(h-250,1750),`${j+1}. ${LAYSHORT[l.k]||l.n}`);
         if(ec&&s.i===S.cur&&j===0) v3Label(scene,s,(a0+a0+(b-a0)/n)/2,l.o1+40,Math.min(h-250,1750),`1. ${LAYSHORT[l.k]||l.n}`);
         if(l.studs){ const r=compute(w), dxs=r.adj.dx||0;
