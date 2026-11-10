@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#1d63c4">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2051,7 +2051,7 @@ function renderRoom3D(){
         if(k.t==="haut" && vis(0,0,-1)) face([P(x0,d0,z0),P(x1,d0,z0),P(x1,d1,z0),P(x0,d1,z0)],{op,fill:shade(fc,0.75),stroke:"#00000044"});
       });
       if(K.on && V.kit) kitRuns(room).filter(rn=>rn.w===w).forEach(rn=>{
-        const pc=(PLANS.find(p=>p.n===K.plan)||PLANS[0]).c, D=T+635, z0=880, z1=918, P=(x,d,z)=>at(x,d,z);
+        const pc=planOf(K,room).c, D=T+635, z0=880, z1=918, P=(x,d,z)=>at(x,d,z);
         const items=K.items.filter(it=>it.wall===wid(w)).map(it=>({it,k:kitItem(it)})).filter(o=>o.k&&o.k.t==="bas"&&o.it.x>=rn.a-1&&o.it.x+o.k.w<=rn.b+1);
         const ext=items.map(o=>{ const m=o.it.x+o.k.w/2, e=[];
           if(o.k.sink){ e.push(`<path d="${pathOf([P(m-o.k.w*0.35,T+120,z1+1),P(m+o.k.w*0.35,T+120,z1+1),P(m+o.k.w*0.35,T+520,z1+1),P(m-o.k.w*0.35,T+520,z1+1)])}" fill="#c9ced3" stroke="#8b9096" stroke-width="10"/>`); const t=pr(...P(m,T+70,z1+1)), t2=pr(...P(m,T+70,z1+300)); e.push(`<line x1="${t[0].toFixed(0)}" y1="${t[1].toFixed(0)}" x2="${t2[0].toFixed(0)}" y2="${t2[1].toFixed(0)}" stroke="#8b9096" stroke-width="30" stroke-linecap="round"/>`); }
@@ -2272,8 +2272,23 @@ const PLANS=[
   {n:"EKBACKEN stratifié blanc",c:"#efefec"},{n:"EKBACKEN stratifié effet chêne",c:"#c79f6e"},{n:"EKBACKEN stratifié effet marbre",c:"#e9e6e1"},{n:"EKBACKEN stratifié anthracite",c:"#3f4143"},
   {n:"SÄLJAN stratifié effet béton",c:"#a9a7a2"},{n:"SÄLJAN stratifié noir",c:"#222"},
   {n:"KARLBY chêne plaqué",c:"#b88a57"},{n:"KARLBY noyer plaqué",c:"#6d4a33"},{n:"MÖLLEKULLA chêne massif",c:"#c4955f"},
-  {n:"Plan quartz sur mesure blanc",c:"#f4f3ef"},{n:"Plan quartz sur mesure noir",c:"#1e1e1e"}
+  {n:"Plan quartz sur mesure blanc",c:"#f4f3ef"},{n:"Plan quartz sur mesure noir",c:"#1e1e1e"},
+  {n:"Carrelage marbré blanc veiné or (Calacatta)",c:"#f2efe9",tile:1,v:"#b89a6a"},{n:"Carrelage marbré blanc veiné gris (Carrare)",c:"#eceae6",tile:1,v:"#8e9196"},
+  {n:"Carrelage marbré noir veiné blanc (Marquina)",c:"#1f1f22",tile:1,v:"#e8e6e0"},{n:"Carrelage marbré vert (Verde Alpi)",c:"#2f4a3e",tile:1,v:"#cfd8cf"},
+  {n:"Carrelage marbré beige (Crema Marfil)",c:"#e3d4ba",tile:1,v:"#b9a07a"},
+  {n:"Béton ciré (teinte du panneau Béton ciré)",c:"#a9a7a2",bc:1}
 ];
+function planOf(K,room){ const P=PLANS.find(p=>p.n===K.plan)||PLANS[0]; if(P.bc){ const B=(S.bc||{})[room]; return {...P,c:(B&&B.col)||P.c}; } return P; }
+const MARBLE_TX={};
+function marbleTex(P){ const key=P.c+P.v; if(MARBLE_TX[key]) return MARBLE_TX[key]; const c=document.createElement("canvas"); c.width=c.height=512; const g=c.getContext("2d");
+  g.fillStyle=P.c; g.fillRect(0,0,512,512); let sd=11; const r=()=>{ sd=(sd*9301+49297)%233280; return sd/233280; };
+  g.filter="blur(14px)"; for(let i=0;i<60;i++){ g.globalAlpha=0.05; g.fillStyle=r()<.5?"#ffffff":"#000000"; g.beginPath(); g.ellipse(r()*512,r()*512,30+r()*110,12+r()*40,0.6,0,7); g.fill(); } g.filter="none";
+  g.strokeStyle=P.v; g.lineCap="round"; g.lineJoin="round";
+  const vein=(x,y,w,a,len)=>{ g.globalAlpha=a; g.lineWidth=w; g.beginPath(); g.moveTo(x,y); for(let i=0;i<len;i++){ x+=8+r()*14; y+=(r()-.5)*22+6; g.lineTo(x,y); if(w>1.2&&r()<.12){ const sx=x, sy=y; g.stroke(); vein(sx,sy,w*.45,a*.8,6+r()*10|0); g.globalAlpha=a; g.lineWidth=w; g.beginPath(); g.moveTo(sx,sy); } } g.stroke(); };
+  for(let k=0;k<5;k++) vein(-20,r()*512-60,1.4+r()*2.4,0.35+r()*0.4,40);
+  g.filter="blur(1.5px)"; for(let k=0;k<6;k++) vein(-20,r()*512,3+r()*4,0.12,40); g.filter="none";
+  g.globalAlpha=0.5; g.strokeStyle="#00000022"; g.lineWidth=1.2; g.beginPath(); g.moveTo(256,0); g.lineTo(256,512); g.stroke(); // joint entre 2 carreaux
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; MARBLE_TX[key]=t; return t; }
 const KIT=(()=>{ const K=[];
   [[200,"1p","panier coulissant"],[300,"1p","1 porte"],[400,"1p","1 porte"],[400,"3t","3 tiroirs MAXIMERA"],[600,"1p","1 porte"],[600,"3t","3 tiroirs MAXIMERA"],[600,"4t","4 tiroirs MAXIMERA"],[800,"2p","2 portes"],[800,"3t","3 tiroirs MAXIMERA"]]
     .forEach(([w,f,d])=>K.push({id:`b${w}${f}`,g:"Éléments bas",n:`METOD élément bas ${w/10}×60×80, ${d}`,t:"bas",w,f}));
@@ -2358,7 +2373,17 @@ function kitMaterials(room){
     if(k.t!=="app" && !/hotteinox|etag/.test(k.f)) add(`Façade(s) ${K.facade} pour ${k.n.replace(/^METOD /,"").split(",")[0].split(" +")[0]}`,"",n,"lot");
     if(k.t==="bas"||k.t==="col") add("Pied réglable METOD 8 cm","4 par meuble au sol",4*n,"u"); });
   const runs=kitRuns(room), lenT=runs.reduce((a,r)=>a+(r.b-r.a),0);
-  add(`Plan de travail ${K.plan} · 246×63,5 cm`,`${runs.length} tronçon(s), ${fr(lenT/1000,2)} m`,runs.reduce((a,r)=>a+Math.ceil((r.b-r.a)/2460),0),"u");
+  const PL=planOf(K,room);
+  if(PL.tile){ const m2=lenT*650/1e6, nez=lenT/1000;
+    add("Panneau support plan de travail hydrofuge 20 mm (type Wedi / panneau ciment) · 260×60 cm",`${fr(lenT/1000,2)} m de plan, profondeur 65 cm avec débord`,runs.reduce((a,r)=>a+Math.ceil((r.b-r.a)/2600)*2,0)/2,"u");
+    add(`${PL.n} · grand format 60×120 cm, rectifié`,`plan ${fr(m2,2)} m² + chant avant ${fr(nez*0.04,2)} m² + 15 % de coupes`,Math.ceil((m2+nez*0.04)*1.15*10)/10,"m²");
+    add("Colle carrelage C2S1 déformable (sac 25 kg)",`≈ 5 kg/m² en double encollage`,Math.max(1,Math.ceil((m2+nez*0.04)*5/25)),"sac");
+    add("Joint époxy (cuisine, anti-taches) · 2 kg",`joints de 2 mm`,Math.max(1,Math.ceil((m2+nez*0.04)*0.4/2)),"u");
+    add("Profilé de finition de chant inox / alu (type Schlüter) · 250 cm",`nez du plan ${fr(nez,2)} m`,runs.reduce((a,r)=>a+Math.ceil((r.b-r.a)/2500),0),"u");
+    add("Mastic silicone sanitaire translucide","raccord plan / mur et évier",Math.max(1,Math.ceil(nez/4)),"u");
+    add("Croisillons autonivelants + cales","grands formats",1,"lot"); }
+  else if(PL.bc){ add("Panneau support plan de travail hydrofuge 20 mm (pour béton ciré) · 260×60 cm",`${fr(lenT/1000,2)} m de plan`,runs.reduce((a,r)=>a+Math.ceil((r.b-r.a)/2600)*2,0)/2,"u"); }
+  else add(`Plan de travail ${K.plan} · 246×63,5 cm`,`${runs.length} tronçon(s), ${fr(lenT/1000,2)} m`,runs.reduce((a,r)=>a+Math.ceil((r.b-r.a)/2460),0),"u");
   add(`Plinthe ${K.facade} · 220 cm`,`${fr(lenT/1000,2)} m de façade`,runs.reduce((a,r)=>a+Math.ceil((r.b-r.a)/2200),0),"u");
   add("Baguette de finition / chant pour plan de travail","",runs.length*2,"u");
   const sinks=K.items.filter(it=>(kitItem(it)||{}).sink).length;
@@ -2909,7 +2934,8 @@ function buildScene(){
         if(kk.f==="ouvert"||kk.f==="etag"){ const ns=Math.max(1,Math.round((b.z1-fz0)/350)); for(let q=1;q<ns;q++){ const z=fz0+(b.z1-fz0)*q/ns; add(v3Box(s,x0+19,x1-19,d0,d1,z,z+19,carc)); } }
         if(kk.f==="hotte") add(v3Box(s,x0,x1,d0,d1+30,b.z0-40,b.z0,M.steel));
       });
-      if(K.on) kitRuns(room).filter(rn=>rn.w===w).forEach(rn=>{ const pc=(PLANS.find(p=>p.n===K.plan)||PLANS[0]).c, wt=v3Mat(pc,{roughness:.45});
+      if(K.on) kitRuns(room).filter(rn=>rn.w===w).forEach(rn=>{ const PL=planOf(K,room), pc=PL.c; let wt=v3Mat(pc,{roughness:.45});
+        if(PL.tile){ const t=marbleTex(PL).clone(); t.needsUpdate=true; t.repeat.set((rn.b-rn.a)/1200,1); wt=v3Mat("#ffffff",{map:t,roughness:.18}); }
         const m=v3Box(s,rn.a,rn.b,g.T,g.T+635,880,918,wt); m.userData={kind:"plan",room}; scene.add(m);
         K.items.filter(it=>it.wall===wid(w)).forEach(it=>{ const kk=kitItem(it); if(!kk||kk.t!=="bas") return; const mx=it.x+kk.w/2;
           if(kk.sink){ scene.add(v3Box(s,mx-kk.w*0.33,mx+kk.w*0.33,g.T+110,g.T+520,912,920,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50,g.T+80,918,1230,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50,g.T+230,1200,1230,M.steel)); }
@@ -3450,6 +3476,10 @@ function loadProject(txt){
 }
 if(ONLINE){ document.getElementById("io-save").hidden=true; document.getElementById("io-print").hidden=true; }
 const APP=window.AndroidApp&&window.AndroidApp.isApp?window.AndroidApp:null;
+/* Appli Capacitor (v2) : reprend une seule fois les projets de l'ancienne appli 1.x */
+window.__legacyImport=function(d){ try{ if(localStorage.getItem("calepinage-legacy-done")) return; if(typeof d==="string") d=d?JSON.parse(d):null; if(!d||!d["calepinage-murs-v2"]) return;
+  localStorage.setItem("calepinage-legacy-done","1"); Object.keys(d).forEach(k=>{ if(/^calepinage/.test(k)) localStorage.setItem(k,d[k]); }); location.reload(); }catch(e){} };
+if(APP&&APP.legacyData){ try{ const d=APP.legacyData(); if(d) window.__legacyImport(d); }catch(e){} }
 document.getElementById("io-save").addEventListener("click",()=>{
   if(APP){ try{ APP.saveFile(`calepinage-${new Date().toISOString().slice(0,10)}.json`,projectText()); ioMsg("Projet enregistré dans Téléchargements/Calepinage."); }catch(e){ ioMsg("L'enregistrement n'a pas marché : utilisez « Copier le projet »."); } return; }
   try{
@@ -3700,11 +3730,14 @@ const BC_SYS={
 };
 function bcPacks(m2,sizes){ // combinaison la moins chère couvrant m2
   let best=null; const [a,b]=sizes; for(let nb=0;nb<=Math.ceil(m2/b[0]);nb++){ const na=Math.max(0,Math.ceil((m2-nb*b[0])/a[0]-1e-9)), c=na*a[1]+nb*b[1]; if(!best||c<best.c) best={c,n:[na,nb]}; } return best; }
-function bcCfg(room){ if(!S.bc) S.bc={}; if(!S.bc[room]) S.bc[room]={on:false,walls:[],sol:false,col:"#c9c6c0",fin:"satin",humide:false,couches:2,sys:"gen",carrel:false}; if(!S.bc[room].sys) S.bc[room].sys="gen"; return S.bc[room]; }
+function bcCfg(room){ if(!S.bc) S.bc={}; if(!S.bc[room]) S.bc[room]={on:false,walls:[],sol:false,plan:false,cred:false,autre:0,col:"#c9c6c0",fin:"satin",humide:false,couches:2,sys:"gen",carrel:false}; if(!S.bc[room].sys) S.bc[room].sys="gen"; return S.bc[room]; }
 function bcOnWall(w){ if(!w) return false; const B=(S.bc||{})[w.room||""]; return !!(B&&B.on&&B.walls.includes(wid(w))); }
 function bcAreas(room){ const B=bcCfg(room), out={walls:[],m2w:0,m2s:0,per:0};
   S.walls.filter(w=>(w.room||"")===room&&B.walls.includes(wid(w))).forEach(w=>{ const L=creaSpan(w).len, H=w.H, op=w.openings.reduce((a,o)=>a+o.w*Math.min(o.h,H-o.y),0); const m2=Math.max(0,L*H-op)/1e6; out.walls.push({w,m2}); out.m2w+=m2; });
-  if(B.sol){ const g=roomGeom(room); if(g.poly){ out.m2s=Math.abs(polyArea(g.poly))/1e6; out.per=g.poly.reduce((a,p,i)=>{ const q=g.poly[(i+1)%g.poly.length]; return a+Math.hypot(q[0]-p[0],q[1]-p[1]); },0)/1000; } }
+  const runs=kitCfg(room).on?kitRuns(room):[], lenT=runs.reduce((a,r)=>a+(r.b-r.a),0);
+  out.m2p=B.plan?lenT*(650+40)/1e6:0; out.m2c=B.cred?lenT*600/1e6:0; out.m2a=(+B.autre||0);
+  out.m2w+=out.m2c+out.m2a; out.m2s+=out.m2p;
+  if(B.sol){ const g=roomGeom(room); if(g.poly){ out.m2s+=Math.abs(polyArea(g.poly))/1e6; out.per=g.poly.reduce((a,p,i)=>{ const q=g.poly[(i+1)%g.poly.length]; return a+Math.hypot(q[0]-p[0],q[1]-p[1]); },0)/1000; } }
   return out; }
 function bcMaterials(room){ const B=bcCfg(room); if(!B.on) return []; const A=bcAreas(room), rows=[], add=(des,det,q,u)=>{ if(q>0) rows.push({cat:"Béton ciré",des,det,q,u}); };
   const mw=A.m2w, ms=A.m2s, m=mw+ms; if(!m) return [];
@@ -3715,7 +3748,7 @@ function bcMaterials(room){ const B=bcCfg(room); if(!B.on) return []; const A=bc
     if(B.carrel||ms){ const n5=Math.floor(M*0.1/5), n1=Math.ceil(Math.max(0,M*0.1-n5*5)); if(n5){ pr("Primaire Béton Ciré Biocemento 5 L (supports non poreux)",95); add("Primaire Béton Ciré Biocemento 5 L (supports non poreux)","≈ 0,1 L/m² (estimation : rendement non publié)",n5,"u"); } if(n1){ pr("Primaire Béton Ciré Biocemento 1 L (supports non poreux)",30); add("Primaire Béton Ciré Biocemento 1 L (supports non poreux)","≈ 0,1 L/m² (estimation : rendement non publié)",n1,"u"); } }
     const ip=bcPacks(M,[[10,84],[50,235]]); [["1 L (10 m²)",ip.n[0],84],["5 L (50 m²)",ip.n[1],235]].forEach(([t,q,v])=>{ const d=`Imprégnateur Béton Ciré Biocemento ${t}`; pr(d,v); add(d,"bouche-pores avant le vernis",q,"u"); });
     const vp=bcPacks(M,[[10,120],[40,350]]); [["1,2 L (10 m²)",vp.n[0],120],["6 L (40 m²)",vp.n[1],350]].forEach(([t,q,v])=>{ const d=`Vernis Béton Ciré Biocemento mat ${t}`; pr(d,v); add(d,"protection haute durabilité, finition mat",q,"u"); });
-    if(ms) add("Treillis fibre de verre (sol)",`${fr(ms,1)} m² + 10 % de recouvrement`,Math.ceil(ms*1.1),"m²");
+    if(ms) add("Treillis fibre de verre (sol, plan de travail)",`${fr(ms,1)} m² + 10 % de recouvrement`,Math.ceil(ms*1.1),"m²");
     add("Lisseuse inox bords arrondis + platoir","pour appliquer et ferrer",1,"u"); add("Papier abrasif grain 120 à 220 + cale","ponçage léger entre couches",1,"lot");
     return rows; }
   if(Y.brand==="EPODEX"){
@@ -3724,13 +3757,13 @@ function bcMaterials(room){ const B=bcCfg(room); if(!B.on) return []; const A=bc
     add("EPODEX résine acrylique (composant B) + pigment WB",`livrés avec les sets au bon dosage · teinte ${col} (12 teintes EPODEX)`,1,"lot");
     add(B.carrel?"EPODEX 2K Bonding Primer / Putty Primer (carrelage)":"EPODEX Deep Primer (support absorbant : plaques, enduit)",`${fr(m,1)} m², ≈ 0,15 L/m² (estimation)`,Math.ceil(m*0.15*1.1*2)/2,"L");
     add("EPODEX PU Finish mat (résine + durcisseur)",`2 couches, 16 h mini entre couches${B.humide?" ; douche : 7 jours avant contact avec l'eau":""}`,Math.ceil(m*0.2*1.1*2)/2,"L");
-    if(ms) add("Treillis fibre de verre (sol)",`${fr(ms,1)} m² + 10 % de recouvrement`,Math.ceil(ms*1.1),"m²");
+    if(ms) add("Treillis fibre de verre (sol, plan de travail)",`${fr(ms,1)} m² + 10 % de recouvrement`,Math.ceil(ms*1.1),"m²");
     add("Lisseuse inox bords arrondis + platoir","pour appliquer et ferrer",1,"u"); add("Papier abrasif grain 120 à 220 + cale","ponçage si défaut > 3 mm entre couches",1,"lot");
     return rows; }
   add("Primaire d'accroche béton ciré",`${fr(m,1)} m², ≈ 0,15 L/m²`,Math.ceil(m*0.15*1.1*2)/2,"L");
-  if(ms) add("Treillis fibre de verre (sol)",`${fr(ms,1)} m² + 10 % de recouvrement`,Math.ceil(ms*1.1),"m²");
-  if(mw) add("Béton ciré murs (base + finition)",`${fr(mw,1)} m², ${B.couches} couches, ≈ ${fr(B.couches===3?1.5:1.1,1)} kg/m² au total`,kg(mw*(B.couches===3?1.5:1.1)),"kg");
-  if(ms) add("Béton ciré sol (base + finition)",`${fr(ms,1)} m², ${B.couches+1} couches, ≈ 2,2 kg/m² au total`,kg(ms*2.2),"kg");
+  if(ms) add("Treillis fibre de verre (sol, plan de travail)",`${fr(ms,1)} m² + 10 % de recouvrement`,Math.ceil(ms*1.1),"m²");
+  if(mw) add("Béton ciré murs et surfaces verticales (base + finition)",`${fr(mw,1)} m², ${B.couches} couches, ≈ ${fr(B.couches===3?1.5:1.1,1)} kg/m² au total`,kg(mw*(B.couches===3?1.5:1.1)),"kg");
+  if(ms) add("Béton ciré sol et plan de travail (base + finition)",`${fr(ms,1)} m², ${B.couches+1} couches, ≈ 2,2 kg/m² au total`,kg(ms*2.2),"kg");
   add("Bouche-pores / imperméabilisant béton ciré",`${fr(m,1)} m², ≈ 0,1 L/m²`,Math.ceil(m*0.1*1.1*2)/2,"L");
   add(B.humide||ms?"Vernis polyuréthane bi-composant (sol, douche, crédence)":"Vernis de protection béton ciré",`${fr(m,1)} m², 2 couches ≈ 0,1 L/m² par couche, ${(BC_FIN.find(f=>f[0]===B.fin)||BC_FIN[1])[1].toLowerCase()}`,Math.ceil(m*0.2*1.1*2)/2,"L");
   add("Colorant béton ciré",`teinte ${(BC_COLS.find(c=>c[1]===B.col)||["personnalisée"])[0]} (dose selon fabricant)`,1,"lot");
@@ -3748,7 +3781,9 @@ function bcChecks(room){ const B=bcCfg(room), ck=[]; if(!B.on) return ck;
 function bcPanel(w){ const room=w.room||"", B=bcCfg(room), rw=S.walls.filter(x=>(x.room||"")===room), A=bcAreas(room);
   return `<section class="box"><h2><span class="sw" style="background:${B.col}"></span>Béton ciré : ${esc(room)}</h2>
     <label class="chk"><input type="checkbox" data-bc="on" ${B.on?"checked":""}> Mettre du béton ciré dans cette pièce</label>
-    ${B.on?`<p class="cap" style="margin:6px 0 2px">Surfaces :</p><div style="display:flex;flex-wrap:wrap;gap:4px 14px">${rw.map(x=>`<label class="chk"><input type="checkbox" data-bcw="${wid(x)}" ${B.walls.includes(wid(x))?"checked":""}> ${esc((x.name||"").split(" — ").pop())}</label>`).join("")}<label class="chk"><input type="checkbox" data-bc="sol" ${B.sol?"checked":""}> Sol</label></div>
+    ${B.on?`<p class="cap" style="margin:6px 0 2px">Surfaces :</p><div style="display:flex;flex-wrap:wrap;gap:4px 14px">${rw.map(x=>`<label class="chk"><input type="checkbox" data-bcw="${wid(x)}" ${B.walls.includes(wid(x))?"checked":""}> ${esc((x.name||"").split(" — ").pop())}</label>`).join("")}<label class="chk"><input type="checkbox" data-bc="sol" ${B.sol?"checked":""}> Sol</label><label class="chk"><input type="checkbox" data-bc="plan" ${B.plan?"checked":""}> Plan de travail</label><label class="chk"><input type="checkbox" data-bc="cred" ${B.cred?"checked":""}> Crédence (60 cm)</label></div>
+    <div class="row"><label class="f">Autre surface : escalier, meuble, vasque… (m²)<input type="number" min="0" step="0.5" data-bc="autre" value="${B.autre||0}"></label></div>
+    ${(B.plan||B.cred)&&!kitRuns(room).length?`<p class="hint">Plan de travail et crédence : ajoutez d'abord les meubles bas de la cuisine (panneau Cuisine), leur longueur sert au calcul.</p>`:""}
     <div class="row"><label class="f" style="flex-basis:100%">Marque / système<select data-bc="sys">${Object.entries(BC_SYS).map(([k,y])=>`<option value="${k}"${k===B.sys?" selected":""}>${esc(y.n)}</option>`).join("")}</select></label></div>
     <label class="chk"><input type="checkbox" data-bc="carrel" ${B.carrel?"checked":""}> Posé sur du carrelage existant</label>
     <div class="row"><label class="f">Teinte<select data-bc="col">${BC_COLS.map(([n,c])=>`<option value="${c}"${c===B.col?" selected":""}>${n}</option>`).join("")}${BC_COLS.some(c=>c[1]===B.col)?"":`<option value="${B.col}" selected>Personnalisée</option>`}</select></label>
@@ -3756,12 +3791,12 @@ function bcPanel(w){ const room=w.room||"", B=bcCfg(room), rw=S.walls.filter(x=>
       <label class="f">Finition<select data-bc="fin">${BC_FIN.map(([k,n])=>`<option value="${k}"${k===B.fin?" selected":""}>${n}</option>`).join("")}</select></label>
       <label class="f">Couches murs<select data-bc="couches"><option value="2"${B.couches===2?" selected":""}>2 (base + finition)</option><option value="3"${B.couches===3?" selected":""}>3 (plus de nuances)</option></select></label></div>
     <label class="chk"><input type="checkbox" data-bc="humide" ${B.humide?"checked":""}> Pièce humide (salle de bain, douche, crédence)</label>
-    <p class="cap" style="margin:6px 0">${fr(A.m2w,1)} m² de murs${B.sol?` · ${fr(A.m2s,1)} m² de sol`:""}. Ces murs ne sont pas peints : la peinture est retirée du métré pour eux. En 3D, ils prennent la teinte choisie.</p>
+    <p class="cap" style="margin:6px 0">${fr(A.m2w,1)} m² verticaux (murs${B.cred?", crédence":""}${B.autre?", autre":""})${A.m2s?` · ${fr(A.m2s,1)} m² horizontaux (${[B.sol?"sol":"",B.plan?"plan de travail":""].filter(Boolean).join(", ")})`:""}. Ces murs ne sont pas peints : la peinture est retirée du métré pour eux. En 3D, ils prennent la teinte choisie.</p>
     <ul class="hint" style="margin:0;padding-left:18px">${bcChecks(room).map(c=>`<li>${c.ok?"":"⚠ "}${esc(c.t)}</li>`).join("")}</ul>
     <p class="hint">Quantités indicatives (consommations moyennes des fabricants) : vérifiez la fiche technique du produit choisi.</p>`:""}</section>`; }
 document.getElementById("side").addEventListener("change",e=>{ const el=e.target, w=S.walls[S.cur], B=bcCfg(w.room||"");
   if(el.dataset.bcw){ const id=el.dataset.bcw; B.walls=B.walls.filter(x=>x!==id); if(el.checked) B.walls.push(id); save(); renderAll(); return; }
-  const k=el.dataset.bc; if(!k) return; if(k==="on"||k==="sol"||k==="humide"||k==="carrel") B[k]=el.checked; else if(k==="couches") B[k]=+el.value; else B[k]=el.value;
+  const k=el.dataset.bc; if(!k) return; if(["on","sol","humide","carrel","plan","cred"].includes(k)){ B[k]=el.checked; if(k==="plan"&&el.checked){ const K=kitCfg(w.room||""); const bp=PLANS.find(p=>p.bc); if(bp) K.plan=bp.n; } } else if(k==="autre") B[k]=Math.max(0,parseFloat(el.value)||0); else if(k==="couches") B[k]=+el.value; else B[k]=el.value;
   if(k==="on"&&el.checked&&!B.walls.length&&!B.sol) B.walls=S.walls.filter(x=>(x.room||"")===(w.room||"")).map(wid);
   save(); renderAll(); });
 { const pc=paintColor; paintColor=function(w){ return bcOnWall(w)?bcCfg(w.room||"").col:pc(w); }; }

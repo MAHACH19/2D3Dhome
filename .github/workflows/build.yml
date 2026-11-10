@@ -1,0 +1,49 @@
+name: Construire l'APK
+
+on:
+  push:
+    branches: [main, capacitor]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Préparer Capacitor
+        run: |
+          npm ci
+          npx cap sync android
+      - name: Compiler
+        working-directory: android
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+      - name: Renommer
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Calepinage.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Calepinage-apk
+          path: Calepinage.apk
+      - name: Publier la version
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.${{ github.run_number }}
+          name: Calepinage 2.${{ github.run_number }}
+          body: |
+            Télécharger **Calepinage.apk** sur le téléphone, l'ouvrir et autoriser l'installation.
+            Version Capacitor : s'installe par-dessus l'ancienne, vos projets sont repris automatiquement.
+          files: Calepinage.apk
+          make_latest: true
