@@ -156,6 +156,47 @@ body[data-scr]:not([data-scr="home"]):not([data-scr="tout"]) #stepbar,body[data-
 .homenote{border:1px solid var(--warn);background:var(--warn-bg);color:var(--ink);border-radius:10px;padding:10px 12px;margin:0 0 12px}
 .homenote ol{margin:6px 0 0;padding-left:20px}
 body[data-scr]:not([data-scr="tout"]) header.top .sub{display:none}
+
+/* ---------- Habillage pro ---------- */
+body[data-scr="home"]{background:var(--bg)}
+body[data-scr="home"] .wrap{padding-top:0;max-width:980px}
+.appbar{display:flex;align-items:center;gap:12px;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px))) 0;padding:calc(18px + env(safe-area-inset-top,0px)) 20px 52px;background:linear-gradient(135deg,#1d63c4,#123f80);color:#fff;border-radius:0 0 22px 22px}
+.appbar svg{width:46px;height:46px;flex:none;border-radius:12px;box-shadow:0 2px 8px #0003}
+.appbar b{display:block;font-family:var(--f-display);font-size:28px;letter-spacing:.03em;text-transform:uppercase;line-height:1}
+.appbar span{font-size:13px;opacity:.85}
+.homein{margin-top:-38px;position:relative}
+.projcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:0 6px 20px #0d203d1f;margin-bottom:6px}
+.pc-top{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.pc-top b{display:block;font-size:20px;margin:2px 0}
+.ring{--p:0;width:58px;height:58px;flex:none;border-radius:50%;background:conic-gradient(var(--chalk) calc(var(--p)*1%),var(--line) 0);display:grid;place-items:center}
+.ring span{width:46px;height:46px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-weight:700;font-size:13px}
+.pc-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+@media (max-width:420px){.pc-btns{grid-template-columns:1fr}}
+.pc-btns button,#scanhint button{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 12px;border-radius:10px;font-weight:600}
+button.lidar{background:#111827;color:#fff;border-color:#111827}
+h3.grp{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.08em;font-size:14px;color:var(--muted);margin:18px 2px 8px;font-weight:600}
+.tiles{grid-template-columns:repeat(auto-fill,minmax(155px,1fr))}
+.tile{border-radius:14px;min-height:132px;transition:transform .12s,box-shadow .12s;box-shadow:0 1px 2px #0000000d}
+.tile:active{transform:scale(.98)}
+.tile:hover{box-shadow:0 4px 14px #0d203d1a}
+.tile .ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--ac) 14%,transparent);color:var(--ac);margin-bottom:4px}
+.tile .num{font-family:var(--f-mono);font-size:12px;color:var(--muted);top:12px}
+.tile .st{color:var(--ac)}
+.foot{text-align:center;margin:20px 0 0}
+#stepbar{flex-wrap:wrap;padding:10px 0 6px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px)}
+#stepbar .t b{display:flex;align-items:center;justify-content:center;gap:6px}
+#stepbar button{border-radius:10px}
+#st-prog{flex-basis:100%;display:flex;gap:4px;margin-top:8px}
+#st-prog i{flex:1;height:4px;border-radius:2px;background:var(--line);cursor:pointer}
+#st-prog i.d{background:color-mix(in srgb,var(--chalk) 55%,var(--line))}
+#st-prog i.c{background:var(--chalk)}
+#scanhint{display:flex;align-items:center;gap:10px;margin:0 0 10px;padding:10px 12px;border-radius:12px;background:var(--card)}
+#scanhint div{flex:1;min-width:0;line-height:1.25}
+#scanhint small{display:block;color:var(--muted);font-size:12px}
+#scanhint.scr-off{display:none!important}
+#scanpanel{scroll-margin-top:96px}
+section.box{border-radius:12px}
+.plan{border-radius:12px}
 @media print{
   body.pshop .wrap{display:none!important}
   body.pshop #shopprint{display:block!important;color:#000;font:13px/1.4 sans-serif}
@@ -187,7 +228,8 @@ body[data-scr]:not([data-scr="tout"]) header.top .sub{display:none}
 <div class="wrap">
   <div id="splash" role="presentation"><svg viewBox="0 0 108 108" width="96" height="96" aria-hidden="true"><rect width="108" height="108" rx="24" fill="#1D63C4"/><rect x="24" y="28" width="14" height="52" fill="#9B9283"/><rect x="38" y="28" width="14" height="52" fill="#C4914F"/><rect x="52" y="28" width="4" height="52" fill="#F2F2EE"/><rect x="53" y="28" width="1" height="52" fill="#3F9A3A"/><rect x="58" y="28" width="8" height="52" fill="#A9B1B8"/><rect x="68" y="28" width="16" height="52" fill="#FBFBF8"/><circle cx="76" cy="44" r="5" fill="#F2C200"/></svg><b>Calepinage</b><span>Murs, isolation, plaques et chantier</span></div>
   <div id="home"></div>
-  <div id="stepbar"><button type="button" id="st-menu">☰ Menu</button><div class="t" id="st-title"></div><button type="button" id="st-next" class="pri">Suivant →</button></div>
+  <div id="stepbar"><button type="button" id="st-menu">☰ Menu</button><div class="t" id="st-title"></div><button type="button" id="st-next" class="pri">Suivant →</button><div id="st-prog"></div></div>
+  <div id="scanhint" class="box scr-off"><span class="sti"></span><div><b>Mesurer la pièce avec le LiDAR</b><small>iPhone 12 Pro : scan RoomPlan, ou saisie rapide de tous les murs d'un coup</small></div><button type="button" data-scan="1" class="lidar">Scanner</button></div>
   <header class="top">
     <div>
       <h1>Calepinage <span>murs</span></h1>
@@ -210,8 +252,13 @@ body[data-scr]:not([data-scr="tout"]) header.top .sub{display:none}
   </div>
 
   <div id="scanpanel" class="box" hidden style="margin:8px 0;padding:10px 12px">
-    <h2 style="margin:0 0 6px;font-size:18px">Importer une pièce scannée</h2>
-    <p class="cap" style="margin:0 0 8px"><b>Avec l'iPhone 12 Pro (LiDAR) :</b> scannez la pièce avec une appli qui utilise RoomPlan d'Apple et exporte le fichier « JSON RoomPlan » (CapturedRoom), par exemple 3D Scanner App ou une appli « RoomPlan export ». Envoyez le fichier .json sur ce téléphone puis choisissez-le ci-dessous : les murs, leurs longueurs, la hauteur, les portes et les fenêtres sont créés automatiquement.</p>
+    <h2 style="margin:0 0 6px;font-size:18px">Scanner la pièce avec le LiDAR</h2>
+    <ol class="cap" style="margin:0 0 8px;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+      <li>Sur l'<b>iPhone 12 Pro</b>, ouvrez une appli de scan basée sur <b>RoomPlan</b> (Apple) capable d'exporter au format <b>JSON</b> (« CapturedRoom »). Faites lentement le tour de la pièce, caméra vers les murs.</li>
+      <li>Exportez le scan en JSON et envoyez le fichier sur ce téléphone (WhatsApp, e-mail, Drive…).</li>
+      <li>Touchez « Choisir le fichier du scan » : les murs, leurs longueurs, la hauteur, les portes et les fenêtres sont créés tout seuls, dans le bon ordre.</li>
+    </ol>
+    <p class="cap" style="margin:0 0 8px">Le S24 Ultra n'a pas de LiDAR : pour lui, utilisez la saisie rapide ci-dessous avec un mètre laser.</p>
     <div class="btns" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
       <label>Nom de la pièce <input id="scan-room" type="text" value="" placeholder="Pièce scannée" style="width:160px"></label>
       <label style="border:1px solid var(--line);border-radius:4px;padding:6px 10px;cursor:pointer;background:var(--card)">Choisir le fichier du scan<input id="scan-file" type="file" accept=".json,application/json,text/plain,.txt,.csv" hidden></label>
@@ -3434,13 +3481,38 @@ function scrStatus(k){ const w=S.walls[S.cur];
   if(k==="dtu"){ const r=compute(w), n=(r.checks||[]).filter(c=>!c.ok).length; return n?`${n} point(s) à revoir sur ce mur`:"Tout est bon sur ce mur"; }
   if(k==="res") return `${(w.points||[]).length} point(s) sur ce mur`;
   return ""; }
+const ICO={
+  murs:'<path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>',
+  mat:'<path d="M12 3 2 8l10 5 10-5z"/><path d="m2 13 10 5 10-5"/><path d="m2 18 10 5 10-5" opacity=".5"/>',
+  res:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+  amen:'<rect x="3" y="10" width="18" height="10" rx="1.5"/><path d="M3 14h18M9 10v10M7 6h10l1 4H6z"/>',
+  fin:'<rect x="3" y="3" width="15" height="6" rx="1.5"/><path d="M18 6h3v6h-9v3"/><rect x="10" y="15" width="4" height="7" rx="1"/>',
+  v3d:'<path d="m12 2 9 5v10l-9 5-9-5V7z"/><path d="m3 7 9 5 9-5M12 12v10"/>',
+  dtu:'<path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+  chan:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 9 1.5 1.5L12 8M8 15l1.5 1.5L12 14M14 9h3M14 15h3"/>',
+  cour:'<path d="M3 4h2l2.5 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/>',
+  proj:'<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  scan:'<path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 12h10"/>',
+  tout:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  play:'<path d="M7 4v16l13-8z" fill="currentColor"/>'
+};
+const ICOL={murs:"#1d63c4",mat:"#b07a35",res:"#7a3fc0",amen:"#0f8a6a",fin:"#c0478a",v3d:"#2a7fb8",dtu:"#3f8a33",chan:"#d0731a",cour:"#c23b3b",proj:"#5a666b",scan:"#111827",tout:"#5a666b"};
+const ico=(k,sz)=>`<svg viewBox="0 0 24 24" width="${sz||22}" height="${sz||22}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]||""}</svg>`;
+const GROUPS=[["Concevoir",["murs","mat","res","amen","fin"]],["Visualiser et vérifier",["v3d","dtu"]],["Réaliser",["chan","cour"]],["Projet",["proj","tout"]]];
+function lastScr(){ try{ return localStorage.getItem("calepinage-last")||""; }catch(e){ return ""; } }
 function renderHome(){
   const h=document.getElementById("home"); if(!h) return;
   const note=isExample()?`<div class="homenote"><b>Vos murs ne sont pas encore dans cette appli.</b> ${APP?"L'appli Android garde ses projets à part : vos murs de cuisine sont restés dans l'ancienne version (le fichier ouvert dans Chrome).":"Chaque copie de l'appli (fichier hors ligne, appli Android, page en ligne) garde ses propres murs : ceux de votre cuisine sont dans la copie où vous les avez saisis."}<ol><li>Ouvrez l'ancien fichier dans Chrome et touchez « Copier le projet » (ou « Enregistrer le projet »).</li><li>Revenez ici : <b>Mon projet</b> → « Coller un projet » (ou « Ouvrir un projet » et choisissez le fichier .json).</li></ol><div class="btns" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="pri" data-go="proj">Récupérer mon projet</button><button type="button" data-go="murs">Commencer un nouveau projet</button></div></div>`:"";
-  h.innerHTML=withCC(()=>`<div class="hd">${LOGO_SVG}<div><h1>Calepinage <span>murs</span></h1><div class="cap">${esc(S.walls[S.cur].room||"")} · ${esc(S.walls[S.cur].name||"")}</div></div></div>${note}
-    <div class="tiles"><button type="button" class="tile big" data-go="murs"><span class="ic">▶</span><span><b>Commencer pas à pas</b><br><small>Les étapes dans l'ordre : murs, matériaux, réseaux, aménagement, finitions, 3D, contrôles, chantier, courses.</small></span></button>
-    ${SCREENS.map((x,i)=>`<button type="button" class="tile" data-go="${x.k}"><span class="num">${i+1}</span><span class="ic">${x.ic}</span><b>${esc(x.t)}</b><small>${esc(x.d)}</small><span class="st">${esc(scrStatus(x.k))}</span></button>`).join("")}
-    <button type="button" class="tile" data-go="tout"><span class="ic">🗂️</span><b>Tout afficher</b><small>L'ancienne page complète, tous les réglages à la suite</small></button></div>`)();
+  const w=S.walls[S.cur], rooms=roomNames(), pct=withCC(()=>Math.round(S.walls.reduce((a,x)=>a+chantierPct(x),0)/Math.max(1,S.walls.length)))();
+  const area=withCC(()=>S.walls.reduce((a,x)=>a+compute(x).netArea,0))(), ls=lastScr(), lsc=SCREENS.find(x=>x.k===ls);
+  const tile=k=>{ const x=SCREENS.find(y=>y.k===k)||{k:"tout",t:"Tout afficher",d:"L'ancienne page complète, tous les réglages à la suite"}, n=SCREENS.findIndex(y=>y.k===k), st=n>=0?withCC(()=>scrStatus(k))():"";
+    return `<button type="button" class="tile" data-go="${k}" style="--ac:${ICOL[k]}"><span class="ic">${ico(k)}</span>${n>=0?`<span class="num">${String(n+1).padStart(2,"0")}</span>`:""}<b>${esc(x.t)}</b><small>${esc(x.d)}</small>${st?`<span class="st">${esc(st)}</span>`:""}</button>`; };
+  h.innerHTML=`<div class="appbar">${LOGO_SVG}<div><b>Calepinage</b><span>Doublage · isolation · finitions</span></div></div>
+    <div class="homein">${note}
+    <div class="projcard"><div class="pc-top"><div><span class="cap">Projet en cours</span><b>${esc(w.room||"Sans nom")}</b><span class="cap">${rooms.length} pièce(s) · ${S.walls.length} mur(s) · ${fr(area,1)} m² de doublage</span></div><div class="ring" style="--p:${pct}"><span>${pct}%</span></div></div>
+      <div class="pc-btns"><button type="button" class="pri" data-go="${lsc?lsc.k:"murs"}">${ico("play",16)} ${lsc?"Reprendre : "+esc(lsc.t):"Commencer pas à pas"}</button><button type="button" class="lidar" data-scan="1">${ico("scan",18)} Scanner une pièce (LiDAR)</button></div></div>
+    ${GROUPS.map(([g,ks])=>`<h3 class="grp">${g}</h3><div class="tiles">${ks.map(tile).join("")}</div>`).join("")}
+    <p class="cap foot">Calepinage — règles DTU 25.41, NF C 15-100 et préconisations fabricants vérifiées automatiquement. Vérifiez toujours les cotes sur place avant de couper.</p></div>`;
 }
 function applyScreen(){
   document.body.dataset.scr=SCR; const sc=SCREENS.find(x=>x.k===SCR), all=SCR==="tout";
@@ -3457,20 +3529,25 @@ function applyScreen(){
   const hb=document.querySelector("header.top"); hb.classList.toggle("scr-off",!all&&SCR!=="proj");
   document.getElementById("jump").classList.toggle("scr-off",!all&&!!sc&&!sc.side.length);
   const i=SCREENS.findIndex(x=>x.k===SCR);
-  document.getElementById("st-title").innerHTML=all?`<b>Toute la page</b><small>tous les réglages</small>`:sc?`<b>${sc.ic} ${esc(sc.t)}</b><small>Étape ${i+1} sur ${SCREENS.length}</small>`:"";
+  document.getElementById("st-title").innerHTML=all?`<b>Toute la page</b><small>tous les réglages</small>`:sc?`<b><span class="sti" style="color:${ICOL[sc.k]}">${ico(sc.k,18)}</span>${esc(sc.t)}</b><small>Étape ${i+1} sur ${SCREENS.length}</small>`:"";
+  document.getElementById("st-prog").innerHTML=all?"":SCREENS.map((x,j)=>`<i class="${j<i?"d":j===i?"c":""}" data-go="${x.k}" title="${esc(x.t)}"></i>`).join("");
+  if(sc) try{ localStorage.setItem("calepinage-last",sc.k); }catch(e){}
+  const sh=document.getElementById("scanhint"); if(sh) sh.classList.toggle("scr-off",SCR!=="murs");
   const nx=document.getElementById("st-next"); nx.textContent=all||i===SCREENS.length-1?"✓ Menu":"Suivant →"; nx.dataset.go=all||i===SCREENS.length-1?"home":SCREENS[i+1].k;
   if(SCR==="proj"&&!document.getElementById("projhelp")){ const d=document.createElement("section"); d.className="box"; d.id="projhelp"; document.querySelector("header.top").after(d); }
   const ph=document.getElementById("projhelp"); if(ph){ ph.classList.toggle("scr-off",SCR!=="proj"); if(SCR==="proj") ph.innerHTML=`<h2>Mon projet</h2><p style="margin:0 0 6px"><b>Récupérer les murs de l'ancienne version :</b> dans l'ancien fichier ouvert dans Chrome, touchez « Copier le projet », puis ici « Coller un projet » et « Charger ce projet ». Ou bien « Enregistrer le projet » là-bas, puis « Ouvrir un projet » ici et choisissez le fichier .json dans Téléchargements.</p><p class="cap" style="margin:0">Pensez à « Enregistrer le projet » de temps en temps : vous gardez une copie de vos murs dans Téléchargements/Calepinage.</p>`; }
 }
 function goScreen(k){
+  if(k!==SCR){ document.getElementById("scanpanel").hidden=true; document.getElementById("iopanel").hidden=true; }
   SCR=k; if(k==="home"){ renderHome(); document.body.dataset.scr="home"; scrollTo(0,0); return; }
   const sc=SCREENS.find(x=>x.k===k); if(sc&&sc.v&&!sc.views.includes(S.view)) S.view=sc.v;
   renderAll(); scrollTo(0,0);
 }
 { const _rs=renderSide; renderSide=function(...a){ const r=_rs.apply(this,a); if(SCR!=="home") applyScreen(); return r; }; }
 { const _ro=renderOut; renderOut=function(...a){ const r=_ro.apply(this,a); if(SCR!=="home") applyScreen(); return r; }; }
-document.addEventListener("click",e=>{ const b=e.target.closest("[data-go]"); if(!b) return; goScreen(b.dataset.go); });
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-go]"); if(!b||b.closest("#tbl")) return; goScreen(b.dataset.go); });
 document.getElementById("st-menu").addEventListener("click",()=>goScreen("home"));
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-scan]"); if(!b) return; if(SCR==="home") goScreen("murs"); const p=document.getElementById("scanpanel"); p.hidden=false; document.getElementById("scan-msg").textContent=""; p.scrollIntoView({behavior:"smooth",block:"start"}); });
 renderHome(); document.body.dataset.scr="home";
 setTimeout(()=>{ const sp=document.getElementById("splash"); if(sp){ sp.classList.add("out"); setTimeout(()=>sp.remove(),600); } },1100);
 

@@ -43,6 +43,8 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         root = new FrameLayout(this);
         web = new WebView(this);
+        web.setBackgroundColor(0xFF1D63C4);
+        root.setBackgroundColor(0xFF1D63C4);
         root.addView(web, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
 
