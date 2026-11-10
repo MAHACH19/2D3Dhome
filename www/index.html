@@ -2169,9 +2169,9 @@ function renderRoom3D(){
         if(c.t==="rideau"){ box(x,x+P.L,T+P.pf,T+P.pf+60,hh-P.h,hh,pc); box(x+10,x+10+P.L*.3,T+P.pf*.3,T+P.pf*.7,15,hh-40,P.col||"#e9e2d4"); box(x+P.L*.7-10,x+P.L-10,T+P.pf*.3,T+P.pf*.7,15,hh-40,P.col||"#e9e2d4"); }
         if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; box(x,x+40,T,T+P.pf,y0,y0+P.h,pc); box(x+P.L-40,x+P.L,T,T+P.pf,y0,y0+P.h,pc); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; box(x,x+P.L,T,T+P.pf,Math.max(0,yy-20),Math.max(20,yy+20),pc); } }
         if(c.t==="led"){ const lc=P.k<=2700?"#ff9a2e":P.k>=4000?"#3d9bff":"#ffb800", gl=lc;
-          if(+P.pos===1) box(x,x+50,T,T+15,P.y,Math.min(hh,P.y+P.L),gl,"#6b7178");
+          if(+P.pos===1) ledSegs(w,P,x,hh).forEach(([a,b])=>box(x,x+50,T,T+15,a,b,gl,"#6b7178"));
           else if(+P.pos===2) box(x,x+P.L,T+P.y,T+P.y+40,hh-12,hh,gl,"#6b7178");
-          else box(x,x+P.L,T,T+12,P.y,P.y+40,gl,"#6b7178"); }
+          else ledSegs(w,P,x,hh).forEach(([a,b])=>box(a,b,T,T+12,P.y,P.y+40,gl,"#6b7178")); }
         for(let i=n0;i<faces.length;i++) faces[i].d=Math.max(faces[i].d,wd+1); // toujours devant son mur
       });
       if(K.on && V.kit) kitRuns(room).filter(rn=>rn.w===w).forEach(rn=>{
@@ -3295,10 +3295,10 @@ function buildScene(){
           if(P.led){ const lm=v3Mat("#fff3d6",{emissive:new T3.Color("#ffd89a"),emissiveIntensity:V.nuit?1.6:.6}); add(v3Box(sg,x,x+P.L,jo-14,jo,hh-40,hh-28,lm)); if(V.nuit&&lights.length<10){ const q=new T3.PointLight("#ffd89a",.5,4,1.6); const m=v3Box(sg,x+P.L/2,x+P.L/2+1,T0+P.pf/2,T0+P.pf/2+1,hh-60,hh-59,M.white); m.geometry.computeBoundingSphere(); q.position.copy(m.geometry.boundingSphere.center); scene.add(q); lights.push(q); } } }
         if(c.t==="led"){ const kc=P.k<=2700?"#ffc06a":P.k>=4000?"#f2f7ff":"#ffdc96", dc=P.k<=2700?"#ff9a2e":P.k>=4000?"#3d9bff":"#ffb800", lm=V.nuit?v3Mat("#ffffff",{emissive:new T3.Color(kc),emissiveIntensity:1.8}):v3Mat(dc,{emissive:new T3.Color(dc),emissiveIntensity:.55,roughness:.4}); let m;
           const alu=v3Mat("#8d949b",{metalness:.6,roughness:.35});
-          if(P.pos===1){ add(v3Box(sg,x-8,x+48,T0-2,T0+6,P.y,Math.min(hh,P.y+P.L),alu)); m=v3Box(sg,x,x+40,T0,T0+10,P.y+3,Math.min(hh,P.y+P.L)-3,lm); }
+          if(P.pos===1){ ledSegs(ww,P,x,hh).forEach(([a,b])=>{ add(v3Box(sg,x-8,x+48,T0-2,T0+6,a,b,alu)); m=v3Box(sg,x,x+40,T0,T0+10,a+3,b-3,lm); add(m); }); }
           else if(P.pos===2){ add(v3Box(sg,x,x+P.L,T0+P.y-8,T0+P.y+48,hh-6,hh+2,alu)); m=v3Box(sg,x+3,x+P.L-3,T0+P.y,T0+P.y+40,hh-10,hh,lm); }
-          else { add(v3Box(sg,x,x+P.L,T0-2,T0+6,P.y-8,P.y+48,alu)); m=v3Box(sg,x+3,x+P.L-3,T0,T0+10,P.y,P.y+40,lm); }
-          add(m); if(V.nuit&&lights.length<10){ m.geometry.computeBoundingSphere(); const q=new T3.PointLight(kc,.45,3.5,1.6), cpos=m.geometry.boundingSphere.center.clone(); const nn=new T3.Vector3(sg.nx,0,-sg.ny).multiplyScalar(.25); q.position.copy(cpos.add(nn)); scene.add(q); lights.push(q); } }
+          else if(P.pos!==2){ ledSegs(ww,P,x,hh).forEach(([a,b])=>{ add(v3Box(sg,a,b,T0-2,T0+6,P.y-8,P.y+48,alu)); m=v3Box(sg,a+3,b-3,T0,T0+10,P.y,P.y+40,lm); add(m); }); }
+          if(P.pos===2) add(m); if(!m) return; if(V.nuit&&lights.length<10){ m.geometry.computeBoundingSphere(); const q=new T3.PointLight(kc,.45,3.5,1.6), cpos=m.geometry.boundingSphere.center.clone(); const nn=new T3.Vector3(sg.nx,0,-sg.ny).multiplyScalar(.25); q.position.copy(cpos.add(nn)); scene.add(q); lights.push(q); } }
         if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; add(v3Box(sg,x,x+40,T0,T0+P.pf,y0,y0+P.h,pm)); add(v3Box(sg,x+P.L-40,x+P.L,T0,T0+P.pf,y0,y0+P.h,pm)); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; add(v3Box(sg,x,x+P.L,T0,T0+P.pf,Math.max(0,yy-35),Math.max(35,yy+35),pm)); } }
       });
       // meubles libres
@@ -4154,6 +4154,11 @@ const CREA_INT=["n","joues","rails","led","pos","k"];
 function creas(room){ if(!S.crea) S.crea={}; if(!S.crea[room]) S.crea[room]=[]; return S.crea[room]; }
 function creaSpan(w){ const g=roomGeom(w.room||""), k=g.segs.findIndex(q=>q.w===w); if(k<0) return {a:0,len:w.L};
   const s=g.segs[k], e=g.inner[k], pr=p=>(p[0]-s.x0)*s.dx+(p[1]-s.y0)*s.dy, a=pr(e.a), b=pr(e.b); return {a, len:Math.max(0,b-a)}; }
+/* morceaux d'un ruban LED mural hors ouvertures : [[a,b]] le long du mur (horizontal) ou en hauteur (vertical) ; x en repère du mur brut */
+function ledSegs(w,P,x,hh){ const vert=+P.pos===1, ops=(w.openings||[]).filter(o=>o.w>0&&o.h>0); let S0=vert?[[P.y,Math.min(hh,P.y+P.L)]]:[[x,x+P.L]];
+  ops.forEach(o=>{ const g=20; let a,b; if(vert){ if(x+40<o.x-g||x>o.x+o.w+g) return; a=o.y-g; b=o.y+o.h+g; } else { if(P.y+40<o.y-g||P.y>o.y+o.h+g) return; a=o.x-g; b=o.x+o.w+g; }
+    S0=S0.flatMap(([u,v])=>{ const A=Math.max(u,a), B=Math.min(v,b); return B<=A?[[u,v]]:[[u,A],[B,v]].filter(([p,q])=>q-p>30); }); });
+  return S0; }
 function creaFit(c,room){ const w=creaWall(c,room); if(!w) return c; const sp=creaSpan(w), k=c.t==="coffv"?"l":c.t==="niche"?"w":"L", x=Math.max(0,Math.min(c.x||0,sp.len-20)); if(c.t==="led"&&+c.pos===1){ const y=Math.max(0,Math.min(c.y||0,w.H-20)); return {...c,x,y,L:Math.max(20,Math.min(c.L,Math.round(w.H-y)))}; } return {...c,x,[k]:Math.max(20,Math.min(c[k],Math.round(sp.len-x)))}; }
 function creaLen(c){ return c.t==="coffv"?c.l:c.t==="niche"?c.w:c.L; }
 function creaWall(c,room){ const rw=S.walls.filter(w=>(w.room||"")===room); return rw.find(w=>wid(w)===c.wall)||rw[0]; }
@@ -4242,6 +4247,7 @@ function creaPanel(w){ const room=w.room||"", C=creas(room), rw=S.walls.filter(x
         :k==="col"?`<label class="f">${l}<input type="color" data-cr="${i}" data-ck="col" value="${esc(c.col||dv)}"></label>`
         :`<label class="f">${c.t==="led"&&k==="y"?(+c.pos===2?"Distance du mur, au plafond":+c.pos===1?"Hauteur du bas du ruban":"Hauteur depuis le sol"):l}${CREA_INT.includes(k)?"":" (cm)"}<input type="number" step="${CREA_INT.includes(k)?1:0.5}" min="0" data-cr="${i}" data-ck="${k}" value="${CREA_INT.includes(k)?c[k]:c[k]/10}"></label>`).join("")}</div>
       ${(()=>{ const ww=creaWall(c,room); if(!ww) return ""; const sp=creaSpan(ww), a=roomAdjust(ww), pl=ww.L+(a.dL||0); return Math.abs(ww.L-sp.len)>5?`<p class="hint" style="margin:4px 0">${esc((ww.name||"").split(" — ").pop())} : brut ${cm(ww.L)} cm, plaques de ce mur ${cm(pl)} cm${pl-sp.len>5?" (elles vont jusqu'à la pierre au bout et passent derrière le doublage du mur suivant)":""}, face visible entre les angles finis ${cm(sp.len)} cm. La création se place sur la face visible.</p>`:""; })()}
+      ${(()=>{ if(c.t!=="led"||+c.pos===2) return ""; const ww=creaWall(c,room); if(!ww) return ""; const P=creaFit(c,room), sp=creaSpan(ww), x=sp.a+P.x, sg=ledSegs(ww,P,x,ww.H), tot=sg.reduce((a,[u,v])=>a+v-u,0); return tot<P.L-5?`<div class="ck ko"><b>!</b><span>Le ruban croise une ouverture : il est coupé en ${sg.length} morceau(x) (${sg.map(([u,v])=>cm(v-u)+" cm").join(" + ")}), 2 cm avant chaque tableau.</span></div>`:""; })()}
       ${c.t==="led"&&+c.pos===2&&c.y>1500?`<div class="ck ko"><b>!</b><span>Ruban au plafond à ${cm(c.y)} cm du mur : il est au milieu du plafond. Pour une gorge le long du mur, mettez 5 à 30 cm.</span></div>`:""}
       ${creaSvg(c,room)}${creaTable(c,room)}</div>`; }).join("")}
     <div class="btns" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${Object.entries(CREA).map(([k,d])=>`<button type="button" data-cradd="${k}">＋ ${esc(d.n.split(" (")[0])}</button>`).join("")}</div>
