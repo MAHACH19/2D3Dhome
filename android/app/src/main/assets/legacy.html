@@ -1,0 +1,4 @@
+<!doctype html><meta charset="utf-8"><script>
+// Lit les projets enregistrés par l'ancienne appli (versions 1.x, adresse file://) pour les passer à la nouvelle.
+try{ var d={}; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); d[k]=localStorage.getItem(k); } Legacy.done(JSON.stringify(d)); }catch(e){ Legacy.done(""); }
+</script>

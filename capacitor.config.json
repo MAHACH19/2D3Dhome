@@ -1,0 +1,17 @@
+{
+  "appId": "fr.maison.calepinage",
+  "appName": "Calepinage",
+  "webDir": "www",
+  "backgroundColor": "#1D63C4",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK",
+      "insetsHandling": "native"
+    }
+  }
+}

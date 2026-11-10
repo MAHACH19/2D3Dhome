@@ -3450,6 +3450,10 @@ function loadProject(txt){
 }
 if(ONLINE){ document.getElementById("io-save").hidden=true; document.getElementById("io-print").hidden=true; }
 const APP=window.AndroidApp&&window.AndroidApp.isApp?window.AndroidApp:null;
+/* Appli Capacitor (v2) : reprend une seule fois les projets de l'ancienne appli 1.x */
+window.__legacyImport=function(d){ try{ if(localStorage.getItem("calepinage-legacy-done")) return; if(typeof d==="string") d=d?JSON.parse(d):null; if(!d||!d["calepinage-murs-v2"]) return;
+  localStorage.setItem("calepinage-legacy-done","1"); Object.keys(d).forEach(k=>{ if(/^calepinage/.test(k)) localStorage.setItem(k,d[k]); }); location.reload(); }catch(e){} };
+if(APP&&APP.legacyData){ try{ const d=APP.legacyData(); if(d) window.__legacyImport(d); }catch(e){} }
 document.getElementById("io-save").addEventListener("click",()=>{
   if(APP){ try{ APP.saveFile(`calepinage-${new Date().toISOString().slice(0,10)}.json`,projectText()); ioMsg("Projet enregistré dans Téléchargements/Calepinage."); }catch(e){ ioMsg("L'enregistrement n'a pas marché : utilisez « Copier le projet »."); } return; }
   try{
