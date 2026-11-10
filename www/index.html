@@ -3293,11 +3293,11 @@ function buildScene(){
             for(let i=0;i<pa.count;i++){ const u=pa.getX(i); pa.setZ(i,Math.sin(u*1000/(b-a)*nx*Math.PI)*0.035); } gg.computeVertexNormals(); gg.translate((a+b)/2000,(15+drop/2)/1000,(T0+P.pf*.5)/1000); gg.applyMatrix4(wallMatrix(sg,0));
             const mm=new T3.Mesh(gg,fab); scene.add(mm); });
           if(P.led){ const lm=v3Mat("#fff3d6",{emissive:new T3.Color("#ffd89a"),emissiveIntensity:V.nuit?1.6:.6}); add(v3Box(sg,x,x+P.L,jo-14,jo,hh-40,hh-28,lm)); if(V.nuit&&lights.length<10){ const q=new T3.PointLight("#ffd89a",.5,4,1.6); const m=v3Box(sg,x+P.L/2,x+P.L/2+1,T0+P.pf/2,T0+P.pf/2+1,hh-60,hh-59,M.white); m.geometry.computeBoundingSphere(); q.position.copy(m.geometry.boundingSphere.center); scene.add(q); lights.push(q); } } }
-        if(c.t==="led"){ const kc=P.k<=2700?"#ffc06a":P.k>=4000?"#f2f7ff":"#ffdc96", lm=v3Mat("#ffffff",{emissive:new T3.Color(kc),emissiveIntensity:V.nuit?1.8:.8}); let m;
+        if(c.t==="led"){ const kc=P.k<=2700?"#ffc06a":P.k>=4000?"#f2f7ff":"#ffdc96", dc=P.k<=2700?"#ff9a2e":P.k>=4000?"#3d9bff":"#ffb800", lm=V.nuit?v3Mat("#ffffff",{emissive:new T3.Color(kc),emissiveIntensity:1.8}):v3Mat(dc,{emissive:new T3.Color(dc),emissiveIntensity:.55,roughness:.4}); let m;
           const alu=v3Mat("#8d949b",{metalness:.6,roughness:.35});
-          if(P.pos===1){ add(v3Box(sg,x-6,x+30,T0-2,T0+2,P.y,Math.min(hh,P.y+P.L),alu)); m=v3Box(sg,x,x+24,T0,T0+4,P.y+3,Math.min(hh,P.y+P.L)-3,lm); }
-          else if(P.pos===2){ add(v3Box(sg,x,x+P.L,T0+P.y-6,T0+P.y+30,hh-2,hh+2,alu)); m=v3Box(sg,x+3,x+P.L-3,T0+P.y,T0+P.y+24,hh-4,hh,lm); }
-          else { add(v3Box(sg,x,x+P.L,T0-2,T0+2,P.y-6,P.y+30,alu)); m=v3Box(sg,x+3,x+P.L-3,T0,T0+4,P.y,P.y+24,lm); }
+          if(P.pos===1){ add(v3Box(sg,x-8,x+48,T0-2,T0+6,P.y,Math.min(hh,P.y+P.L),alu)); m=v3Box(sg,x,x+40,T0,T0+10,P.y+3,Math.min(hh,P.y+P.L)-3,lm); }
+          else if(P.pos===2){ add(v3Box(sg,x,x+P.L,T0+P.y-8,T0+P.y+48,hh-6,hh+2,alu)); m=v3Box(sg,x+3,x+P.L-3,T0+P.y,T0+P.y+40,hh-10,hh,lm); }
+          else { add(v3Box(sg,x,x+P.L,T0-2,T0+6,P.y-8,P.y+48,alu)); m=v3Box(sg,x+3,x+P.L-3,T0,T0+10,P.y,P.y+40,lm); }
           add(m); if(V.nuit&&lights.length<10){ m.geometry.computeBoundingSphere(); const q=new T3.PointLight(kc,.45,3.5,1.6), cpos=m.geometry.boundingSphere.center.clone(); const nn=new T3.Vector3(sg.nx,0,-sg.ny).multiplyScalar(.25); q.position.copy(cpos.add(nn)); scene.add(q); lights.push(q); } }
         if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; add(v3Box(sg,x,x+40,T0,T0+P.pf,y0,y0+P.h,pm)); add(v3Box(sg,x+P.L-40,x+P.L,T0,T0+P.pf,y0,y0+P.h,pm)); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; add(v3Box(sg,x,x+P.L,T0,T0+P.pf,Math.max(0,yy-35),Math.max(35,yy+35),pm)); } }
       });
