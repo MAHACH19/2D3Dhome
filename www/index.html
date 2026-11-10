@@ -3060,7 +3060,7 @@ function renderVisite(){
     loadThree(()=>{ v3Init(); }); }
   else if(window.THREE && V3.r) v3Rebuild();
   v3Bar();
-  document.getElementById("legend").innerHTML=(V.res?netLegend():"")+(V.mode==="visite"?`<span>Visite : glissez pour regarder autour, joystick ou flèches / ZQSD pour avancer. Touchez un meuble pour le peindre, l'ouvrir ou le déplacer.</span>`:`<span>Maquette : glissez pour tourner, molette ou pincer pour zoomer. Touchez un meuble pour le peindre, l'ouvrir ou le déplacer (glisser).</span>`);
+  document.getElementById("legend").innerHTML=(V.res?netLegend():"")+(V.mode==="visite"?`<span>Visite : glissez pour regarder autour, joystick ou flèches / ZQSD pour avancer, pincez avec deux doigts pour zoomer. Touchez un meuble pour le peindre, l'ouvrir ou le déplacer.</span>`:`<span>Maquette : glissez pour tourner, molette ou pincer pour zoomer. Touchez un meuble pour le peindre, l'ouvrir ou le déplacer (glisser).</span>`);
   document.getElementById("extra").innerHTML=v3Extra(); }
 function v3Bar(){ const V=S.v3, b=(k,l,on)=>`<button type="button" data-v3="${k}" aria-pressed="${!!on}" style="padding:5px 10px;font-size:13px;background:${on?"var(--chalk)":"#ffffffdd"};color:${on?"#fff":"#222"};border:1px solid #0002;border-radius:5px">${l}</button>`;
   const el=document.getElementById("v3bar"); if(!el) return;
@@ -3089,7 +3089,7 @@ function v3Rebuild(){ if(!V3.r) return; if(V3.scene) V3.scene.traverse(o=>{ if(o
 function v3Cam(){ const V=S.v3, cam=V3.cam, wrap=V3.wrap, W=wrap.clientWidth, H=wrap.clientHeight;
   if(V3.r.domElement.width!==Math.round(W*V3.r.getPixelRatio())||V3.r.domElement.height!==Math.round(H*V3.r.getPixelRatio())){ V3.r.setSize(W,H,false); }
   cam.aspect=W/H; cam.updateProjectionMatrix();
-  if(V.mode==="visite"){ cam.fov=70; cam.updateProjectionMatrix(); const f=V3.fp; cam.position.set(f.x/1000,1.6,-f.y/1000);
+  if(V.mode==="visite"){ cam.fov=V3.fov||70; cam.updateProjectionMatrix(); const f=V3.fp; cam.position.set(f.x/1000,1.6,-f.y/1000);
     cam.lookAt(cam.position.x+Math.cos(f.pitch)*Math.sin(f.yaw), 1.6+Math.sin(f.pitch), cam.position.z-Math.cos(f.pitch)*Math.cos(f.yaw)); }
   else { cam.fov=50; cam.updateProjectionMatrix(); const o=V3.orb, tx=o.t[0]/1000, tz=-o.t[1]/1000;
     cam.position.set(tx+o.r*Math.sin(o.ph)*Math.sin(o.th), o.r*Math.cos(o.ph)+0.5, tz+o.r*Math.sin(o.ph)*Math.cos(o.th)); cam.lookAt(tx,1.0,tz); }
@@ -3110,14 +3110,18 @@ function v3Events(){
   const pts=new Map();
   el.addEventListener("pointerdown",e=>{ el.setPointerCapture(e.pointerId); pts.set(e.pointerId,[e.clientX,e.clientY]);
     const h=hitObj(e), ud=h&&h.object.userData, movable=ud&&(ud.kind==="meub"||ud.kind==="kit")&&V3.sel&&V3.sel.kind===ud.kind&&V3.sel.idx===ud.idx&&V3.sel.room===ud.room;
-    drag={x:e.clientX,y:e.clientY,moved:false,obj:movable?ud:null,orb:{...V3.orb},fp:{...V3.fp},d0:pts.size===2?Math.hypot(...[...pts.values()].reduce((a,p,i)=>i?[a[0]-p[0],a[1]-p[1]]:p,[0,0])):0}; });
+    if(pts.size>=2&&drag){ drag.pinch=true; drag.moved=true; drag.obj=null; drag.d0=0; return; }
+    drag={x:e.clientX,y:e.clientY,moved:false,obj:movable?ud:null,orb:{...V3.orb},fp:{...V3.fp},d0:0}; });
   el.addEventListener("pointermove",e=>{ if(!drag) return; pts.set(e.pointerId,[e.clientX,e.clientY]); const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(Math.abs(dx)+Math.abs(dy)>5) drag.moved=true; if(!drag.moved) return;
-    if(pts.size===2&&S.v3.mode!=="visite"){ const [a,b]=[...pts.values()], d=Math.hypot(a[0]-b[0],a[1]-b[1]); if(!drag.d0) drag.d0=d; V3.orb.r=Math.max(1.5,Math.min(40,drag.orb.r*drag.d0/d)); V3.dirty=true; return; }
+    if(pts.size>=2){ const [a,b]=[...pts.values()], d=Math.max(1,Math.hypot(a[0]-b[0],a[1]-b[1])); if(!drag.d0){ drag.d0=d; drag.fov=V3.fov||70; drag.orb={...V3.orb}; } drag.pinch=true;
+      if(S.v3.mode==="visite") V3.fov=Math.max(20,Math.min(100,drag.fov*drag.d0/d)); else V3.orb.r=Math.max(1.5,Math.min(40,drag.orb.r*drag.d0/d)); V3.dirty=true; return; }
+    if(drag.pinch) return;
     if(drag.obj){ ray.setFromCamera(ndc(e),V3.cam); const pl=new THREE.Plane(new THREE.Vector3(0,1,0),0), pt=new THREE.Vector3(); if(!ray.ray.intersectPlane(pl,pt)) return; v3MoveSel(pt.x*1000,-pt.z*1000); return; }
     if(S.v3.mode==="visite"){ V3.fp.yaw=drag.fp.yaw-dx*0.005; V3.fp.pitch=Math.max(-1.2,Math.min(1.2,drag.fp.pitch+dy*0.004)); }
     else { V3.orb.th=drag.orb.th-dx*0.006; V3.orb.ph=Math.max(0.12,Math.min(1.5,drag.orb.ph-dy*0.005)); }
     V3.dirty=true; });
-  el.addEventListener("pointerup",e=>{ pts.delete(e.pointerId); if(!drag) return; const d=drag; drag=null;
+  el.addEventListener("pointercancel",e=>{ pts.delete(e.pointerId); if(!pts.size) drag=null; });
+  el.addEventListener("pointerup",e=>{ pts.delete(e.pointerId); if(!drag) return; if(drag.pinch){ if(!pts.size) drag=null; return; } const d=drag; drag=null;
     if(d.obj){ save(); renderSide(); v3Rebuild(); return; }
     if(!d.moved){ const h=hitObj(e); v3Select(h?h.object.userData:null); } });
   el.addEventListener("wheel",e=>{ e.preventDefault(); if(S.v3.mode==="visite"){ const f=V3.fp, st=e.deltaY<0?250:-250, nx=f.x+Math.sin(f.yaw)*st, ny=f.y+Math.cos(f.yaw)*st; if(insideAny(nx,ny)){ f.x=nx; f.y=ny; } } else V3.orb.r=Math.max(1.5,Math.min(40,V3.orb.r*(e.deltaY<0?0.9:1.1))); V3.dirty=true; },{passive:false});
@@ -3142,7 +3146,7 @@ function v3Cmd(k){ const V=S.v3;
   if(k==="cutfini"){ V.cut=""; V.couches=false; S.r3.lay={}; } if(k==="cutlay"){ V.cut=""; V.couches=true; } if(k==="cutecorche"){ V.cut="ecorche"; v3FaceWall(); }
   if(k==="fs"){ const w=V3.wrap; if(document.fullscreenElement) document.exitFullscreen(); else if(w.requestFullscreen) w.requestFullscreen().then(()=>{ V3.dirty=true; }).catch(()=>{}); return; }
   save(); const j=document.getElementById("v3joy"); if(j) j.style.display=V.mode==="visite"?"block":"none"; v3Rebuild(); v3Bar(); document.getElementById("extra").innerHTML=v3Extra();
-  document.getElementById("legend").innerHTML=(V.res?netLegend():"")+(V.mode==="visite"?`<span>Visite : glissez pour regarder autour, joystick ou flèches / ZQSD pour avancer. Touchez un meuble pour le peindre, l'ouvrir ou le déplacer.</span>`:`<span>Maquette : glissez pour tourner, molette ou pincer pour zoomer. Touchez un meuble pour le peindre, l'ouvrir ou le déplacer (glisser).</span>`); }
+  document.getElementById("legend").innerHTML=(V.res?netLegend():"")+(V.mode==="visite"?`<span>Visite : glissez pour regarder autour, joystick ou flèches / ZQSD pour avancer, pincez avec deux doigts pour zoomer. Touchez un meuble pour le peindre, l'ouvrir ou le déplacer.</span>`:`<span>Maquette : glissez pour tourner, molette ou pincer pour zoomer. Touchez un meuble pour le peindre, l'ouvrir ou le déplacer (glisser).</span>`); }
 function v3FaceWall(){ // place la caméra face au mur sélectionné, côté pièce
   const w=S.walls[S.cur], room=w.room||"", g=S.v3.all?geomXf(roomGeom(room),room):roomGeom(room), s=g.segs.find(q=>q.i===S.cur); if(!s) return;
   const um=(s.w.L||0)/2, d=Math.min(3200,Math.max(1200,s.w.L*0.45)*(V3.wrap&&V3.wrap.clientWidth<V3.wrap.clientHeight?1.7:1)), px=s.x0+s.dx*um+s.nx*(g.T+d), py=s.y0+s.dy*um+s.ny*(g.T+d);
