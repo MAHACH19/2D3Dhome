@@ -3692,7 +3692,15 @@ document.getElementById("side").addEventListener("change",e=>{ const el=e.target
 /* ---------- Béton ciré (murs et sol, par pièce) ---------- */
 const BC_COLS=[["Gris perle","#c9c6c0"],["Gris béton","#a9a7a2"],["Anthracite","#5b5b5a"],["Blanc cassé","#ebe6dc"],["Sable","#d8c8ad"],["Taupe","#a4978a"],["Terracotta","#b8775a"],["Vert sauge","#a7b19b"],["Bleu orage","#6f7c86"]];
 const BC_FIN=[["mat","Mat (aspect brut)"],["satin","Satiné (le plus courant)"],["brillant","Brillant"]];
-function bcCfg(room){ if(!S.bc) S.bc={}; if(!S.bc[room]) S.bc[room]={on:false,walls:[],sol:false,col:"#c9c6c0",fin:"satin",humide:false,couches:2}; return S.bc[room]; }
+const BC_SYS={
+  gen:{n:"Béton ciré générique"},
+  biomin:{n:"Biocemento à la chaux · finition minérale",brand:"Biocemento",kit:"Kit Béton Ciré à la Chaux Biocemento, Finition Minérale",sizes:[[7,180],[15,340]]},
+  biocoule:{n:"Biocemento à la chaux · finition béton coulé",brand:"Biocemento",kit:"Kit Béton Ciré à la Chaux Biocemento, Finition Béton Coulé",sizes:[[10,180],[21,340]]},
+  epodex:{n:"EPODEX Microcement",brand:"EPODEX"}
+};
+function bcPacks(m2,sizes){ // combinaison la moins chère couvrant m2
+  let best=null; const [a,b]=sizes; for(let nb=0;nb<=Math.ceil(m2/b[0]);nb++){ const na=Math.max(0,Math.ceil((m2-nb*b[0])/a[0]-1e-9)), c=na*a[1]+nb*b[1]; if(!best||c<best.c) best={c,n:[na,nb]}; } return best; }
+function bcCfg(room){ if(!S.bc) S.bc={}; if(!S.bc[room]) S.bc[room]={on:false,walls:[],sol:false,col:"#c9c6c0",fin:"satin",humide:false,couches:2,sys:"gen",carrel:false}; if(!S.bc[room].sys) S.bc[room].sys="gen"; return S.bc[room]; }
 function bcOnWall(w){ if(!w) return false; const B=(S.bc||{})[w.room||""]; return !!(B&&B.on&&B.walls.includes(wid(w))); }
 function bcAreas(room){ const B=bcCfg(room), out={walls:[],m2w:0,m2s:0,per:0};
   S.walls.filter(w=>(w.room||"")===room&&B.walls.includes(wid(w))).forEach(w=>{ const L=creaSpan(w).len, H=w.H, op=w.openings.reduce((a,o)=>a+o.w*Math.min(o.h,H-o.y),0); const m2=Math.max(0,L*H-op)/1e6; out.walls.push({w,m2}); out.m2w+=m2; });
@@ -3700,7 +3708,25 @@ function bcAreas(room){ const B=bcCfg(room), out={walls:[],m2w:0,m2s:0,per:0};
   return out; }
 function bcMaterials(room){ const B=bcCfg(room); if(!B.on) return []; const A=bcAreas(room), rows=[], add=(des,det,q,u)=>{ if(q>0) rows.push({cat:"Béton ciré",des,det,q,u}); };
   const mw=A.m2w, ms=A.m2s, m=mw+ms; if(!m) return [];
-  const kg=(x)=>Math.ceil(x*1.1);
+  const kg=(x)=>Math.ceil(x*1.1), Y=BC_SYS[B.sys]||BC_SYS.gen, col=(BC_COLS.find(c=>c[1]===B.col)||["teinte personnalisée"])[0], pr=(des,v)=>{ if(S.prices[des]===undefined||S.prices[des]==="") S.prices[des]=v; };
+  if(Y.brand==="Biocemento"){ const M=m*1.1;
+    if(B.carrel){ const k=bcPacks(M,[[5,180],[10,340]]); [["5 m²",k.n[0],180],["10 m²",k.n[1],340]].forEach(([t,q,v])=>{ const d=`Base Rénovation Béton Ciré Biocemento (carrelage, joints) · ${t}`; pr(d,v); add(d,`${fr(m,1)} m² + 10 %`,q,"u"); }); }
+    const kp=bcPacks(M,Y.sizes); Y.sizes.forEach(([sz,v],i)=>{ const d=`${Y.kit} · ${sz} m²`; pr(d,v); add(d,`${fr(m,1)} m² + 10 % (murs ${fr(mw,1)} m²${ms?`, sol ${fr(ms,1)} m²`:""}), teinte à choisir dans le nuancier Biocemento (21 teintes, ici ${col})`,kp.n[i],"kit"); });
+    if(B.carrel||ms){ const n5=Math.floor(M*0.1/5), n1=Math.ceil(Math.max(0,M*0.1-n5*5)); if(n5){ pr("Primaire Béton Ciré Biocemento 5 L (supports non poreux)",95); add("Primaire Béton Ciré Biocemento 5 L (supports non poreux)","≈ 0,1 L/m² (estimation : rendement non publié)",n5,"u"); } if(n1){ pr("Primaire Béton Ciré Biocemento 1 L (supports non poreux)",30); add("Primaire Béton Ciré Biocemento 1 L (supports non poreux)","≈ 0,1 L/m² (estimation : rendement non publié)",n1,"u"); } }
+    const ip=bcPacks(M,[[10,84],[50,235]]); [["1 L (10 m²)",ip.n[0],84],["5 L (50 m²)",ip.n[1],235]].forEach(([t,q,v])=>{ const d=`Imprégnateur Béton Ciré Biocemento ${t}`; pr(d,v); add(d,"bouche-pores avant le vernis",q,"u"); });
+    const vp=bcPacks(M,[[10,120],[40,350]]); [["1,2 L (10 m²)",vp.n[0],120],["6 L (40 m²)",vp.n[1],350]].forEach(([t,q,v])=>{ const d=`Vernis Béton Ciré Biocemento mat ${t}`; pr(d,v); add(d,"protection haute durabilité, finition mat",q,"u"); });
+    if(ms) add("Treillis fibre de verre (sol)",`${fr(ms,1)} m² + 10 % de recouvrement`,Math.ceil(ms*1.1),"m²");
+    add("Lisseuse inox bords arrondis + platoir","pour appliquer et ferrer",1,"u"); add("Papier abrasif grain 120 à 220 + cale","ponçage léger entre couches",1,"lot");
+    return rows; }
+  if(Y.brand==="EPODEX"){
+    if(mw) add("EPODEX Microcement medium (composant A)",`murs ${fr(mw,1)} m² : 2 couches × 1,2 kg/m² + 10 %`,kg(mw*2.4),"kg");
+    if(ms){ add("EPODEX Microcement large (composant A)",`sol ${fr(ms,1)} m² : 1re couche 1,6 kg/m² + 10 %`,kg(ms*1.6),"kg"); add("EPODEX Microcement medium (composant A)",`sol ${fr(ms,1)} m² : 2e couche 1,2 kg/m² + 10 %`,kg(ms*1.2),"kg"); }
+    add("EPODEX résine acrylique (composant B) + pigment WB",`livrés avec les sets au bon dosage · teinte ${col} (12 teintes EPODEX)`,1,"lot");
+    add(B.carrel?"EPODEX 2K Bonding Primer / Putty Primer (carrelage)":"EPODEX Deep Primer (support absorbant : plaques, enduit)",`${fr(m,1)} m², ≈ 0,15 L/m² (estimation)`,Math.ceil(m*0.15*1.1*2)/2,"L");
+    add("EPODEX PU Finish mat (résine + durcisseur)",`2 couches, 16 h mini entre couches${B.humide?" ; douche : 7 jours avant contact avec l'eau":""}`,Math.ceil(m*0.2*1.1*2)/2,"L");
+    if(ms) add("Treillis fibre de verre (sol)",`${fr(ms,1)} m² + 10 % de recouvrement`,Math.ceil(ms*1.1),"m²");
+    add("Lisseuse inox bords arrondis + platoir","pour appliquer et ferrer",1,"u"); add("Papier abrasif grain 120 à 220 + cale","ponçage si défaut > 3 mm entre couches",1,"lot");
+    return rows; }
   add("Primaire d'accroche béton ciré",`${fr(m,1)} m², ≈ 0,15 L/m²`,Math.ceil(m*0.15*1.1*2)/2,"L");
   if(ms) add("Treillis fibre de verre (sol)",`${fr(ms,1)} m² + 10 % de recouvrement`,Math.ceil(ms*1.1),"m²");
   if(mw) add("Béton ciré murs (base + finition)",`${fr(mw,1)} m², ${B.couches} couches, ≈ ${fr(B.couches===3?1.5:1.1,1)} kg/m² au total`,kg(mw*(B.couches===3?1.5:1.1)),"kg");
@@ -3715,12 +3741,16 @@ function bcChecks(room){ const B=bcCfg(room), ck=[]; if(!B.on) return ck;
   if(B.walls.length) ck.push({ok:true,t:"Béton ciré sur plaques : faire les bandes et traiter les joints avant (le béton ciré ne masque pas un joint qui travaille)."});
   if(B.humide) ck.push({ok:true,t:"Pièce humide : plaques hydrofuges (H1) en zone d'eau, système d'étanchéité sous carrelage (SPEC) dans la douche, puis béton ciré compatible pièces humides et vernis PU."});
   if(B.sol) ck.push({ok:true,t:"Sol : support sain et sec (chape > 28 jours, humidité < 4 %), primaire, treillis noyé dans la 1re couche, joints de fractionnement de la chape respectés."});
+  if(B.sys==="epodex") ck.push({ok:true,t:"EPODEX : murs 2 couches medium à 1,2 kg/m² ; sol 1re couche large 1,6 kg/m² puis medium 1,2 kg/m². 8 à 24 h entre couches, poncer les défauts > 3 mm. PU Finish mat en 2 couches (16 h mini entre les deux), utilisation après 48 h, douche après 7 jours."});
+  if(B.sys.startsWith("bio")) ck.push({ok:true,t:"Biocemento (béton ciré à la chaux) : kits prêts à teinter, imprégnateur bouche-pores puis vernis mat. Sur carrelage : Base Rénovation pour combler les joints, primaire pour supports non poreux. Respectez le mode d'emploi du kit."});
   ck.push({ok:true,t:"Application : 5 à 30 °C, pas en plein soleil ni courant d'air ; ponçage léger entre couches ; vernis après séchage complet (24 h). Circulation légère 48 h, pleine utilisation 7 jours."});
   return ck; }
 function bcPanel(w){ const room=w.room||"", B=bcCfg(room), rw=S.walls.filter(x=>(x.room||"")===room), A=bcAreas(room);
   return `<section class="box"><h2><span class="sw" style="background:${B.col}"></span>Béton ciré : ${esc(room)}</h2>
     <label class="chk"><input type="checkbox" data-bc="on" ${B.on?"checked":""}> Mettre du béton ciré dans cette pièce</label>
     ${B.on?`<p class="cap" style="margin:6px 0 2px">Surfaces :</p><div style="display:flex;flex-wrap:wrap;gap:4px 14px">${rw.map(x=>`<label class="chk"><input type="checkbox" data-bcw="${wid(x)}" ${B.walls.includes(wid(x))?"checked":""}> ${esc((x.name||"").split(" — ").pop())}</label>`).join("")}<label class="chk"><input type="checkbox" data-bc="sol" ${B.sol?"checked":""}> Sol</label></div>
+    <div class="row"><label class="f" style="flex-basis:100%">Marque / système<select data-bc="sys">${Object.entries(BC_SYS).map(([k,y])=>`<option value="${k}"${k===B.sys?" selected":""}>${esc(y.n)}</option>`).join("")}</select></label></div>
+    <label class="chk"><input type="checkbox" data-bc="carrel" ${B.carrel?"checked":""}> Posé sur du carrelage existant</label>
     <div class="row"><label class="f">Teinte<select data-bc="col">${BC_COLS.map(([n,c])=>`<option value="${c}"${c===B.col?" selected":""}>${n}</option>`).join("")}${BC_COLS.some(c=>c[1]===B.col)?"":`<option value="${B.col}" selected>Personnalisée</option>`}</select></label>
       <label class="f">Couleur libre<input type="color" data-bc="col" value="${B.col}" style="padding:2px;height:34px"></label>
       <label class="f">Finition<select data-bc="fin">${BC_FIN.map(([k,n])=>`<option value="${k}"${k===B.fin?" selected":""}>${n}</option>`).join("")}</select></label>
@@ -3731,7 +3761,7 @@ function bcPanel(w){ const room=w.room||"", B=bcCfg(room), rw=S.walls.filter(x=>
     <p class="hint">Quantités indicatives (consommations moyennes des fabricants) : vérifiez la fiche technique du produit choisi.</p>`:""}</section>`; }
 document.getElementById("side").addEventListener("change",e=>{ const el=e.target, w=S.walls[S.cur], B=bcCfg(w.room||"");
   if(el.dataset.bcw){ const id=el.dataset.bcw; B.walls=B.walls.filter(x=>x!==id); if(el.checked) B.walls.push(id); save(); renderAll(); return; }
-  const k=el.dataset.bc; if(!k) return; if(k==="on"||k==="sol"||k==="humide") B[k]=el.checked; else if(k==="couches") B[k]=+el.value; else B[k]=el.value;
+  const k=el.dataset.bc; if(!k) return; if(k==="on"||k==="sol"||k==="humide"||k==="carrel") B[k]=el.checked; else if(k==="couches") B[k]=+el.value; else B[k]=el.value;
   if(k==="on"&&el.checked&&!B.walls.length&&!B.sol) B.walls=S.walls.filter(x=>(x.room||"")===(w.room||"")).map(wid);
   save(); renderAll(); });
 { const pc=paintColor; paintColor=function(w){ return bcOnWall(w)?bcCfg(w.room||"").col:pc(w); }; }
