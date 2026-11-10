@@ -153,6 +153,7 @@ body[data-scr]:not([data-scr="home"]):not([data-scr="tout"]) #stepbar,body[data-
 #stepbar button{white-space:nowrap;padding:8px 10px}
 .scr-off{display:none!important}
 #jump.scr-off{display:none!important}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;border-radius:10px;border:1px solid var(--line);background:#fff;color:#1f1f1f;font-weight:600;margin-top:4px}
 .cloudbox{border:1px dashed #1d63c455;background:#1d63c40d;border-radius:10px;padding:8px 10px;margin:0 0 8px;display:flex;flex-direction:column;gap:4px}
 .cloudbox .row{margin-top:4px}.cloudbox button{padding:7px 10px;border-radius:8px}
 .libbox{margin:0 0 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px 12px}
@@ -3996,7 +3997,8 @@ function cloudBox(){ const c=clGet(), cfg=clCfg(), s=c.sess;
   if(!cfg.url||!cfg.key) return `<div id="cloudbox" class="cloudbox"><b>☁ Cloud</b><span class="cap">Bientôt : vos projets sur tous vos appareils.</span>
     <details><summary class="cap">Réglages du cloud (Supabase)</summary><div class="row"><label class="f">Project URL<input data-clc="url" placeholder="https://xxxx.supabase.co" value="${esc(c.url||"")}"></label><label class="f">Clé anon / publishable<input data-clc="key" value="${esc(c.key||"")}"></label></div></details></div>`;
   if(!s) return `<div id="cloudbox" class="cloudbox"><b>☁ Cloud : connectez-vous pour retrouver vos projets partout</b>
-    <div class="row"><label class="f">E-mail<input type="email" id="cl-mail" autocomplete="email" value="${esc(c.mail||"")}"></label><label class="f">Mot de passe<input type="password" id="cl-pw" autocomplete="current-password"></label></div>
+    ${APP&&APP.openUrl?`<button type="button" class="gbtn" data-cl="google"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.2 7-17.6z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg> Continuer avec Google</button><p class="cap" style="text-align:center;margin:2px 0">ou avec votre e-mail</p>`:""}<div class="row"><label class="f">E-mail<input type="email" id="cl-mail" autocomplete="email" value="${esc(c.mail||"")}"></label><label class="f">Mot de passe<input type="password" id="cl-pw" autocomplete="current-password"></label></div>
+    
     <div class="lib-b"><button type="button" class="pri" data-cl="login">Se connecter</button><button type="button" data-cl="signup">Créer un compte</button></div>${CL_MSG?`<p class="cap">${esc(CL_MSG)}</p>`:""}</div>`;
   return `<div id="cloudbox" class="cloudbox"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">☁ ${esc(s.email||"Connecté")}</b><button type="button" data-cl="sync" ${CL_BUSY?"disabled":""}>⟳ Synchroniser</button><button type="button" class="ghost" data-cl="out">Déconnexion</button></div>
     <p class="cap" style="margin:4px 0 0">${esc(CL_MSG||(c.last?"Dernière synchro : "+new Date(c.last).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"Touchez Synchroniser pour envoyer vos projets."))}</p></div>`; }
@@ -4009,8 +4011,17 @@ document.addEventListener("click",async e=>{ const b=e.target.closest("[data-cl]
       if(!j.access_token){ CL_MSG="Compte créé : ouvrez le lien reçu par e-mail, puis revenez vous connecter."; clRefreshBox(); return; }
       clSaveSess(j); CL_MSG=""; await clSync(); }
     catch(x){ CL_MSG=/Invalid login/i.test(x.message)?"E-mail ou mot de passe incorrect.":/Failed to fetch|NetworkError/i.test(x.message)?"Pas de connexion Internet.":x.message; clRefreshBox(); } return; }
+  if(a==="google"){ const {url}=clCfg(); CL_MSG="Connexion Google dans le navigateur… revenez ensuite dans l'appli."; clRefreshBox();
+    APP.openUrl(`${url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent("fr.maison.calepinage://login")}`); return; }
   if(a==="sync"){ clSync(); return; }
   if(a==="out"){ if(!confirm("Se déconnecter ? Vos projets restent sur cet appareil et dans le cloud.")) return; const c=clGet(); delete c.sess; clSet(c); CL_MSG=""; renderHome(); } });
+
+window.__oauthReturn=async function(u){ try{ const h=new URLSearchParams((u.split("#")[1]||u.split("?")[1]||""));
+  if(h.get("error")){ CL_MSG="Google : "+(h.get("error_description")||h.get("error")).replace(/\+/g," "); renderHome(); return; }
+  const at=h.get("access_token"), rt=h.get("refresh_token"); if(!at){ CL_MSG="Connexion Google interrompue."; renderHome(); return; }
+  const {url,key}=clCfg(); let email=""; try{ const r=await fetch(`${url}/auth/v1/user`,{headers:{apikey:key,Authorization:"Bearer "+at}}); const j=await r.json(); email=j.email||""; }catch(e){}
+  clSaveSess({access_token:at,refresh_token:rt,expires_in:+h.get("expires_in")||3600,user:{email}}); CL_MSG=""; goScreen("home"); await clSync(); }catch(e){ CL_MSG="Connexion Google : "+e.message; renderHome(); } };
+setTimeout(()=>{ try{ if(APP&&APP.takeAuth){ const u=APP.takeAuth(); if(u) window.__oauthReturn(u); } }catch(e){} },1200);
 function renderHome(){
   const h=document.getElementById("home"); if(!h) return;
   const note=isExample()&&(libGet()||{items:[1]}).items.length<2&&!S.nom?`<div class="homenote"><b>Vos murs ne sont pas encore dans cette appli.</b> ${APP?"L'appli Android garde ses projets à part : vos murs de cuisine sont restés dans l'ancienne version (le fichier ouvert dans Chrome).":"Chaque copie de l'appli (fichier hors ligne, appli Android, page en ligne) garde ses propres murs : ceux de votre cuisine sont dans la copie où vous les avez saisis."}<ol><li>Ouvrez l'ancien fichier dans Chrome et touchez « Copier le projet » (ou « Enregistrer le projet »).</li><li>Revenez ici : <b>Mon projet</b> → « Coller un projet » (ou « Ouvrir un projet » et choisissez le fichier .json).</li></ol><div class="btns" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${APP&&APP.recoverLegacy?`<button type="button" class="pri" data-legacy="1">Reprendre les projets de l'ancienne appli</button>`:""}<button type="button" class="${APP&&APP.recoverLegacy?"":"pri"}" data-go="proj">Récupérer mon projet</button><button type="button" data-go="murs">Commencer un nouveau projet</button></div></div>`:"";

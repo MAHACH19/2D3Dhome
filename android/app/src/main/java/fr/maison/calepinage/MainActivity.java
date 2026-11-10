@@ -40,6 +40,26 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         readLegacyOnce();
+        keepAuth(getIntent());
+    }
+
+    private String pendingAuth = "";
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (keepAuth(intent)) {
+            String u = pendingAuth;
+            getBridge().getWebView().evaluateJavascript("window.__oauthReturn&&window.__oauthReturn(" + org.json.JSONObject.quote(u) + ")", null);
+        }
+    }
+
+    /** Garde l'adresse de retour de la connexion Google pour la page. */
+    private boolean keepAuth(Intent i) {
+        Uri d = i == null ? null : i.getData();
+        if (d == null || !"fr.maison.calepinage".equals(d.getScheme())) return false;
+        pendingAuth = d.toString();
+        return true;
     }
 
     /** Plugin minimal : pose window.AndroidApp dans la WebView avant que la page se charge. */
@@ -140,6 +160,14 @@ public class MainActivity extends BridgeActivity {
         }
         @JavascriptInterface
         public boolean isApp() { return true; }
+        /** Ouvre une adresse dans le navigateur du téléphone (connexion Google). */
+        @JavascriptInterface
+        public void openUrl(String url) {
+            runOnUiThread(() -> { try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception e) { toast("Impossible d'ouvrir le navigateur"); } });
+        }
+        /** Retour de connexion arrivé avant le chargement de la page (vide sinon). */
+        @JavascriptInterface
+        public String takeAuth() { String u = pendingAuth; pendingAuth = ""; return u; }
         @JavascriptInterface
         public void recoverLegacy() { runOnUiThread(() -> readLegacy(true)); }
         @JavascriptInterface
