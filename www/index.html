@@ -705,9 +705,14 @@ function roomAdjust(wall){
   const d = prev && prev.angle!=="libre" ? -wT(prev)/Math.tan(angDeg(prev)*Math.PI/360) : 0;
   return {start, end, dL:d, dx:d, T};
 }
+/* isolant continu dans les angles rentrants : la fibre du mur suivant vient contre celle du mur courant, l'ossature et les plaques s'arrêtent sur l'isolant */
+const fibOn=w=>!!w&&(WCFG?WCFG.iso:S.iso.on)&&S.iso.pose==="mur"&&!w.noIso&&!w.dbl&&!w.noDbl;
+function fibCorner(wall){ const rw=roomWalls(wall), i=rw.indexOf(wall), n=rw.length, ep=S.iso.ep||0; if(!fibOn(wall)||n<2) return {pre:0,cut:0};
+  const prev=i>0?rw[i-1]:(rw[n-1].angle!=="libre"?rw[n-1]:null), next=(i<n-1||wall.angle!=="libre")?rw[(i+1)%n]:null;
+  return {pre:prev&&prev.angle==="rentrant"&&fibOn(prev)?Math.max(0,wT(prev)-ep):0, cut:next&&wall.angle==="rentrant"&&fibOn(next)?ep:0}; }
 function compute(wall){
-  const adj = roomAdjust(wall);
-  if(adj.dL) wall = {...wall, L:wall.L+adj.dL, openings:wall.openings.map(o=>({...o,x:o.x+adj.dx})), points:(wall.points||[]).map(p=>({...p,x:p.x+adj.dx}))};
+  const adj = roomAdjust(wall), FC=fibCorner(wall); adj.fib=FC;
+  if(adj.dL||FC.cut) wall = {...wall, L:wall.L+adj.dL-FC.cut, openings:wall.openings.map(o=>({...o,x:o.x+adj.dx})), points:(wall.points||[]).map(p=>({...p,x:p.x+adj.dx}))};
   const {oss,iso,mem}=S, L=wall.L, H=wall.H, e=oss.e, checks=[];
   const ko=(t,ref="")=>checks.push({ok:false,t,ref}), okk=(t,ref="")=>checks.push({ok:true,t,ref});
   const wp = wall.plaN && PLA.find(p=>p.n===wall.plaN);
@@ -776,6 +781,7 @@ function compute(wall){
   if(adj.start==="rentrant") okk(`Départ contre le doublage du mur précédent : doublage de ${cm(L)} cm pour un mur brut de ${cm(L-adj.dL)} cm.`);
   if(adj.start==="sortant") okk(`Départ sur un angle sortant : doublage prolongé de ${cm(adj.T)} cm pour couvrir l'about du mur précédent.`);
   if(adj.end==="rentrant") okk("Angle rentrant avec le mur suivant : montant d'angle ajouté et bande à joint dans l'angle.","DTU 25.41");
+  if(FC.pre||FC.cut) okk(`Isolant continu dans les angles : on pose d'abord la fibre de tous les murs${FC.pre?`, ici elle démarre ${cm(FC.pre)} cm avant l'ossature, contre la fibre du mur précédent`:""}${FC.cut?`${FC.pre?" ;":","} au bout, la fibre va jusqu'à la pierre et l'ossature s'arrête ${cm(FC.cut)} cm avant, contre la fibre du mur suivant`:""}. Ossature et plaques ensuite, sans couper l'isolant.`,"Pont thermique d'angle");
   if(adj.end==="sortant") okk("Angle sortant avec le mur suivant : montant d'angle et cornière de protection ajoutés.","DTU 25.41");
   const studBins = ffd(studPieces, Sm, 300);
   const railBins = ffd(rails.map(r=>r.len), oss.railLen||3000, 0);
@@ -788,8 +794,9 @@ function compute(wall){
   let chevQty=0, appuis=0; const chevs=[];
   if(iso.on && murMode){
     const W2=iso.W||600, Lg=iso.Lg||1200, A=W2*Lg; let col=0;
-    for(let x=0; x<L-1; x+=W2, col++){
-      const w=Math.min(W2,L-x); let y=0, first=true;
+    const xi0=-FC.pre, xi1=L+FC.cut;
+    for(let x=xi0; x<xi1-1; x+=W2, col++){
+      const w=Math.min(W2,xi1-x); let y=0, first=true;
       while(H-y>5){
         const h = (first && col%2===1) ? Math.min(Lg/2,H-y) : Math.min(Lg,H-y);
         const p={x,y,w,h};
@@ -837,7 +844,7 @@ function compute(wall){
     if(e===400 && iso.W>=560) ko(`Entraxe 40 cm : les panneaux de ${cm(iso.W)} cm sont recoupés à la largeur de l'entre-axe, avec une chute à chaque panneau.`);
   }
   const insBins = iso.on ? ffd(insPieces, iso.Lg) : [];
-  const insArea = murMode ? (L*H - ops.reduce((a,o)=>a+Math.max(0,Math.min(o.x1,L)-Math.max(o.x,0))*Math.max(0,o.y1-Math.max(o.y,0)),0))/1e6 : ins.reduce((a,p)=>a+p.w*p.h,0)/1e6;
+  const insArea = murMode ? ((L+FC.cut+FC.pre)*H - ops.reduce((a,o)=>a+Math.max(0,Math.min(o.x1,L)-Math.max(o.x,0))*Math.max(0,o.y1-Math.max(o.y,0)),0))/1e6 : ins.reduce((a,p)=>a+p.w*p.h,0)/1e6;
   const insPanels = Math.ceil(insBins.length*(1+(iso.perte||0)/100));
 
   // Plaques
@@ -1828,7 +1835,9 @@ function renderPlan(r){
     parts.push(`<rect data-pc="${i}" x="${hx0}" y="${Y(q.y+q.h)}" width="${hw}" height="${q.h}" fill="${sel?"#1d63c433":"transparent"}" ${sel?`stroke="#1d63c4" stroke-width="${fs*.14}"`:""} style="cursor:pointer" pointer-events="all"/>`);
   });
 
-  const vb=[-padL,-padT,L+padL+padR,H+padT+padB].join(" ");
+  const fP=(v==="iso"||v==="all")&&r.adj.fib?r.adj.fib:{pre:0,cut:0};
+  if(fP.pre||fP.cut) parts.push(`<text x="${L/2}" y="${-padT*0.3}" text-anchor="middle" font-size="${fs*.7}" style="fill:var(--muted)">fibre continue dans les angles : ${fP.pre?`${cm(fP.pre)} cm avant le doublage`:""}${fP.pre&&fP.cut?" · ":""}${fP.cut?`${cm(fP.cut)} cm après, jusqu'à la pierre`:""}</text>`);
+  const vb=[-padL-fP.pre,-padT,L+padL+padR+fP.pre+fP.cut,H+padT+padB].join(" ");
   document.getElementById("plan").innerHTML=`<svg viewBox="${vb}" role="img" aria-label="Calepinage du mur ${esc(S.walls[S.cur].name)}">${parts.join("")}</svg>`;
 
   const lg={
