@@ -2544,6 +2544,8 @@ function kitPanel(w){
       <label class="f">Façades<select data-kit="facade">${opt(FACADES.map(f=>f.n),K.facade)}</select></label>
       <label class="f">Plan de travail<select data-kit="plan">${opt(PLANS.map(f=>f.n),K.plan)}</select></label>
     </div>
+    <div class="row"><label class="f">Poignées<select data-kit="pg">${HANDLES.map(([k,n])=>`<option value="${k}"${(K.pg||"barre")===k?" selected":""}>${n}</option>`).join("")}</select></label>
+      <label class="f">Finition des poignées<select data-kit="pf">${HFIN.map(([k,n])=>`<option value="${k}"${(K.pf||"inox")===k?" selected":""}>${n}</option>`).join("")}</select></label></div>
     <div class="row"><label class="f">Haut des meubles muraux (cm)<input type="number" min="150" step="1" data-kit="top" data-cmv value="${K.top/10}"></label></div>
     ${K.items.map((it,i)=>`<div class="kitrow" style="border-top:1px solid var(--line,#ddd);padding-top:8px;margin-top:8px">
       <label class="f">Meuble ${i+1}${prodSel(i,it.k)}</label>
@@ -3241,9 +3243,9 @@ function buildScene(){
             if(hor){ const sh=380; add(v3Box(s,a,bb,d1+sh,d1+sh+19,c,d,pm)); const tm=v3Mat("#eceae4"); add(v3Box(s,a+25,bb-25,d1-120+sh,d1+sh,c+15,c+27,tm)); add(v3Box(s,a+25,a+37,d1-120+sh,d1+sh,c+15,c+(d-c)*0.7,tm)); add(v3Box(s,bb-37,bb-25,d1-120+sh,d1+sh,c+15,c+(d-c)*0.7,tm)); add(v3Box(s,(a+bb)/2-80,(a+bb)/2+80,d1+sh+19,d1+sh+40,d-60,d-45,M.steel)); return; }
             const right=kk.f==="2p"&&p[0]>x0+10||kk.f==="us"&&p[0]>(x0+x1)/2-5; if(right) add(v3Box(s,bb-19,bb,d1,d1+(bb-a),c,d,pm)); else add(v3Box(s,a,a+19,d1,d1+(bb-a),c,d,pm)); return; } add(v3Box(s,p[0]+1.5,p[1]-1.5,d1,d1+19,p[2]+1.5,p[3]-1.5,pm));
           if(p[4]==="four") add(v3Box(s,p[0]+60,p[1]-60,d1+19,d1+21,p[2]+80,p[3]-120,v3Mat("#3d4248",{roughness:.2})));
-          if(kk.t!=="app"||kk.f==="frigo"||kk.f==="us"){ const hor=(p[3]-p[2])<500||p[4]; const hm=M.steel;
-            if(hor) add(v3Box(s,(p[0]+p[1])/2-80,(p[0]+p[1])/2+80,d1+19,d1+40,p[3]-60,p[3]-45,hm));
-            else { const hx=kk.f==="2p"&&p[0]>x0+10?p[0]+40:p[1]-40, hz=kk.t==="haut"?p[2]+60:p[3]-200; add(v3Box(s,hx-8,hx+8,d1+19,d1+40,hz,hz+160,hm)); } } });
+          if(kk.t!=="app"||kk.f==="frigo"||kk.f==="us"){ const hor=(p[3]-p[2])<500||p[4], HD=handleOf(it,room), hm=handleMat(HD.f);
+            const c=hor?[(p[0]+p[1])/2,p[3]-52]:[kk.f==="2p"&&p[0]>x0+10?p[0]+40:p[1]-40, kk.t==="haut"?p[2]+140:p[3]-120];
+            handleBoxes(HD.m,[p[0],p[1],p[2],p[3]],c,hor,kk.t==="haut").forEach(q=>add(v3Box(s,q[0],q[1],d1+19+q[4],d1+19+q[5],q[2],q[3],hm))); } });
         if(kk.f==="ouvert"||kk.f==="etag"){ const ns=Math.max(1,Math.round((b.z1-fz0)/350)); for(let q=1;q<ns;q++){ const z=fz0+(b.z1-fz0)*q/ns; add(v3Box(s,x0+19,x1-19,d0,d1,z,z+19,carc)); } }
         if(kk.f==="hotte") add(v3Box(s,x0,x1,d0,d1+30,b.z0-40,b.z0,M.steel));
       });
@@ -3312,13 +3314,13 @@ function buildScene(){
         bx(e,H-soc,D,-W/2+e/2,soc+(H-soc)/2,0); bx(e,H-soc,D,W/2-e/2,soc+(H-soc)/2,0); bx(W-2*e,e,D,0,H-e/2,0); bx(W-2*e,e,D,0,soc+e/2,0); bx(W-0.004,H-soc-0.004,0.003,0,soc+(H-soc)/2,-D/2+0.0015,v3Mat(shade(col,0.85)));
         if(soc) bx(W-2*e,soc,e,0,soc/2,D/2-0.04,v3Mat(shade(col,0.7)));
         for(let q=1;q<=(m.etag||0);q++){ const y=soc+e+(H-soc-2*e)*q/((m.etag||0)+1); bx(W-2*e,e,D-0.025,0,y,-0.0125); }
-        const np=m.portes||0, nt=m.tiroirs||0, hT=nt?Math.min(H-soc-2*e,nt*0.18):0, hm=m.poignee==="noir"?v3Mat("#1f1f1f"):M.steel;
+        const np=m.portes||0, nt=m.tiroirs||0, hT=nt?Math.min(H-soc-2*e,nt*0.18):0, HD=handleOf(m), hm=handleMat(HD.f), hb=(par,F,c,hor,z0)=>handleBoxes(HD.m,F,c,hor,false).forEach(q=>{ const w=(q[1]-q[0])/1000,h=(q[3]-q[2])/1000,d=(q[5]-q[4])/1000; if(par) bxp(par,w,h,d,(q[0]+q[1])/2000,(q[2]+q[3])/2000,z0+(q[4]+q[5])/2000,hm); else bx(w,h,d,(q[0]+q[1])/2000,(q[2]+q[3])/2000,z0+(q[4]+q[5])/2000,hm); });
         const op=!!m.open, bxp=(par,w0,h0,d0,x,y,z,mat)=>{ const b=new T3.Mesh(new T3.BoxGeometry(w0,h0,d0),mat||cm3); b.position.set(x,y,z); b.userData=tg; par.add(b); pick.push(b); };
-        for(let q=0;q<nt;q++){ const hh=hT/nt, y=soc+hh*(q+0.5), sh=op?D*0.6:0; bx(W-0.006,hh-0.003,e,0,y,D/2+e/2+sh); bx(0.16,0.015,0.02,0,y+hh*0.25,D/2+e+0.01+sh,hm);
+        for(let q=0;q<nt;q++){ const hh=hT/nt, y=soc+hh*(q+0.5), sh=op?D*0.6:0; bx(W-0.006,hh-0.003,e,0,y,D/2+e/2+sh); hb(null,[-W*500,W*500,(y-hh/2)*1000,(y+hh/2)*1000],[0,(y+hh*0.25)*1000],true,D/2+e+sh);
           if(op){ const tm=v3Mat(shade(col,0.92)); bx(W-2*e-0.03,0.012,D*0.85,0,y-hh/2+0.03,D/2-D*0.425+sh,tm); [-1,1].forEach(sd=>bx(0.012,hh*0.6,D*0.85,sd*(W/2-e-0.02),y-hh*0.15,D/2-D*0.425+sh,tm)); bx(W-2*e-0.03,hh*0.6,0.012,0,y-hh*0.15,D/2-D*0.85+sh,tm); } }
         for(let q=0;q<np;q++){ const pw=(W-0.003*(np+1))/np, x=-W/2+0.003+pw/2+q*(pw+0.003), ph=H-soc-hT-0.006, y=soc+hT+ph/2+0.003, hl=np>1?q%2===0:true, hxp=hl?x-pw/2:x+pw/2;
           const pv=new T3.Group(); pv.position.set(hxp,0,D/2); pv.rotation.y=op?(hl?-1:1)*1.75:0; grp.add(pv);
-          bxp(pv,pw,ph,e,x-hxp,y,e/2); const hx=hl?pw/2-0.05:-pw/2+0.05; bxp(pv,0.015,0.14,0.02,x+hx-hxp,y+ph*0.2,e+0.01,hm); }
+          bxp(pv,pw,ph,e,x-hxp,y,e/2); const hx=hl?pw/2-0.05:-pw/2+0.05; hb(pv,[(x-hxp-pw/2)*1000,(x-hxp+pw/2)*1000,(y-ph/2)*1000,(y+ph/2)*1000],[(x+hx-hxp)*1000,(y+ph*0.2)*1000],false,e); }
         const [px,py]=X.p(m.x,m.y); grp.position.set(px/1000,0,-py/1000); grp.rotation.y=-((m.rot||0)+(V.all?roomLayout(room).rot:0))*Math.PI/180; scene.add(grp); });
     }
     const NN=V.res?v3Net(scene,pick,room,g,X,wallSets):netRoom(room,g,X); if(V.ceil||V.res) v3Traps(scene,pick,room,NN.traps,g.H);
@@ -3492,11 +3494,13 @@ function v3PopHtml(){ const s=V3.sel, paints=[...DIVERS.filter(d=>/laque|Finish|
     <label class="f" style="margin-top:6px">Couleur<input type="color" data-popk="col" value="${col}" style="height:34px;padding:2px"></label>${sw(col)}
     <label class="f">Peinture (je peins moi-même)<select data-popk="peint"><option value="">${isK?"Façade IKEA d'origine":"Pas encore choisie"}</option>${paints.map(n=>`<option${n===it.peint?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
     <div class="btns" style="margin-top:6px"><button type="button" data-pop="open">${it.open?"Fermer":"Ouvrir"}</button>${isK?"":`<button type="button" data-pop="rot">Tourner 90°</button>`}<button type="button" data-pop="del" class="ghost">Supprimer</button></div>
+    ${(()=>{ const HD=handleOf(it,isK?s.room:undefined); return handleSw(HD.m,HD.f,isK?(S.v3.pgOne?"ce meuble seulement":"toute la cuisine"):"")+(isK?`<label class="chk" style="margin-top:4px"><input type="checkbox" data-popk="pgone" ${S.v3.pgOne?"checked":""}> Changer seulement ce meuble</label>`:""); })()}
     ${v3MovePad()}<p class="hint">Vous pouvez aussi faire glisser le meuble sélectionné${isK?" : il suit le mur le plus proche, vous pouvez le changer de mur":""}.</p>`; }
 const DOORS=[["pleine","Pleine lisse"],["panneaux","4 panneaux (moulurée)"],["rainuree","Rainurée"],["vitree","Vitrée"],["coulissante","Coulissante en applique"],["galandage","Galandage (dans la cloison)"]];
 function v3PopInput(e){ const el=e.target, k=el.dataset&&el.dataset.popk; if(!k) return; const s=V3.sel; if(!s) return;
   if(s.kind==="wall"){ const w=S.walls[s.i]; if(k==="wpeint") w.peintN=el.value; if(k==="wcol") w.teinte=el.value; }
   else if(s.kind==="door"){ const o=S.walls[s.i].openings[s.op]; if(k==="dstyle") o.style=el.value; if(k==="dcol") o.color=el.value; if(k==="dopen") o.open=+el.value; }
+  else if(k==="pgone"){ S.v3.pgOne=el.checked; save(); const pop=document.getElementById("v3pop"); pop.innerHTML=v3PopHtml(); return; }
   else if(k==="mvx"||k==="mvy"){ const it=s.kind==="lum"?lumList(s.room)[s.idx]:meubles(s.room)[s.idx]; if(it&&el.value!==""){ it[k==="mvx"?"x":"y"]=Math.round(+el.value*10); if(e.type!=="change"){ save(); v3Rebuild(); return; } } }
   else { const it=s.kind==="kit"?kitCfg(s.room).items[s.idx]:meubles(s.room)[s.idx]; if(k==="col") it.c=el.value; if(k==="peint") it.peint=el.value; }
   save(); v3Rebuild(); if(e.type==="change"){ renderSide(); const pop=document.getElementById("v3pop"); pop.innerHTML=v3PopHtml(); } }
@@ -3507,6 +3511,8 @@ function v3PopBtn(k){ const s=V3.sel; if(!s) return;
   if(k.startsWith("sw:")){ const c=k.slice(3); if(s.kind==="wall") S.walls[s.i].teinte=c; else if(s.kind==="door") S.walls[s.i].openings[s.op].color=c; else (s.kind==="kit"?kitCfg(s.room).items[s.idx]:meubles(s.room)[s.idx]).c=c; }
   if(k==="wreset") delete S.walls[s.i].teinte;
   if(k.startsWith("step:")) S.v3.step=+k.slice(5);
+  if(k.startsWith("pg:")||k.startsWith("pf:")){ const f=k.slice(0,2), v=k.slice(3), it=s.kind==="kit"?kitCfg(s.room).items[s.idx]:s.kind==="meub"?meubles(s.room)[s.idx]:null;
+    if(s.kind==="kit"&&!S.v3.pgOne){ const K=kitCfg(s.room); K[f]=v; K.items.forEach(q=>{ delete q[f]; if(f==="pf") delete q.poignee; }); } else if(it){ it[f]=v; if(f==="pf") delete it.poignee; } }
   if(k.startsWith("mv:")) v3MoveStep(k.slice(3));
   if(k==="lumdel"){ lumList(s.room).splice(s.idx,1); V3.sel=null; }
   if(k.startsWith("lus:")){ const L=lumList(s.room)[s.idx], id=k.slice(4); if(id) L.m=id; else delete L.m; }
@@ -3620,6 +3626,17 @@ function thumbOf(kind,o){ const key=kind+":"+o.id+":"+(o.c||o.col||""); if(THUMB
     sc.traverse(x=>{ if(x.geometry) x.geometry.dispose(); }); THUMBS[key]=url; return url; }catch(e){ return ""; } }
 function fillThumbs(root){ const L=[...root.querySelectorAll("img[data-th]")]; let i=0; const step=()=>{ const t=performance.now(); while(i<L.length&&performance.now()-t<30){ const im=L[i++], [k,id]=im.dataset.th.split(":"), o=k==="mob"?MOB.find(q=>q.id===id):LUSTRES.find(q=>q.id===id); if(o) im.src=thumbOf(k,o); } if(i<L.length) requestAnimationFrame(step); }; requestAnimationFrame(step); }
 function altGrid(list,kind,curId,act){ return `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:6px 0">${list.map(o=>`<button type="button" data-pop="${act}:${o.id}" style="display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:4px;text-align:left;border-radius:8px;${o.id===curId?"border:2px solid #1d63c4;":""}"><img data-th="${kind}:${o.id}" alt="" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:5px;background:#eef0f2"><span style="font-size:12px;line-height:1.2;font-weight:600">${esc(o.n)}</span><span class="cap" style="font-size:11px">${kind==="mob"?`${cm(o.w)} × ${cm(o.d)} × ${cm(o.h)} cm`:o.sh==="lin"?`${cm(o.d)} cm de long`:`Ø ${cm(o.d)} cm${o.n2>1?` · ${o.n2} têtes`:""}`}</span></button>`).join("")}</div>`; }
+const HANDLES=[["barre","Barre 16 cm"],["longue","Barre longue 32 cm"],["bouton","Bouton rond"],["coquille","Coquille"],["profil","Profilé sur le chant"],["sans","Sans poignée (push)"]];
+const HFIN=[["inox","Inox brossé","#c9ced3",.7,.3],["noir","Noir mat","#1f1f1f",.3,.55],["laiton","Laiton brossé","#b8935a",.8,.35],["cuivre","Cuivre","#b87333",.8,.35],["blanc","Blanc","#f2f2f0",.1,.5],["chene","Chêne","#b98d5c",0,.7]];
+const HMATS={}; function handleMat(f){ const h=HFIN.find(q=>q[0]===f)||HFIN[0]; return HMATS[h[0]]||(HMATS[h[0]]=v3Mat(h[2],{metalness:h[3],roughness:h[4]})); }
+function handleOf(it,room){ const K=room!==undefined&&S.kit&&S.kit[room]||{}; return {m:it&&it.pg||K.pg||"barre", f:it&&(it.pf||it.poignee)||K.pf||"inox"}; }
+/* boîtes d'une poignée, repère de la face (mm) : u horizontal, v vertical, w sortant de la face ; F=[u0,u1,v0,v1] face, c=[cu,cv] position par défaut, hor, low (meuble haut : profil en bas) */
+function handleBoxes(m,F,c,hor,low){ const [cu,cv]=c, B=[], seg=(L)=>{ const a=L/2; if(hor){ B.push([cu-a,cu+a,cv-6,cv+6,22,32],[cu-a+4,cu-a+12,cv-5,cv+5,0,22],[cu+a-12,cu+a-4,cv-5,cv+5,0,22]); } else { B.push([cu-6,cu+6,cv-a,cv+a,22,32],[cu-5,cu+5,cv-a+4,cv-a+12,0,22],[cu-5,cu+5,cv+a-12,cv+a-4,0,22]); } };
+  if(m==="sans") return B; if(m==="barre") seg(160); else if(m==="longue") seg(Math.min(320,(hor?F[1]-F[0]:F[3]-F[2])-60)); else if(m==="bouton") B.push([cu-15,cu+15,cv-15,cv+15,10,30],[cu-6,cu+6,cv-6,cv+6,0,10]);
+  else if(m==="coquille") B.push(hor?[cu-55,cu+55,cv-16,cv+16,0,6]:[cu-16,cu+16,cv-55,cv+55,0,6], hor?[cu-55,cu+55,cv+10,cv+16,0,22]:[cu+10,cu+16,cv-55,cv+55,0,22]);
+  else if(m==="profil"){ const v=low?F[2]:F[3]-18; B.push([F[0]+15,F[1]-15,v,v+18,0,24]); } return B; }
+function handleSw(cur,curF,inh){ return `<div style="margin-top:8px"><b>Poignées</b>${inh?` <span class="cap">${inh}</span>`:""}<div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0">${HANDLES.map(([k,n])=>`<button type="button" data-pop="pg:${k}" class="${k===cur?"pri":"ghost"}" style="padding:3px 8px">${n}</button>`).join("")}</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${HFIN.map(([k,n,c])=>`<button type="button" data-pop="pf:${k}" title="${n}" aria-label="${n}" style="width:26px;height:26px;padding:0;border-radius:50%;background:${c};border:2px solid ${k===curF?"#1d63c4":"#0003"}"></button>`).join("")}<span class="cap">${(HFIN.find(q=>q[0]===curF)||HFIN[0])[1]}</span></div></div>`; }
 function mobDraw(T3,grp,m,mat,tg,pick){ const W=m.w/1000,D=m.d/1000,H=m.h/1000, c=m.c||"#bdbcb8", t=m.cat;
   const fab=v3Mat(c,{roughness:t==="tv"?.3:.95}), dk=v3Mat(shade(c,.8),{roughness:.9}), wood=v3Mat("#3b2d22",{roughness:.6}), lg=v3Mat("#2b2b2b",{roughness:.5,metalness:.3});
   const bx=(w0,h0,d0,x,y,z,mt)=>{ const b=new T3.Mesh(new T3.BoxGeometry(Math.max(.005,w0),Math.max(.005,h0),Math.max(.005,d0)),mt||fab); b.position.set(x,y,z); b.userData=tg; grp.add(b); pick.push(b); return b; };
