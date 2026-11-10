@@ -1001,6 +1001,7 @@ function renderSide(){ renderQuick();
   ${lumPanel(w)}
   ${meubPanel(w)}
   ${creaPanel(w)}
+  ${bcPanel(w)}
 
   <section class="box">
     <h2>Ouvertures</h2>
@@ -2921,6 +2922,7 @@ function buildScene(){
       const P=g.poly, sh=new T3.Shape(P.map(p=>new T3.Vector2(p[0]/1000,p[1]/1000))), geo=new T3.ShapeGeometry(sh); geo.rotateX(-Math.PI/2);
       let mat=v3Mat("#b9b3a8"); if(F.on){ const sp=floorSpec(F), ft=floorTexture(room,g,sp); mat=v3Mat("#ffffff",{map:ft.t,roughness:sp.fam==="carrelage"?.35:.7});
         const uv=geo.attributes.uv; for(let i=0;i<uv.count;i++){ uv.setXY(i,(uv.getX(i)*1000-ft.X0)/ft.Wd,(uv.getY(i)*1000-ft.Y0)/ft.Hd); } uv.needsUpdate=true; }
+      { const B=(S.bc||{})[room]; if(B&&B.on&&B.sol){ const cv=document.createElement("canvas"); cv.width=cv.height=256; const cx=cv.getContext("2d"); cx.fillStyle=B.col; cx.fillRect(0,0,256,256); let sd=7; const rr=()=>{ sd=(sd*9301+49297)%233280; return sd/233280; }; for(let i=0;i<260;i++){ cx.globalAlpha=0.05+rr()*0.07; cx.fillStyle=rr()<.5?"#ffffff":"#000000"; cx.beginPath(); cx.ellipse(rr()*256,rr()*256,8+rr()*40,5+rr()*22,rr()*3,0,7); cx.fill(); } const tx=new T3.CanvasTexture(cv); tx.wrapS=tx.wrapT=T3.RepeatWrapping; tx.repeat.set(1,1); mat=v3Mat("#ffffff",{map:tx,roughness:B.fin==="brillant"?.15:B.fin==="satin"?.35:.75}); } }
       const fl=new T3.Mesh(geo,mat); fl.userData={kind:"floor",room}; scene.add(fl); pick.push(fl);
       if(V.ceil){ const cg=new T3.ShapeGeometry(sh); cg.rotateX(-Math.PI/2); cg.translate(0,g.H/1000,0); const cm2=new T3.Mesh(cg,v3Mat("#fbfbf9",{transparent:V.mode!=="visite"||V.res,opacity:V.res?0.14:V.mode!=="visite"?0.25:1,depthWrite:!V.res})); scene.add(cm2); }
       // luminaires / VMC (coordonnées locales à la pièce)
@@ -2934,7 +2936,7 @@ function buildScene(){
         if(t==="vmc"||t==="vmcins"){ mk(new T3.CylinderGeometry(0.075,0.075,0.02,24),M.white,0.01); mk(new T3.TorusGeometry(0.05,0.006,6,24).rotateX(Math.PI/2),v3Mat("#c9c9c9"),0.022); }
         if((t==="spot"||t==="plaf"||t==="susp"||t==="regl") && lights.length<8){ const pl=new T3.PointLight("#ffe7b8",V.nuit?(t==="spot"?0.55:0.9):0.18,6,1.6); pl.position.copy(pos); pl.position.y-=t==="susp"?1.0:0.15; scene.add(pl); lights.push(pl); } });
       // créations en placo
-      creas(room).forEach(c=>{ const sg=g.segs.find(q=>wid(q.w)===c.wall)||g.segs[0]; if(!sg) return; const ww=sg.w, dxs=compute(ww).adj.dx||0, T0=g.T, hh=ww.H, pm=v3Mat("#efebe3",{roughness:.8}), P=c, x=(P.x||0)-dxs;
+      creas(room).forEach(c=>{ const sg=g.segs.find(q=>wid(q.w)===c.wall)||g.segs[0]; if(!sg) return; const ww=sg.w, sp=creaSpan(ww), T0=g.T, hh=Math.min(ww.H,g.H), pm=v3Mat("#efebe3",{roughness:.8}), P={...c}, x=sp.a+Math.max(0,Math.min(P.x||0,sp.len-20)); { const k=c.t==="coffv"?"l":c.t==="niche"?"w":"L"; P[k]=Math.max(20,Math.min(P[k],sp.a+sp.len-x)); }
         const add=m=>{ if(m){ scene.add(m); } };
         if(c.t==="coffh") add(v3Box(sg,x,x+P.L,T0,T0+P.l,hh-P.h,hh,pm));
         if(c.t==="coffv") add(v3Box(sg,x,x+P.l,T0,T0+P.pf,0,hh,pm));
@@ -3176,8 +3178,8 @@ function renderOut(){
 
   // Métré
   const src = S.scope==="wall" ? [materials(r)] : (S.scope==="room" ? roomWalls(w) : S.walls).map(x=>materials(compute(x)));
-  if(S.scope==="room"){ src.push(ceilMaterials(w.room||"")); src.push(kitMaterials(w.room||"")); src.push(floorMaterials(w.room||"")); src.push(wallTileMaterials(roomWalls(w))); src.push(lumMaterials(w.room||"")); src.push(netMaterials(w.room||"")); src.push(meubMaterials(w.room||"")); src.push(creaMaterials(w.room||"")); }
-  else if(S.scope==="all") roomNames().forEach(n=>{ src.push(ceilMaterials(n)); src.push(kitMaterials(n)); src.push(floorMaterials(n)); src.push(wallTileMaterials(S.walls.filter(x=>(x.room||"")===n))); src.push(lumMaterials(n)); src.push(netMaterials(n)); src.push(meubMaterials(n)); src.push(creaMaterials(n)); });
+  if(S.scope==="room"){ src.push(ceilMaterials(w.room||"")); src.push(kitMaterials(w.room||"")); src.push(floorMaterials(w.room||"")); src.push(wallTileMaterials(roomWalls(w))); src.push(lumMaterials(w.room||"")); src.push(netMaterials(w.room||"")); src.push(meubMaterials(w.room||"")); src.push(bcMaterials(w.room||"")); src.push(creaMaterials(w.room||"")); }
+  else if(S.scope==="all") roomNames().forEach(n=>{ src.push(ceilMaterials(n)); src.push(kitMaterials(n)); src.push(floorMaterials(n)); src.push(wallTileMaterials(S.walls.filter(x=>(x.room||"")===n))); src.push(lumMaterials(n)); src.push(netMaterials(n)); src.push(meubMaterials(n)); src.push(bcMaterials(n)); src.push(creaMaterials(n)); });
   else src.push(wallTileMaterials([w]));
   const map=new Map();
   src.forEach(list=>list.forEach(m=>{
@@ -3195,7 +3197,7 @@ function renderOut(){
     const L=Math.ceil(m.raw*10)/10, Lb=S.scope==="wall"?Math.max(L,Math.ceil((roomL.get(m.des)||L)*10)/10):L, share=Lb?L/Lb:1;
     const best=potCombo(m.des,Lb), tag=S.scope==="wall"&&Lb>L+0.05?`achat groupé pour toute la pièce ${w.room||""} : ${fr(Lb,1)} L, ce mur en utilise ${fr(L,1)} L (${Math.round(share*100)} %)`:`${fr(L,1)} L nécessaires`;
     return best.n.map((n,i)=>({cat:m.cat,des:`${m.des} · pot ${fr(best.v[i],best.v[i]%1?2:0)} L`,det:!n?"non retenu : entrez son prix pour comparer":(m.det?m.det+" · ":"")+tag+` · ${best.n.map((k,j)=>k?k+" × "+fr(best.v[j],best.v[j]%1?2:0)+" L":"").filter(Boolean).join(" + ")} = ${fr(best.tot,1)} L`+(best.est?" (choix estimé : saisissez le prix de chaque pot pour l'optimiser)":""),q:n,u:"pot(s)",share,potL:best.v[i]})); });
-  const ORD=["Ossature","Isolant","Membrane","Plaques","Électricité","Plomberie","Finition","Peinture","Plafond","VMC","Sol","Créations placo","Cuisine IKEA","Mes meubles","Divers"];
+  const ORD=["Ossature","Isolant","Membrane","Plaques","Électricité","Plomberie","Finition","Peinture","Plafond","VMC","Sol","Béton ciré","Créations placo","Cuisine IKEA","Mes meubles","Divers"];
   rows.sort((a,b)=>ORD.indexOf(a.cat)-ORD.indexOf(b.cat));
   rows.forEach(m=>{ if(m.pack){ const n=Math.ceil(m.q/m.pack); m.det=(m.det?m.det+" · ":"")+`soit ${n} ${m.packName}`; } });
   let total=0;
@@ -3614,11 +3616,15 @@ const CREA={
   etag:{n:"Bibliothèque / étagères en placo",p:[["L","Longueur",1200],["h","Hauteur",2000],["pf","Profondeur",300],["n","Nombre d'étagères",4],["x","Depuis la gauche",0],["y","Hauteur du bas",0]]}
 };
 function creas(room){ if(!S.crea) S.crea={}; if(!S.crea[room]) S.crea[room]=[]; return S.crea[room]; }
+function creaSpan(w){ const g=roomGeom(w.room||""), k=g.segs.findIndex(q=>q.w===w); if(k<0) return {a:0,len:w.L};
+  const s=g.segs[k], e=g.inner[k], pr=p=>(p[0]-s.x0)*s.dx+(p[1]-s.y0)*s.dy, a=pr(e.a), b=pr(e.b); return {a, len:Math.max(0,b-a)}; }
+function creaFit(c,room){ const w=creaWall(c,room); if(!w) return c; const sp=creaSpan(w), k=c.t==="coffv"?"l":c.t==="niche"?"w":"L", x=Math.max(0,Math.min(c.x||0,sp.len-20)); return {...c,x,[k]:Math.max(20,Math.min(c[k],Math.round(sp.len-x)))}; }
+function creaLen(c){ return c.t==="coffv"?c.l:c.t==="niche"?c.w:c.L; }
 function creaWall(c,room){ const rw=S.walls.filter(w=>(w.room||"")===room); return rw.find(w=>wid(w)===c.wall)||rw[0]; }
 function creaCalc(c,room){
   const w=creaWall(c,room)||{H:2500}, H=w.H||2500, F=[], R=[], Mo=[], e=600; let ang=0;
   const face=(n,a,b,q=1)=>{ if(a>5&&b>5) F.push({n,w:Math.round(a),h:Math.round(b),q}); };
-  const nb=L=>Math.ceil(L/e)+1, P=c;
+  const nb=L=>Math.ceil(L/e)+1, P=creaFit(c,room);
   if(c.t==="coffh"){ face("Dessous",P.L,P.l); face("Face avant",P.L,P.h); if(P.joues>0) face("Joue",P.l,P.h,Math.min(2,P.joues));
     R.push({n:"Rail fixé au mur",len:P.L,q:1},{n:"Rail fixé au plafond",len:P.L,q:1},{n:"Rail d'angle bas avant",len:P.L,q:1});
     Mo.push({n:"Montant vertical de face",len:P.h-12,q:nb(P.L)},{n:"Traverse sous le coffrage",len:P.l-12,q:nb(P.L)}); ang=P.L+(P.joues||0)*(P.l+P.h); }
@@ -3649,20 +3655,21 @@ function creaMaterials(room){ const C=creas(room); if(!C.length) return []; cons
   add("Cornière d'angle / bande armée",`angles sortants : ${fr(an/1000,1)} m`,Math.ceil(an/1000),"m"); add("Vis TTPC 25 (plaques)","≈ 30 par m²",v,"u"); add("Vis TRPF 13 (rail-montant)","4 par montant",vm,"u");
   add("Bande à joint papier","joints et angles",Math.ceil(an/1000+ar*1.2),"m"); return rows; }
 function creaSvg(c,room){ const k=creaCalc(c,room), w=creaWall(c,room)||{L:3000,H:2500};
-  // vue de face du mur avec la création, cotée
-  const L=w.L, H=w.H, sc=Math.min(300/L,150/H), ox=26, oy=10, X=x=>ox+x*sc, Y=y=>oy+(H-y)*sc;
+  // vue de face du mur fini (entre les angles, devant les plaques) avec la création, cotée
+  const L=w.room!==undefined?Math.round(creaSpan(w).len):w.L, H=w.H, sc=Math.min(300/L,150/H), ox=26, oy=10, X=x=>ox+x*sc, Y=y=>oy+(H-y)*sc;
   let g=`<rect x="${X(0)}" y="${Y(H)}" width="${L*sc}" height="${H*sc}" fill="var(--wall)" stroke="var(--ink)" stroke-width="1"/>`;
   const box=(x,y,a,b,fill)=>{ g+=`<rect x="${X(x)}" y="${Y(y+b)}" width="${a*sc}" height="${b*sc}" fill="${fill}" stroke="#1d63c4" stroke-width="1.5"/>`; };
   const dim=(x,y,a,b)=>{ g+=`<text x="${X(x+a/2)}" y="${Y(y)+12}" text-anchor="middle" font-size="10" fill="#1d63c4">${cm(a)}</text><text x="${X(x+a)+3}" y="${Y(y+b/2)+3}" font-size="10" fill="#1d63c4">${cm(b)}</text>`; };
-  const P=c, x=P.x||0;
+  const P=creaFit(c,room), x=P.x||0;
   if(c.t==="coffh"){ box(x,H-P.h,P.L,P.h,"#ece8df"); dim(x,H-P.h,P.L,P.h); }
   if(c.t==="coffv"){ box(x,0,P.l,H,"#ece8df"); dim(x,0,P.l,H); }
   if(c.t==="niche"){ box(x,P.y,P.w,P.h,"#cfc8ba"); dim(x,P.y,P.w,P.h); g+=`<text x="${X(x)}" y="${Y(P.y)+24}" font-size="10" fill="var(--muted)">bas à ${cm(P.y)} cm</text>`; }
   if(c.t==="banq"){ box(x,0,P.L,P.h,"#ece8df"); dim(x,0,P.L,P.h); }
   if(c.t==="muret"){ box(x,0,P.L,P.h,"#ece8df"); dim(x,0,P.L,P.h); }
   if(c.t==="etag"){ box(x,P.y||0,P.L,P.h,"none"); const n=Math.max(1,P.n||1); for(let i=0;i<=n;i++){ const yy=(P.y||0)+P.h*i/n; g+=`<line x1="${X(x)}" x2="${X(x+P.L)}" y1="${Y(yy)}" y2="${Y(yy)}" stroke="#1d63c4" stroke-width="3"/>`; } dim(x,P.y||0,P.L,P.h); }
-  g+=`<text x="${X(x)}" y="${Y(H)-2}" font-size="10" fill="var(--muted)">à ${cm(x)} cm de la gauche de ${esc((w.name||"").split(" — ").pop())}</text>`;
-  return `<svg viewBox="0 0 ${ox+L*sc+40} ${oy+H*sc+30}" style="width:100%;max-width:380px;height:auto">${g}</svg>`; }
+  g+=`<text x="${X(x)}" y="${Y(H)-2}" font-size="10" fill="var(--muted)">à ${cm(x)} cm de l'angle gauche · mur fini ${cm(L)} cm</text>`;
+  const over=(c.x||0)+creaLen(c)-L; if(over>1) g+=`<text x="${X(0)}" y="${Y(0)+24}" font-size="10" font-weight="700" fill="#c0392b">⚠ Trop long de ${cm(over)} cm : ramené à ${cm(creaLen(P))} cm</text>`;
+  return `<svg viewBox="0 0 ${Math.max(330,ox+L*sc+40)} ${oy+H*sc+30}" style="width:100%;max-width:380px;height:auto">${g}</svg>`; }
 function creaTable(c,room){ const k=creaCalc(c,room);
   return `<div class="tbl-wrap"><table class="cutl"><thead><tr><th>Pièce de plaque</th><th style="text-align:right">Qté</th><th style="text-align:right">Largeur × hauteur</th></tr></thead><tbody>${k.F.map(f=>`<tr><td>${esc(f.n)}</td><td class="n">${f.q}</td><td class="n"><b>${cm(f.w)} × ${cm(f.h)}</b></td></tr>`).join("")}</tbody></table></div>
     <div class="tbl-wrap"><table class="cutl"><thead><tr><th>Ossature (${S.oss.g} mm)</th><th style="text-align:right">Qté</th><th style="text-align:right">Longueur à couper</th></tr></thead><tbody>${[...k.R.map(r=>({...r,t:"Rail"})),...k.Mo.map(r=>({...r,t:"Montant"}))].map(r=>`<tr><td>${r.t} — ${esc(r.n)}</td><td class="n">${r.q}</td><td class="n"><b>${cm(r.len)}</b></td></tr>`).join("")}</tbody></table></div>
@@ -3675,12 +3682,64 @@ function creaPanel(w){ const room=w.room||"", C=creas(room), rw=S.walls.filter(x
       ${d.p.map(([k,l])=>`<label class="f">${l}${k==="n"||k==="joues"?"":" (cm)"}<input type="number" step="${k==="n"||k==="joues"?1:0.5}" min="0" data-cr="${i}" data-ck="${k}" value="${k==="n"||k==="joues"?c[k]:c[k]/10}"></label>`).join("")}</div>
       ${creaSvg(c,room)}${creaTable(c,room)}</div>`; }).join("")}
     <div class="btns" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${Object.entries(CREA).map(([k,d])=>`<button type="button" data-cradd="${k}">＋ ${esc(d.n.split(" (")[0])}</button>`).join("")}</div>
-    <p class="hint">Cotes en cm, mesurées sur le mur fini (devant les plaques). Ossature en ${S.oss.g} mm, plaques ${esc(S.pla.n)}. Les quantités s'ajoutent au métré de la pièce (lot « Créations placo »).</p></section>`; }
+    <p class="hint">Cotes en cm, mesurées sur le mur fini : depuis l'angle intérieur gauche, devant les plaques (la longueur finie est plus courte que la longueur brute du mur, à cause du doublage dans les angles). Ossature en ${S.oss.g} mm, plaques ${esc(S.pla.n)}. Les quantités s'ajoutent au métré de la pièce (lot « Créations placo »).</p></section>`; }
 document.getElementById("side").addEventListener("click",e=>{ const a=e.target.closest("[data-cradd]"), d=e.target.closest("[data-crdel]"); if(!a&&!d) return; const w=S.walls[S.cur], C=creas(w.room||"");
   if(a){ const t=a.dataset.cradd, c={t,wall:wid(w)}; CREA[t].p.forEach(([k,,v])=>c[k]=v); C.push(c); } else C.splice(+d.dataset.crdel,1); save(); renderAll(); });
 document.getElementById("side").addEventListener("change",e=>{ const el=e.target; if(el.dataset.cr===undefined) return; const C=creas(S.walls[S.cur].room||""), c=C[+el.dataset.cr], k=el.dataset.ck; if(!c) return;
   if(k==="wall") c.wall=el.value; else { const v=parseFloat(el.value); if(isNaN(v)) return; c[k]=(k==="n"||k==="joues")?Math.round(v):Math.round(v*10); } save(); renderAll(); });
 
+
+/* ---------- Béton ciré (murs et sol, par pièce) ---------- */
+const BC_COLS=[["Gris perle","#c9c6c0"],["Gris béton","#a9a7a2"],["Anthracite","#5b5b5a"],["Blanc cassé","#ebe6dc"],["Sable","#d8c8ad"],["Taupe","#a4978a"],["Terracotta","#b8775a"],["Vert sauge","#a7b19b"],["Bleu orage","#6f7c86"]];
+const BC_FIN=[["mat","Mat (aspect brut)"],["satin","Satiné (le plus courant)"],["brillant","Brillant"]];
+function bcCfg(room){ if(!S.bc) S.bc={}; if(!S.bc[room]) S.bc[room]={on:false,walls:[],sol:false,col:"#c9c6c0",fin:"satin",humide:false,couches:2}; return S.bc[room]; }
+function bcOnWall(w){ if(!w) return false; const B=(S.bc||{})[w.room||""]; return !!(B&&B.on&&B.walls.includes(wid(w))); }
+function bcAreas(room){ const B=bcCfg(room), out={walls:[],m2w:0,m2s:0,per:0};
+  S.walls.filter(w=>(w.room||"")===room&&B.walls.includes(wid(w))).forEach(w=>{ const L=creaSpan(w).len, H=w.H, op=w.openings.reduce((a,o)=>a+o.w*Math.min(o.h,H-o.y),0); const m2=Math.max(0,L*H-op)/1e6; out.walls.push({w,m2}); out.m2w+=m2; });
+  if(B.sol){ const g=roomGeom(room); if(g.poly){ out.m2s=Math.abs(polyArea(g.poly))/1e6; out.per=g.poly.reduce((a,p,i)=>{ const q=g.poly[(i+1)%g.poly.length]; return a+Math.hypot(q[0]-p[0],q[1]-p[1]); },0)/1000; } }
+  return out; }
+function bcMaterials(room){ const B=bcCfg(room); if(!B.on) return []; const A=bcAreas(room), rows=[], add=(des,det,q,u)=>{ if(q>0) rows.push({cat:"Béton ciré",des,det,q,u}); };
+  const mw=A.m2w, ms=A.m2s, m=mw+ms; if(!m) return [];
+  const kg=(x)=>Math.ceil(x*1.1);
+  add("Primaire d'accroche béton ciré",`${fr(m,1)} m², ≈ 0,15 L/m²`,Math.ceil(m*0.15*1.1*2)/2,"L");
+  if(ms) add("Treillis fibre de verre (sol)",`${fr(ms,1)} m² + 10 % de recouvrement`,Math.ceil(ms*1.1),"m²");
+  if(mw) add("Béton ciré murs (base + finition)",`${fr(mw,1)} m², ${B.couches} couches, ≈ ${fr(B.couches===3?1.5:1.1,1)} kg/m² au total`,kg(mw*(B.couches===3?1.5:1.1)),"kg");
+  if(ms) add("Béton ciré sol (base + finition)",`${fr(ms,1)} m², ${B.couches+1} couches, ≈ 2,2 kg/m² au total`,kg(ms*2.2),"kg");
+  add("Bouche-pores / imperméabilisant béton ciré",`${fr(m,1)} m², ≈ 0,1 L/m²`,Math.ceil(m*0.1*1.1*2)/2,"L");
+  add(B.humide||ms?"Vernis polyuréthane bi-composant (sol, douche, crédence)":"Vernis de protection béton ciré",`${fr(m,1)} m², 2 couches ≈ 0,1 L/m² par couche, ${(BC_FIN.find(f=>f[0]===B.fin)||BC_FIN[1])[1].toLowerCase()}`,Math.ceil(m*0.2*1.1*2)/2,"L");
+  add("Colorant béton ciré",`teinte ${(BC_COLS.find(c=>c[1]===B.col)||["personnalisée"])[0]} (dose selon fabricant)`,1,"lot");
+  add("Lisseuse inox bords arrondis + platoir",`pour appliquer et ferrer`,1,"u");
+  add("Papier abrasif grain 120 à 220 + cale",`ponçage léger entre couches`,1,"lot");
+  return rows; }
+function bcChecks(room){ const B=bcCfg(room), ck=[]; if(!B.on) return ck;
+  if(B.walls.length) ck.push({ok:true,t:"Béton ciré sur plaques : faire les bandes et traiter les joints avant (le béton ciré ne masque pas un joint qui travaille)."});
+  if(B.humide) ck.push({ok:true,t:"Pièce humide : plaques hydrofuges (H1) en zone d'eau, système d'étanchéité sous carrelage (SPEC) dans la douche, puis béton ciré compatible pièces humides et vernis PU."});
+  if(B.sol) ck.push({ok:true,t:"Sol : support sain et sec (chape > 28 jours, humidité < 4 %), primaire, treillis noyé dans la 1re couche, joints de fractionnement de la chape respectés."});
+  ck.push({ok:true,t:"Application : 5 à 30 °C, pas en plein soleil ni courant d'air ; ponçage léger entre couches ; vernis après séchage complet (24 h). Circulation légère 48 h, pleine utilisation 7 jours."});
+  return ck; }
+function bcPanel(w){ const room=w.room||"", B=bcCfg(room), rw=S.walls.filter(x=>(x.room||"")===room), A=bcAreas(room);
+  return `<section class="box"><h2><span class="sw" style="background:${B.col}"></span>Béton ciré : ${esc(room)}</h2>
+    <label class="chk"><input type="checkbox" data-bc="on" ${B.on?"checked":""}> Mettre du béton ciré dans cette pièce</label>
+    ${B.on?`<p class="cap" style="margin:6px 0 2px">Surfaces :</p><div style="display:flex;flex-wrap:wrap;gap:4px 14px">${rw.map(x=>`<label class="chk"><input type="checkbox" data-bcw="${wid(x)}" ${B.walls.includes(wid(x))?"checked":""}> ${esc((x.name||"").split(" — ").pop())}</label>`).join("")}<label class="chk"><input type="checkbox" data-bc="sol" ${B.sol?"checked":""}> Sol</label></div>
+    <div class="row"><label class="f">Teinte<select data-bc="col">${BC_COLS.map(([n,c])=>`<option value="${c}"${c===B.col?" selected":""}>${n}</option>`).join("")}${BC_COLS.some(c=>c[1]===B.col)?"":`<option value="${B.col}" selected>Personnalisée</option>`}</select></label>
+      <label class="f">Couleur libre<input type="color" data-bc="col" value="${B.col}" style="padding:2px;height:34px"></label>
+      <label class="f">Finition<select data-bc="fin">${BC_FIN.map(([k,n])=>`<option value="${k}"${k===B.fin?" selected":""}>${n}</option>`).join("")}</select></label>
+      <label class="f">Couches murs<select data-bc="couches"><option value="2"${B.couches===2?" selected":""}>2 (base + finition)</option><option value="3"${B.couches===3?" selected":""}>3 (plus de nuances)</option></select></label></div>
+    <label class="chk"><input type="checkbox" data-bc="humide" ${B.humide?"checked":""}> Pièce humide (salle de bain, douche, crédence)</label>
+    <p class="cap" style="margin:6px 0">${fr(A.m2w,1)} m² de murs${B.sol?` · ${fr(A.m2s,1)} m² de sol`:""}. Ces murs ne sont pas peints : la peinture est retirée du métré pour eux. En 3D, ils prennent la teinte choisie.</p>
+    <ul class="hint" style="margin:0;padding-left:18px">${bcChecks(room).map(c=>`<li>${c.ok?"":"⚠ "}${esc(c.t)}</li>`).join("")}</ul>
+    <p class="hint">Quantités indicatives (consommations moyennes des fabricants) : vérifiez la fiche technique du produit choisi.</p>`:""}</section>`; }
+document.getElementById("side").addEventListener("change",e=>{ const el=e.target, w=S.walls[S.cur], B=bcCfg(w.room||"");
+  if(el.dataset.bcw){ const id=el.dataset.bcw; B.walls=B.walls.filter(x=>x!==id); if(el.checked) B.walls.push(id); save(); renderAll(); return; }
+  const k=el.dataset.bc; if(!k) return; if(k==="on"||k==="sol"||k==="humide") B[k]=el.checked; else if(k==="couches") B[k]=+el.value; else B[k]=el.value;
+  if(k==="on"&&el.checked&&!B.walls.length&&!B.sol) B.walls=S.walls.filter(x=>(x.room||"")===(w.room||"")).map(wid);
+  save(); renderAll(); });
+{ const pc=paintColor; paintColor=function(w){ return bcOnWall(w)?bcCfg(w.room||"").col:pc(w); }; }
+{ const m1=materials; materials=function(r){ if(!bcOnWall(r._w)) return m1(r); const p=S.fin.peint.on; S.fin.peint.on=false; try{ return m1(r); } finally{ S.fin.peint.on=p; } }; }
+{ const f=chantierSteps; chantierSteps=function(w,r){ if(!bcOnWall(w)) return f(w,r); const p=S.fin.peint.on; S.fin.peint.on=false; let st; try{ st=f(w,r); } finally{ S.fin.peint.on=p; }
+  const B=bcCfg(w.room||""), A=bcAreas(w.room||"").walls.find(x=>x.w===w), m2=A?A.m2:0, col=(BC_COLS.find(c=>c[1]===B.col)||["teinte personnalisée"])[0];
+  st.push({k:"bc",t:"Béton ciré",d:[`Surface : ${fr(m2,1)} m², teinte ${col}, finition ${(BC_FIN.find(x=>x[0]===B.fin)||BC_FIN[1])[1].toLowerCase()}.`,"Bandes faites et sèches, dépoussiérer, primaire d'accroche au rouleau, laisser sécher 2 à 4 h.",`Couche de base à la lisseuse inox (≈ 1 mm), passes croisées. Séchage 4 à 6 h, ponçage léger grain 120.`,`${B.couches===3?"2 couches":"Couche"} de finition très fine, ferrer à la lisseuse pour les nuances. Ponçage grain 220.`,"Bouche-pores, puis 2 couches de vernis à 2–4 h d'intervalle.",`Environ ${fr(m2*(B.couches===3?1.5:1.1),1)} kg de béton ciré pour ce mur.`]});
+  return st; }; }
 /* ---------- Dossier de pose à imprimer (tous les murs, ordre, coupes, cotes) ---------- */
 function buildDossier(rooms){
   const keep={cur:S.cur,view:S.view,scope:S.scope}, plan=document.getElementById("plan"), keepPlan=plan.innerHTML, ex=document.getElementById("extra"), keepEx=ex.innerHTML, lg=document.getElementById("legend"), keepLg=lg.innerHTML;
@@ -3742,8 +3801,8 @@ const SCREENS=[
   {k:"murs",ic:"📏",t:"Mes pièces et murs",d:"Pièces, longueurs, hauteurs, portes et fenêtres",side:["murs","ouv"],views:["piece","logement","all","3d"],v:"piece",main:[]},
   {k:"mat",ic:"🧱",t:"Isolant, ossature, plaques",d:"Fibre de bois, Vario Xtra, rails et montants, placo",side:["oss","iso","mem","pla"],views:["all","iso","mem","oss","pla","coupe","3d"],v:"iso",main:[]},
   {k:"res",ic:"🔌",t:"Électricité et plomberie",d:"Prises, interrupteurs, eau, évacuations, gaines",side:["elec"],views:["res","visite"],v:"res",main:[]},
-  {k:"amen",ic:"🍳",t:"Cuisine, plafond, sol, meubles",d:"Cuisine IKEA, plafond, luminaires, VMC, sol, MDF, créations placo",side:["plaf","cuis","sol","lum","meub","crea"],views:["room3d","plafond","logement","visite"],v:"room3d",main:[]},
-  {k:"fin",ic:"🎨",t:"Enduits et peinture",d:"Mildecor MIL'12 / MIL'13, primaire, peintures",side:["fin"],views:["fin","visite"],v:"fin",main:[]},
+  {k:"amen",ic:"🍳",t:"Cuisine, plafond, sol, meubles",d:"Cuisine IKEA, plafond, luminaires, VMC, sol, MDF, créations placo",side:["plaf","cuis","sol","lum","meub","crea","bc"],views:["room3d","plafond","logement","visite"],v:"room3d",main:[]},
+  {k:"fin",ic:"🎨",t:"Enduits et peinture",d:"Mildecor MIL'12 / MIL'13, primaire, peintures, béton ciré",side:["fin","bc"],views:["fin","visite"],v:"fin",main:[]},
   {k:"v3d",ic:"🏠",t:"Voir en 3D",d:"Visite de la pièce, couches, écorché, réseaux",side:[],views:["visite","room3d","logement","3d"],v:"visite",main:[]},
   {k:"dtu",ic:"✅",t:"Contrôles DTU",d:"Règles DTU 25.41, NF C 15-100 vérifiées",side:[],views:["all","piece"],v:"all",main:["dtu"]},
   {k:"chan",ic:"🛠️",t:"Chantier pas à pas",d:"Les étapes de pose avec vos cotes, à cocher",side:[],views:["chantier"],v:"chantier",main:[]},
@@ -3751,7 +3810,7 @@ const SCREENS=[
   {k:"proj",ic:"💾",t:"Mon projet",d:"Enregistrer, ouvrir, récupérer, scanner une pièce",side:[],views:[],v:null,main:[],noPlan:1}
 ];
 let SCR="home"; const LOGO_SVG=(document.querySelector("#splash svg")||{outerHTML:""}).outerHTML;
-const SIDE_TAG=[["Pièces et murs","murs"],["Ouvertures","ouv"],["Ossature","oss"],["Isolant","iso"],["Plaques","pla"],["Membrane","mem"],["Électricité","elec"],["Enduits","fin"],["Plafond","plaf"],["Cuisine","cuis"],["Sol","sol"],["Luminaires","lum"],["Mes meubles","meub"],["Créations en placo","crea"]];
+const SIDE_TAG=[["Pièces et murs","murs"],["Ouvertures","ouv"],["Ossature","oss"],["Isolant","iso"],["Plaques","pla"],["Membrane","mem"],["Électricité","elec"],["Enduits","fin"],["Plafond","plaf"],["Cuisine","cuis"],["Sol","sol"],["Luminaires","lum"],["Mes meubles","meub"],["Créations en placo","crea"],["Béton ciré","bc"]];
 function tagSide(){ document.querySelectorAll("#side>section.box").forEach(sec=>{ const h=(sec.querySelector("h2")||{}).textContent||""; const t=SIDE_TAG.find(([n])=>h.trim().startsWith(n)); sec.dataset.ss=t?t[1]:"autre"; }); }
 function isExample(){ const ex=example().walls.map(w=>w.name).join("|"); return S.walls.map(w=>w.name).join("|")===ex; }
 function scrStatus(k){ const w=S.walls[S.cur];
