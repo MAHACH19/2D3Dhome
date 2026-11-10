@@ -216,7 +216,8 @@ section.box{border-radius:12px}
 
 #printdoc{display:none}
 #dossierbox{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-radius:12px;background:var(--chalk-soft);border:1px solid var(--chalk)}
-#dossierbox div{flex:1;min-width:200px}
+#dossierbox>div:first-child{flex:1;min-width:200px}
+.dossopts{flex-basis:100%;display:flex;flex-direction:column;gap:4px}
 #cutpop{position:fixed;left:8px;right:8px;bottom:8px;z-index:120;max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px #0006;padding:10px 12px;max-height:70vh;overflow:auto}
 #cutpop .cp-h{display:flex;align-items:center;gap:8px}
 #cutpop .cp-h b{font-size:17px}
@@ -227,12 +228,23 @@ section.box{border-radius:12px}
 #cutpop .cp-n button{flex:1;padding:9px;border-radius:10px}
 @media print{
   body.pshop .wrap{display:none!important}
-  body.pdoc .wrap,body.pdoc #cutpop{display:none!important}
-  body.pdoc #printdoc{display:block!important;color:#000;font:11pt/1.35 sans-serif}
+  body.pdoc>*:not(#printdoc){display:none!important}
+  body.pdoc{background:#fff!important}
+  body.pdoc #printdoc{display:block!important;color:#1c2428;font:10.5pt/1.4 "IBM Plex Sans",Arial,sans-serif;
+    --bg:#fff;--panel:#fff;--card:#fff;--ink:#1c2428;--muted:#5a666b;--line:#c9cfcd;--chalk:#2a2f33;--chalk-soft:#eef0ef;--steel:#8794a0;--steel-d:#4c5a66;--fibre:#d2ad73;--fibre-d:#9c7640;--plaque:#ebe5da;--plaque-d:#9d9585;--wall:#f5f5f3;--opening:#fff;--warn:#a3480f;--warn-bg:#fbefe4;--elec:#7a3fc0;--water:#0e7f9c;--mem:#3f8a33;color-scheme:light}
+  #printdoc .pd-brand{display:flex;align-items:center;gap:10pt;border-bottom:1.5pt solid #1c2428;padding-bottom:8pt}
+  #printdoc .pd-brand svg{width:34pt;height:34pt}#printdoc .pd-brand b{font-size:13pt;display:block}#printdoc .pd-brand small{color:#5a666b}
+  #printdoc .pd-title{margin:60pt 0 24pt}#printdoc .pd-title small{text-transform:uppercase;letter-spacing:.12em;color:#5a666b;font-size:9pt}
+  #printdoc .pd-title h1{font:600 28pt/1.1 "Barlow Condensed","Arial Narrow",sans-serif;margin:4pt 0}
+  #printdoc .pd-proj{font-size:15pt;margin:0;color:#3b4449}
+  #printdoc .pd-meta{width:auto;min-width:60%;margin:0 0 20pt}#printdoc .pd-meta th{width:42mm;color:#5a666b;font-weight:500}
+  #printdoc .pd-compo li{margin:2pt 0}
+  #printdoc h2{border-bottom:.8pt solid #1c2428;padding-bottom:2pt;margin-top:14pt!important}
+  #printdoc th{font-weight:600;background:#f2f3f2}
+  @page{margin:14mm 12mm 16mm;@bottom-right{content:"Page " counter(page) " / " counter(pages);font:8pt sans-serif;color:#777}@bottom-left{content:"Dossier technique de doublage";font:8pt sans-serif;color:#777}}
   #printdoc .pd-page,#printdoc .pd-cover{break-before:page;page-break-before:always}
   #printdoc .pd-cover{break-before:auto;page-break-before:auto}
-  #printdoc h1{font-size:26pt;margin:0 0 6pt}
-  #printdoc h2{font-size:16pt;margin:0 0 6pt}
+  #printdoc h2{font-size:14pt;margin:0 0 6pt}
   #printdoc h3{font-size:13pt;margin:8pt 0 4pt}
   #printdoc .pd-svg svg{width:100%;max-height:15cm}
   #printdoc table{width:100%;border-collapse:collapse;font-size:9.5pt}
@@ -240,7 +252,6 @@ section.box{border-radius:12px}
   #printdoc .box{border:0;padding:0;background:none}
   #printdoc .pd-steps li{margin-bottom:4pt}
   .pd-cap,.cap{color:#444}
-  @page{margin:12mm}
 
   body.pshop #shopprint{display:block!important;color:#000;font:13px/1.4 sans-serif}
   #shopprint table{width:100%;border-collapse:collapse;margin:0 0 14px}
@@ -362,7 +373,7 @@ section.box{border-radius:12px}
         </div>
         <div class="tbl-wrap"><table id="tbl"></table></div>
         <p class="cap" id="cap">Quantités arrondies à l'unité de vente. Chutes de montants, de panneaux et de plaques réutilisées quand c'est possible. Vis, bande et enduit sont des estimations. Un prix saisi une fois est repris automatiquement sur tous les murs qui utilisent le même matériau. Cochez « J'ai » pour ce que vous possédez déjà : il ne compte plus dans le total.</p>
-        <div id="dossierbox" style="margin-top:12px"><div><b>📘 Dossier de pose à imprimer</b><br><span class="cap">Comme une notice IKEA : plan, ordre de pose, puis pour chaque mur l'isolant, la membrane, l'ossature, les plaques et les vis, avec toutes les coupes et cotes.</span></div><button type="button" class="pri" data-dossier="room">Cette pièce</button><button type="button" data-dossier="all">Tout le chantier</button></div>
+        <div id="dossierbox" style="margin-top:12px"><div><b>📘 Dossier de pose à imprimer</b><br><span class="cap">Comme une notice IKEA : plan, ordre de pose, puis pour chaque mur l'isolant, la membrane, l'ossature, les plaques et les vis, avec toutes les coupes et cotes.</span></div><div id="dossopts" class="dossopts"></div><button type="button" class="pri" data-dossier="room">Cette pièce</button><button type="button" data-dossier="all">Tout le chantier</button></div>
         <details id="shopbox" style="margin-top:10px"><summary style="cursor:pointer;font-weight:700;font-size:16px">🛒 Liste de courses par magasin</summary>
           <div class="btns" style="margin:8px 0;display:flex;gap:6px;flex-wrap:wrap"><button type="button" id="shop-print">Imprimer / PDF la liste</button><button type="button" id="shop-share">Partager la liste</button><button type="button" id="shop-reset">Tout décocher</button></div>
           <div id="shoplist"></div>
@@ -3828,32 +3839,63 @@ document.getElementById("side").addEventListener("change",e=>{ const el=e.target
   st.push({k:"bc",t:"Béton ciré",d:[`Surface : ${fr(m2,1)} m², teinte ${col}, finition ${(BC_FIN.find(x=>x[0]===B.fin)||BC_FIN[1])[1].toLowerCase()}.`,"Bandes faites et sèches, dépoussiérer, primaire d'accroche au rouleau, laisser sécher 2 à 4 h.",`Couche de base à la lisseuse inox (≈ 1 mm), passes croisées. Séchage 4 à 6 h, ponçage léger grain 120.`,`${B.couches===3?"2 couches":"Couche"} de finition très fine, ferrer à la lisseuse pour les nuances. Ponçage grain 220.`,"Bouche-pores, puis 2 couches de vernis à 2–4 h d'intervalle.",`Environ ${fr(m2*(B.couches===3?1.5:1.1),1)} kg de béton ciré pour ce mur.`]});
   return st; }; }
 /* ---------- Dossier de pose à imprimer (tous les murs, ordre, coupes, cotes) ---------- */
+
+function dossOpts(){ if(!S.doss) S.doss={ordre:"iso",crea:true,cuis:true}; return S.doss; }
+function renderDossOpts(){ const el=document.getElementById("dossopts"); if(!el) return; const O=dossOpts();
+  el.innerHTML=`<label class="f">Commencer par<select data-dso="ordre"><option value="iso"${O.ordre==="iso"?" selected":""}>L'isolant (chevillé sur la pierre), puis l'ossature</option><option value="oss"${O.ordre==="oss"?" selected":""}>L'ossature, puis l'isolant glissé derrière</option></select></label>
+    <label class="chk"><input type="checkbox" data-dso="crea" ${O.crea?"checked":""}> Créations en placo (coffrages, niches…)</label>
+    <label class="chk"><input type="checkbox" data-dso="cuis" ${O.cuis?"checked":""}> Pose de la cuisine (meubles, hauteurs, plan de travail)</label>
+    <details${O.client||O.auteur?" open":""}><summary class="cap" style="cursor:pointer">Page de garde pour le client</summary><div class="row">
+      <label class="f">Client<input data-dso="client" value="${esc(O.client||"")}" placeholder="M. et Mme …"></label>
+      <label class="f">Adresse du chantier<input data-dso="adresse" value="${esc(O.adresse||"")}"></label>
+      <label class="f">Réalisé par<input data-dso="auteur" value="${esc(O.auteur||"")}" placeholder="Entreprise, artisan"></label>
+      <label class="f">Contact<input data-dso="contact" value="${esc(O.contact||"")}" placeholder="Téléphone, e-mail"></label>
+      <label class="f">Référence<input data-dso="ref" value="${esc(O.ref||"")}" placeholder="Devis n°…"></label></div></details>`; }
+document.addEventListener("change",e=>{ const k=e.target.dataset&&e.target.dataset.dso; if(!k) return; const O=dossOpts(); O[k]=e.target.type==="checkbox"?e.target.checked:e.target.value; save(); });
+{ const ro=renderOut; renderOut=function(...a){ const r=ro.apply(this,a); try{ renderDossOpts(); }catch(e){} return r; }; }
+function kitDossier(room){ const K=kitCfg(room); if(!K.on||!K.items.length) return "";
+  const rw=S.walls.filter(w=>(w.room||"")===room), runs=kitRuns(room), PL=planOf(K,room);
+  let h=`<section class="pd-page"><h2>Pose de la cuisine : ${esc(room)}</h2><p class="pd-cap">Façades ${esc(K.facade)} · plan de travail ${esc(K.plan)}. Cotes en cm depuis le début de chaque mur (angle gauche, vu depuis la pièce), hauteurs depuis le sol fini.</p>
+    <h3>Ordre de pose</h3><ol class="pd-steps">${["Doublage terminé (plaques, bandes, peinture ou béton ciré derrière les meubles), sol posé, réseaux d'eau et d'électricité sortis aux bonnes cotes.","Tracer au laser le trait des 80 cm (dessus des caissons bas sur pieds de 8 cm) et la hauteur du rail de suspension des meubles hauts.","Fixer les rails de suspension METOD dans les renforts de l'ossature (pas dans la plaque seule).","Monter les caissons, les accrocher en commençant par l'angle, régler les pieds et l'aplomb, solidariser les caissons entre eux.","Poser et découper le plan de travail (évier, plaque de cuisson), puis la crédence.","Raccorder évier, électroménager, plinthes, façades et poignées ; régler les charnières."].map(t=>`<li>${t}</li>`).join("")}</ol>`;
+  rw.forEach(w=>{ const its=K.items.filter(it=>it.wall===wid(w)).map(it=>({it,b:kitBox(it,K,w.H)})).filter(o=>o.b).sort((a,b)=>a.it.x-b.it.x); if(!its.length) return;
+    h+=`<h3>${esc(w.name)}</h3><table class="pd-t"><thead><tr><th>Meuble</th><th>De … à (cm)</th><th>Largeur</th><th>Hauteur pose</th><th>Profondeur</th></tr></thead><tbody>${its.map(({it,b})=>`<tr><td>${esc(b.k.n)}</td><td><b>${cm(it.x)} → ${cm(it.x+b.k.w)}</b></td><td>${cm(b.k.w)}</td><td>${cm(b.z0)} → ${cm(b.z1)}</td><td>${cm(b.d)}</td></tr>`).join("")}</tbody></table>`; });
+  if(runs.length) h+=`<h3>Plan de travail ${PL.tile?"en carrelage":""}</h3><table class="pd-t"><thead><tr><th>Mur</th><th>De … à (cm)</th><th>Longueur à couper</th><th>Profondeur</th></tr></thead><tbody>${runs.map(rn=>`<tr><td>${esc(rn.w.name)}</td><td>${cm(rn.a)} → ${cm(rn.b)}</td><td><b>${cm(rn.b-rn.a)}</b></td><td>${PL.tile?"65 (support + carreaux, débord 2 cm)":"63,5"}</td></tr>`).join("")}</tbody></table><p class="pd-cap">Dessus du plan à ${PL.tile?"≈ 92":"≈ 91,8"} cm du sol. Évier et plaque : découpe d'après le gabarit fourni avec l'appareil.</p>`;
+  return h+`</section>`; }
 function buildDossier(rooms){
-  const keep={cur:S.cur,view:S.view,scope:S.scope}, plan=document.getElementById("plan"), keepPlan=plan.innerHTML, ex=document.getElementById("extra"), keepEx=ex.innerHTML, lg=document.getElementById("legend"), keepLg=lg.innerHTML;
+  const O=dossOpts(), keep={cur:S.cur,view:S.view,scope:S.scope}, plan=document.getElementById("plan"), keepPlan=plan.innerHTML, ex=document.getElementById("extra"), keepEx=ex.innerHTML, lg=document.getElementById("legend"), keepLg=lg.innerHTML;
   const snap=(i,v)=>{ S.cur=i; S.view=v; const r=compute(S.walls[i]); renderPlan(r); return plan.innerHTML.replace(/ id="/g,' data-id="').replace(/data-pc="\d+"/g,""); };
-  let html=`<div class="pd-cover"><h1>Dossier de pose</h1><p><b>${rooms.map(esc).join(", ")}</b></p><p>${new Date().toLocaleDateString("fr-FR")} · doublage ${S.iso.on?`fibre de bois ${S.iso.ep} mm chevillée, `:""}${S.mem.on?esc(S.mem.n)+", ":""}ossature ${S.oss.g} mm entraxe ${S.oss.e/10} cm, ${esc(S.pla.n)}</p>
-    <h2>Ordre de pose</h2><ol>${["Préparer les murs (pierre brossée, humidité traitée)","Isolant fibre de bois chevillé, panneau par panneau (liste I1, I2…)","Membrane Vario Xtra, lé par lé, recouvrements au KB1","Rails haut et bas, puis montants aux cotes indiquées (M1, M2…)","Réseaux électriques et eau dans le vide technique","Plaques dans l'ordre P1, P2… (bord aminci coupé dans les angles), vis aux positions indiquées","Créations en placo (coffrages, niches…)","Bandes, ratissage MIL'12, primaire et peinture"].map(t=>`<li>${t}</li>`).join("")}</ol>
-    <h2>Murs</h2><ol>${S.walls.filter(w=>rooms.includes(w.room||"")).map(w=>`<li>${esc(w.name)} — ${cm(w.L)} × ${cm(w.H)} cm</li>`).join("")}</ol></div>`;
+  const RW=S.walls.filter(w=>rooms.includes(w.room||"")), surf=withCC(()=>RW.reduce((a,w)=>a+compute(w).netArea,0))(), today=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+  const compo=[S.iso.on?`Isolant fibre de bois ${S.iso.n?esc(S.iso.n)+" ":""}${S.iso.ep} mm chevillé sur la pierre`:"",S.mem.on?`Membrane ${esc(S.mem.n)} (frein-vapeur côté chaud)`:"",`Ossature métallique ${S.oss.g} mm, entraxe ${S.oss.e/10} cm`,`Parement ${esc(S.pla.n)}`,S.fin.rat.on?"Bandes et ratissage, primaire et peinture":""].filter(Boolean);
+  let html=`<div class="pd-cover"><div class="pd-brand"><span>${LOGO_SVG}</span><div><b>${esc(O.auteur||"Calepinage")}</b>${O.contact?`<small>${esc(O.contact)}</small>`:""}</div></div>
+    <div class="pd-title"><small>Dossier technique</small><h1>Doublage et isolation des murs</h1><p class="pd-proj">${esc(projName(S))}</p></div>
+    <table class="pd-meta"><tbody>${[["Client",O.client],["Adresse du chantier",O.adresse],["Pièces",rooms.join(", ")],["Référence",O.ref],["Date",today]].filter(r=>r[1]).map(r=>`<tr><th>${r[0]}</th><td>${esc(r[1])}</td></tr>`).join("")}</tbody></table>
+    <h2>Composition du doublage</h2><ol class="pd-compo">${compo.map(t=>`<li>${t}</li>`).join("")}</ol>
+    <h2>Synthèse</h2><table class="pd-t"><thead><tr><th>Pièce</th><th>Murs</th><th>Surface doublée</th></tr></thead><tbody>${rooms.map(r=>{ const ws=RW.filter(w=>(w.room||"")===r); return `<tr><td>${esc(r)}</td><td>${ws.length}</td><td>${fr(withCC(()=>ws.reduce((a,w)=>a+compute(w).netArea,0))(),1)} m²</td></tr>`; }).join("")}<tr><th>Total</th><th>${RW.length}</th><th>${fr(surf,1)} m²</th></tr></tbody></table>
+    <p class="pd-cap">Travaux conformes aux règles de l'art (DTU 25.41 plaques de plâtre, NF C 15-100 électricité) et aux préconisations des fabricants. Cotes à vérifier sur place avant toute découpe.</p></div>
+    <section class="pd-page"><h2>Ordre de pose</h2><ol>${[..."Préparer les murs (pierre brossée, humidité traitée)|".split("|").filter(Boolean),...(O.ordre==="oss"?["Rails haut et bas, puis montants aux cotes indiquées (M1, M2…)","Isolant fibre de bois glissé derrière les montants et chevillé, panneau par panneau (liste I1, I2…)","Membrane Vario Xtra, lé par lé sur les montants, recouvrements au KB1"]:["Isolant fibre de bois chevillé, panneau par panneau (liste I1, I2…)","Membrane Vario Xtra, lé par lé, recouvrements au KB1","Rails haut et bas, puis montants aux cotes indiquées (M1, M2…)"]),"Réseaux électriques et eau dans le vide technique","Plaques dans l'ordre P1, P2… (bord aminci coupé dans les angles), vis aux positions indiquées",...(O.crea&&rooms.some(r=>creas(r).length)?["Créations en placo (coffrages, niches…)"]:[]),"Bandes, ratissage MIL'12, primaire et peinture",...(O.cuis&&rooms.some(r=>kitCfg(r).on&&kitCfg(r).items.length)?["Pose de la cuisine (après les finitions des murs)"]:[])].map(t=>`<li>${t}</li>`).join("")}</ol>
+    <h2>Liste des murs</h2><table class="pd-t"><thead><tr><th>N°</th><th>Mur</th><th>Longueur × hauteur</th></tr></thead><tbody>${RW.map((w,n)=>`<tr><td>${n+1}</td><td>${esc(w.name)}</td><td>${cm(w.L)} × ${cm(w.H)} cm</td></tr>`).join("")}</tbody></table></section>`;
   try{ withCC(()=>{
     rooms.forEach(room=>{
       const idx=S.walls.map((w,i)=>[w,i]).filter(([w])=>(w.room||"")===room);
       S.cur=idx[0][1]; S.view="piece"; renderPlan(compute(S.walls[S.cur]));
       html+=`<section class="pd-page"><h2>Pièce : ${esc(room)}</h2><p class="pd-cap">Plan vu de dessus, murs numérotés dans le sens des aiguilles d'une montre.</p><div class="pd-svg">${plan.innerHTML.replace(/ id="/g,' data-id="')}</div></section>`;
       idx.forEach(([w,i],n)=>{ const r=compute(w); S.cur=i;
-        const steps=chantierSteps(w,r);
+        let steps=chantierSteps(w,r); if(O.ordre==="oss"){ const ord=["prep","rails","studs","iso","mem","res","pla","fin","peint","bc"]; steps=[...steps].sort((a,b)=>(ord.indexOf(a.k)+99*(ord.indexOf(a.k)<0))-(ord.indexOf(b.k)+99*(ord.indexOf(b.k)<0))); const si=steps.find(x=>x.k==="iso"); if(si) si.d=["Ossature déjà en place : glisser chaque panneau derrière les montants et le cheviller dans la pierre (rosaces), sans écraser la lame d'air.",...si.d]; }
         html+=`<section class="pd-page"><h2>Mur ${n+1} : ${esc(w.name)}</h2><p class="pd-cap">${cm(r.L)} × ${cm(r.H)} cm${w.noIso?" · sans isolant":""}${w.noMem?" · sans membrane":""}. Cotes en cm, depuis le coin bas gauche, vues depuis la pièce.</p>
           <h3>Étapes</h3><ol class="pd-steps">${steps.map(st=>`<li><b>${esc(st.t)}</b><br>${st.d.map(esc).join("<br>")}</li>`).join("")}</ol></section>`;
-        if(r.isoOn){ html+=`<section class="pd-page"><h3>Mur ${n+1} · Isolant</h3><div class="pd-svg">${snap(i,"iso")}</div>${cutListHtml(r,"iso")}</section>`; }
-        if(r.memOn){ html+=`<section class="pd-page"><h3>Mur ${n+1} · Membrane</h3><div class="pd-svg">${snap(i,"mem")}</div>${cutListHtml(r,"mem")}</section>`; }
-        html+=`<section class="pd-page"><h3>Mur ${n+1} · Ossature</h3><div class="pd-svg">${snap(i,"oss")}</div>${cutListHtml(r,"oss")}</section>`;
+        const sIso=r.isoOn?`<section class="pd-page"><h3>Mur ${n+1} · Isolant</h3><div class="pd-svg">${snap(i,"iso")}</div>${cutListHtml(r,"iso")}</section>`:"";
+        const sMem=r.memOn?`<section class="pd-page"><h3>Mur ${n+1} · Membrane</h3><div class="pd-svg">${snap(i,"mem")}</div>${cutListHtml(r,"mem")}</section>`:"";
+        const sOss=`<section class="pd-page"><h3>Mur ${n+1} · Ossature</h3><div class="pd-svg">${snap(i,"oss")}</div>${cutListHtml(r,"oss")}</section>`;
+        html+=O.ordre==="oss"?sOss+sIso+sMem:sIso+sMem+sOss;
         const cl=cutList(r), scr=screwPts(r);
         html+=`<section class="pd-page"><h3>Mur ${n+1} · Plaques et vis</h3><div class="pd-svg">${snap(i,"pla")}</div><table class="pd-t"><thead><tr><th>Plaque</th><th>Position</th><th>Dimensions</th><th>Coupes</th><th>Vis</th></tr></thead><tbody>${cl.map(c=>{ const p=r.plates.find(q=>q.layer===c.layer&&q.x===c.x&&q.w===c.w&&q.h===c.h)||{x:c.x,y:10,w:c.w,h:c.h}; const sc=scr.filter(([x,y])=>x>=p.x-1&&x<=p.x+p.w+1&&y>=p.y&&y<=p.y+p.h), xs=[...new Set(sc.map(v=>Math.round(clamp(v[0]-p.x,10,p.w-10))))].sort((a,b)=>a-b);
           return `<tr><td><b>${c.nm}</b></td><td>${cm(c.x)} cm</td><td><b>${cm(c.w)} × ${cm(c.h)}</b></td><td>${c.notes.map(esc).join("<br>")||"entière"}</td><td>${sc.length} vis, montants à ${xs.map(x=>cm(x)).join(" · ")} cm du bord gauche, tous les 30 cm en hauteur</td></tr>`; }).join("")}</tbody></table></section>`;
       });
-      const C=creas(room); if(C.length) html+=`<section class="pd-page"><h2>Créations en placo : ${esc(room)}</h2>${C.map((c,k)=>`<h3>${k+1}. ${esc(CREA[c.t].n)}</h3>${creaSvg(c,room)}${creaTable(c,room)}`).join("")}</section>`;
+      const C=O.crea?creas(room):[]; if(C.length) html+=`<section class="pd-page"><h2>Créations en placo : ${esc(room)}</h2>${C.map((c,k)=>`<h3>${k+1}. ${esc(CREA[c.t].n)}</h3>${creaSvg(c,room)}${creaTable(c,room)}`).join("")}</section>`;
+      if(O.cuis) html+=kitDossier(room);
     });
   })(); } finally { S.cur=keep.cur; S.view=keep.view; S.scope=keep.scope; plan.innerHTML=keepPlan; ex.innerHTML=keepEx; lg.innerHTML=keepLg; }
-  return html;
+  return html.replace(/#1d63c4/gi,"#2a2f33").replace(/Touchez[^<]*?\./g,"").replace(/ data-pc[a-z]*="[^"]*"/g,"");
 }
 function printDossier(all){
   const w=S.walls[S.cur], rooms=all?roomNames():[w.room||""];
