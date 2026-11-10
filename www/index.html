@@ -473,6 +473,26 @@ const PTS = {
   "Évacuation Ø32":{c:"eau",k:"EV",h:450,evac:"Tube PVC Ø32"},
   "Évacuation Ø40":{c:"eau",k:"EV",h:450,evac:"Tube PVC Ø40"}
 };
+
+/* Appareillage électrique (gammes Schneider Electric et Legrand) : désignations pour le métré + couleur des plaques en 3D */
+const APPAR={
+  "Legrand Dooxie":[["Blanc","#f7f7f5"],["Alu","#b9bcbf"],["Noir","#1c1c1d"],["Effet bois","#a8825a"]],
+  "Legrand Céliane":[["Blanc","#f6f6f3"],["Titane","#8d8f91"],["Graphite","#3b3d40"],["Laiton","#c8a24d"],["Pierre","#d8d2c5"]],
+  "Legrand Mosaic":[["Blanc","#f7f7f5"],["Alu","#b9bcbf"]],
+  "Legrand Niloé Step":[["Blanc","#f7f7f5"],["Crème","#efe9da"],["Noir","#1c1c1d"]],
+  "Legrand Art d'Arnould Univers Épure":[["Blanc mat","#f1f0ec"],["Noir mat","#222222"],["Laiton","#c8a24d"]],
+  "Schneider Odace":[["Blanc","#f7f7f5"],["Anthracite","#3f4144"],["Alu","#b7babd"],["Bois","#a8825a"]],
+  "Schneider Unica":[["Blanc","#f6f6f3"],["Anthracite","#3f4144"],["Alu","#b7babd"],["Sable","#d9cdb4"]],
+  "Schneider Unica Studio (métal)":[["Inox","#c4c7ca"],["Noir","#1e1e1f"],["Or","#c9a650"]],
+  "Schneider Ovalis":[["Blanc","#f7f7f5"],["Anthracite","#3f4144"]],
+  "Schneider Merten System M":[["Blanc polaire","#f8f8f6"],["Anthracite","#3f4144"],["Aluminium","#b7babd"]]
+};
+const APP_DES={"Prise 16 A":"prise 2P+T 16 A à puits","Prise double 16 A":"prise double 2P+T 16 A précâblée","Prise spécialisée 20/32 A":"prise spécialisée 20 A 2P+T (ou sortie de câble 32 A)","Interrupteur":"interrupteur simple allumage 10 A","Va-et-vient":"interrupteur va-et-vient 10 A","Prise RJ45":"prise RJ45 grade 2/3 TV","Applique murale":"sortie de câble + DCL applique","Boîte de dérivation":""};
+function appCfg(){ if(!S.app) S.app={g:"Legrand Dooxie",f:"Blanc"}; if(!APPAR[S.app.g]) S.app.g="Legrand Dooxie"; if(!APPAR[S.app.g].some(x=>x[0]===S.app.f)) S.app.f=APPAR[S.app.g][0][0]; return S.app; }
+function appCol(){ const A=appCfg(); return (APPAR[A.g].find(x=>x[0]===A.f)||APPAR[A.g][0])[1]; }
+function appBox(){ const A=appCfg(); return `<div class="row" style="margin:6px 0"><label class="f">Gamme d'appareillage<select data-app="g">${Object.keys(APPAR).map(k=>`<option${k===A.g?" selected":""}>${esc(k)}</option>`).join("")}</select></label>
+  <label class="f">Finition<select data-app="f">${APPAR[A.g].map(([n])=>`<option${n===A.f?" selected":""}>${esc(n)}</option>`).join("")}</select></label></div>`; }
+document.addEventListener("change",e=>{ const k=e.target.dataset&&e.target.dataset.app; if(!k) return; const A=appCfg(); A[k]=e.target.value; appCfg(); save(); renderAll(); if(S.view==="visite"&&typeof v3Rebuild==="function") v3Rebuild(); });
 function ptLabels(points){ const c={}; return points.map(p=>{ const d=PTS[p.type]||PTS["Prise 16 A"]; c[d.k]=(c[d.k]||0)+1; return d.k+c[d.k]; }); }
 const ENDUITS = [
   {n:"Mildecor MIL'12 (ex MIL'2F)", pk:25, u:"kg", cont:"seau 25 kg", prix:45.90},
@@ -969,6 +989,7 @@ function materials(r){
   const tight=(mem.on && !r.murMode)?"étanche à l'air ":"";
   add("Électricité", `Boîte d'encastrement ${tight}Ø67 simple`, "pour plaque de plâtre", el.filter(p=>!p.d.dbl).length, "u");
   add("Électricité", `Boîte d'encastrement ${tight}double`, "entraxe 71 mm", el.filter(p=>p.d.dbl).length, "u");
+  { const A=appCfg(), by={}; el.forEach(p=>{ const d=APP_DES[p.type]; if(d) by[d]=(by[d]||0)+1; }); Object.entries(by).forEach(([d,q])=>add("Électricité", `${A.g} · ${d} + plaque ${A.f.toLowerCase()}`, "appareillage complet (mécanisme, enjoliveur, plaque)", q, "u")); }
   [16,20,25].forEach(g=>{
     const len=el.filter(p=>p.d.g===g).reduce((a,p)=>a+(r.H-p.y)+500,0);
     add("Électricité", `Gaine ICTA Ø${g}`, "du point au plafond + 50 cm", Math.ceil(len/1000), "m", 100, "couronne(s) de 100 m");
@@ -1181,6 +1202,7 @@ function renderSide(){ renderQuick();
 
   <section class="box">
     <h2><span class="sw" style="background:var(--elec)"></span>Électricité et plomberie</h2>
+    ${appBox()}
     <div class="ops">
       ${(()=>{ const lb=ptLabels(w.points); return w.points.map((p,i)=>`
       <div class="op">
@@ -2547,7 +2569,57 @@ const SOLS=[
    ["Saint-Maclou",[["Grès cérame effet marbre Statuario 120×120",1200,1200,"#f1efea",2],["Grès cérame effet béton ciré 80×80",800,800,"#b8b4ad",2],["Grès cérame effet parquet chevron 10×60",600,100,"#b48a5e",2,"chevron"],["Grès cérame effet pierre de Bourgogne 60×60",600,600,"#d9cfbd",3]]],
    ["Point.P / Cedeo",[["Grès cérame pleine masse gris 60×60",600,600,"#8f8e8a",3],["Grès cérame rectifié blanc 60×120",1200,600,"#f0efeb",2],["Grès cérame effet pierre bleue 60×60",600,600,"#6f767b",3]]],
    ["Carrelage mural (toutes enseignes)",[["Faïence métro biseautée 10×20 blanc",200,100,"#f5f5f2",2,"decale",0,1],["Faïence métro 7,5×30 vert sauge",300,75,"#9fb09a",2,"decale",0,1],["Zellige 13×13 blanc cassé",130,130,"#efe9dc",2,"droite",0,1],["Zellige 5×15 bleu canard",150,50,"#2f6f73",2,"decale",0,1],["Faïence 20×20 terracotta",200,200,"#b8714f",2,"droite",0,1],["Faïence 30×90 effet marbre",900,300,"#ece9e3",2,"decale",0,1],["Mosaïque turquoise 30×30 (plaques)",300,300,"#2fa7a0",2,"droite",0,1],["Grès cérame 60×120 effet béton (douche)",1200,600,"#a8a59f",2,"droite",0,1]]]
-  ].flatMap(([shop,L])=>L.map(([n,l,w,c,j,pose,motif,mur])=>({g:shop,n:`${shop.split(" (")[0]} · ${n}`,L:l,W:w,c,pose:pose||"droite",pk:Math.max(1,Math.round(l*w*Math.ceil(1.4e6/(l*w))/1e4)/100),fam:"carrelage",joint:j,...(motif?{motif:1}:{}),...(mur?{mur:1}:{})})))
+  ].flatMap(([shop,L])=>L.map(([n,l,w,c,j,pose,motif,mur])=>({g:shop,n:`${shop.split(" (")[0]} · ${n}`,L:l,W:w,c,pose:pose||"droite",pk:Math.max(1,Math.round(l*w*Math.ceil(1.4e6/(l*w))/1e4)/100),fam:"carrelage",joint:j,...(motif?{motif:1}:{}),...(mur?{mur:1}:{})}))),
+  {g:"Allo Carrelage",n:"Allo Carrelage · Marbre Marmo Lab Calacatta Statuario poli 60×60 · 25,90 €/m² (nov. 2026)",L:600,W:600,c:"#f0eee9",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Marbre Calacatta Gold mat 60×120 · 29,90 €/m² (nov. 2026)",L:1200,W:600,c:"#efe9df",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Marbre Marmo Calacatta XL poli 60×120 · 37,90 €/m² (nov. 2026)",L:1200,W:600,c:"#f2f1ed",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Marbre Marmo Calacatta blanc gris mat 60×120 · 34,90 €/m² (nov. 2026)",L:1200,W:600,c:"#e9e8e4",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Marbre Saint Laurent noir poli 60×60 · 29,90 €/m² (nov. 2026)",L:600,W:600,c:"#1e1d1d",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Marbre Marquinia Gold poli brillant 60×120 · 37,90 €/m² (nov. 2026)",L:1200,W:600,c:"#1c1c1d",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Marbre Masterstone Blanc mat 60×120 · 32,90 €/m² (nov. 2026)",L:1200,W:600,c:"#ecebe7",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Marbre Masterstone Silver mat 60×120 · 32,90 €/m² (nov. 2026)",L:1200,W:600,c:"#b8b8b5",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Marbre Masterstone Graphite mat 60×120 · 32,90 €/m² (nov. 2026)",L:1200,W:600,c:"#4a4b4d",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Marbre Ragno Incanto Michelangelo 30×60 · 22,90 €/m² (nov. 2026)",L:600,W:300,c:"#ece6da",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet pierre Tempo Cotton beige clair mat 60×60 · 19,90 €/m² (nov. 2026)",L:600,W:600,c:"#ddd3c2",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet pierre Tempo Nature beige mat 60×60 · 19,90 €/m² (nov. 2026)",L:600,W:600,c:"#c9b9a0",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet pierre Tempo Ash gris mat 60×60 · 19,90 €/m² (nov. 2026)",L:600,W:600,c:"#9c9a95",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Tempo Cotton beige clair grand format 100×100 · 29,90 €/m² (nov. 2026)",L:1000,W:1000,c:"#ddd3c2",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Storm White R10 80×80 · 36,90 €/m² (nov. 2026)",L:800,W:800,c:"#eceae5",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Storm Sand beige R10 80×80 · 36,90 €/m² (nov. 2026)",L:800,W:800,c:"#d6cab5",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Storm Gris R10 60×120 · 37,90 €/m² (nov. 2026)",L:1200,W:600,c:"#9d9b97",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet travertin Trocadero blanc 45×45 · 19,90 €/m² (nov. 2026)",L:450,W:450,c:"#e6ddcc",pose:"droite",pk:1.44,fam:"carrelage",joint:3},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet travertin Max beige 60×120 · 29,90 €/m² (nov. 2026)",L:1200,W:600,c:"#d4c2a2",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet travertin Navona Candido R10 60×120 · 36,90 €/m² (nov. 2026)",L:1200,W:600,c:"#e5dccb",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet pierre Alma beige 60×60 · 19,90 €/m² (nov. 2026)",L:600,W:600,c:"#cfc1a8",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet béton Concrete gris 60×60 · 23,90 €/m² (nov. 2026)",L:600,W:600,c:"#a3a19c",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet béton Concrete graphite 80×80 · 32,90 €/m² (nov. 2026)",L:800,W:800,c:"#56575a",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet béton Stonecrete Almond 90×90 · 32,90 €/m² (nov. 2026)",L:900,W:900,c:"#cbbfae",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet béton Unika Carbon noir 80×80 · 29,90 €/m² (nov. 2026)",L:800,W:800,c:"#2b2b2c",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet béton ciré Camouflage Green 60×120 · 42,90 €/m² (nov. 2026)",L:1200,W:600,c:"#6f7a5d",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet béton Ares blanc R10 60×60 · 23,90 €/m² (nov. 2026)",L:600,W:600,c:"#e3e1dc",pose:"droite",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Effet béton Betonico beige R10 60×120 · 35,90 €/m² (nov. 2026)",L:1200,W:600,c:"#c9bca6",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Terrazzo Ceppo Nuovo Black poli 60×120 · 43,90 €/m² (nov. 2026)",L:1200,W:600,c:"#3a3938",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Terrazzo Art Grey 30×60 · 18,90 €/m² (nov. 2026)",L:600,W:300,c:"#b2b0ab",pose:"decale",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Imitation parquet Hermitage Miel R10 20×120 · 35,90 €/m² (nov. 2026)",L:1200,W:200,c:"#c39260",pose:"tiers",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Imitation parquet Hermitage Noisette R10 20×120 · 35,90 €/m² (nov. 2026)",L:1200,W:200,c:"#9c7350",pose:"tiers",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Imitation parquet Axe Walnut 20×120 · 25,90 €/m² (nov. 2026)",L:1200,W:200,c:"#6e4c34",pose:"tiers",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Imitation parquet Axe Off White 20×120 · 25,90 €/m² (nov. 2026)",L:1200,W:200,c:"#e2d8c8",pose:"tiers",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Imitation parquet Acero Sabbia 20×120 · 27,90 €/m² (nov. 2026)",L:1200,W:200,c:"#cdb592",pose:"tiers",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Imitation parquet Tonella Beige R10 20×120 · 27,90 €/m² (nov. 2026)",L:1200,W:200,c:"#c7a87f",pose:"tiers",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Imitation parquet Feel Gold 20×90 · 23,90 €/m² (nov. 2026)",L:900,W:200,c:"#c09a5f",pose:"tiers",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Imitation parquet Sestrière beige 19×80 · 19,90 €/m² (nov. 2026)",L:800,W:190,c:"#c8ab84",pose:"tiers",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Imitation parquet Bozel gris 19×80 · 17,90 €/m² (nov. 2026)",L:800,W:190,c:"#9a958d",pose:"tiers",pk:1.44,fam:"carrelage",joint:2},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Mural faïence Super Blanc brillant 30×60 · 22,00 €/m² (nov. 2026)",L:600,W:300,c:"#f7f7f5",pose:"decale",pk:1.44,fam:"carrelage",joint:2,mur:1},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Mural faïence Super Blanc mat 30×60 · 22,00 €/m² (nov. 2026)",L:600,W:300,c:"#f1f0ec",pose:"decale",pk:1.44,fam:"carrelage",joint:2,mur:1},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Mural marbre Diamond blanc beige mat 7,5×30 · 39,90 €/m² (nov. 2026)",L:300,W:75,c:"#ece5d8",pose:"decale",pk:1.44,fam:"carrelage",joint:2,mur:1},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Mural effet zellige Monpelli Emerald 6,5×29,8 · 39,90 €/m² (nov. 2026)",L:298,W:65,c:"#2f6b4f",pose:"decale",pk:1.44,fam:"carrelage",joint:2,mur:1},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Mural effet zellige Monpelli Navy 6,5×29,8 · 39,90 €/m² (nov. 2026)",L:298,W:65,c:"#24395a",pose:"decale",pk:1.44,fam:"carrelage",joint:2,mur:1},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Mural effet zellige Monpelli White 6,5×29,8 · 39,90 €/m² (nov. 2026)",L:298,W:65,c:"#f0ede4",pose:"decale",pk:1.44,fam:"carrelage",joint:2,mur:1},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Mural zellige blanc brillant 10×10 · 59,90 €/m² (nov. 2026)",L:100,W:100,c:"#f3f1ea",pose:"droite",pk:1.44,fam:"carrelage",joint:2,mur:1},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Mural zellige vert olive brillant 10×10 · 59,90 €/m² (nov. 2026)",L:100,W:100,c:"#6f7442",pose:"droite",pk:1.44,fam:"carrelage",joint:2,mur:1},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Mural zellige bleu brillant 10×10 · 59,90 €/m² (nov. 2026)",L:100,W:100,c:"#2f5e86",pose:"droite",pk:1.44,fam:"carrelage",joint:2,mur:1},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Mural effet pierre pavé Dolmen Fumo 22,5×45 · 25,90 €/m² (nov. 2026)",L:450,W:225,c:"#7d7a75",pose:"decale",pk:1.44,fam:"carrelage",joint:2,mur:1},
+  {g:"Allo Carrelage",n:"Allo Carrelage · Mural effet pierre Ardoise Falaise gris R10 60×120 · 37,90 €/m² (nov. 2026)",L:1200,W:600,c:"#7f7f7c",pose:"decale",pk:1.44,fam:"carrelage",joint:2,mur:1}
 ];
 const POSES=[["droite","Droite (alignée)"],["decale","Décalée 1/2"],["tiers","Décalée 1/3"],["aleatoire","Coupe perdue (aléatoire)"],["chevron","Chevron / bâton rompu"],["diagonale","Diagonale 45°"]];
 function floorCfg(room){ if(!S.floor) S.floor={}; if(!S.floor[room]) S.floor[room]={on:true,n:SOLS[0].n,c:"",L:0,W:0,pose:"",ori:0,joint:0}; return S.floor[room]; }
@@ -3077,7 +3149,7 @@ function buildScene(){
           if(kk.sink){ scene.add(v3Box(s,mx-kk.w*0.33,mx+kk.w*0.33,g.T+110,g.T+520,912,920,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50,g.T+80,918,1230,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50,g.T+230,1200,1230,M.steel)); }
           if(kk.hob){ scene.add(v3Box(s,mx-290,mx+290,g.T+50,g.T+570,918,924,M.dark)); } }); });
       // points électriques sur la face finie
-      (w.points||[]).forEach(p=>{ const d=PTS[p.type]||{}; scene.add(v3Box(s,p.x-40,p.x+40,g.T,g.T+12,p.y-40,p.y+40,d.c==="eau"?v3Mat("#2f7fd0"):M.white)); });
+      (w.points||[]).forEach(p=>{ const d=PTS[p.type]||{}; scene.add(v3Box(s,p.x-40,p.x+40,g.T,g.T+12,p.y-40,p.y+40,d.c==="eau"?v3Mat("#2f7fd0"):v3Mat(appCol(),{roughness:/Alu|Titane|Inox|Or|Laiton|Aluminium/.test(appCfg().f)?.35:.5,metalness:/Alu|Titane|Inox|Or|Laiton|Aluminium/.test(appCfg().f)?.6:0}))); });
     }));
     // sol
     if(g.poly){
@@ -3350,7 +3422,44 @@ const MOB=[
   // déco et équipement
   ["tv","Déco et équipement","Télévision 55 pouces",1230,60,710,"#1f1f20"],["tv","Déco et équipement","Télévision 65 pouces",1450,60,830,"#1f1f20"],["tapis","Déco et équipement","Tapis 160×230",2300,1600,10,"#d9ccb8"],
   ["tapis","Déco et équipement","Tapis 200×290",2900,2000,10,"#bdbcb8"],["plante","Déco et équipement","Plante en pot (grande)",500,500,1600,"#3f6b3a"],["lampe","Déco et équipement","Lampadaire (type)",400,400,1650,"#1f1f20"],
-  ["bureau","Déco et équipement","Bureau 120 cm (type)",1200,600,750,"#f3f2ee"],["frigo","Déco et équipement","Réfrigérateur américain",910,720,1780,"#c9ced3"]
+  ["bureau","Déco et équipement","Bureau 120 cm (type)",1200,600,750,"#f3f2ee"],["frigo","Déco et équipement","Réfrigérateur américain",910,720,1780,"#c9ced3"],
+  ["canape","Canapés · Micadoni","Micadoni OPHELIA 3 places velours",2170,1000,840,"#7a1f2b"],
+  ["canape","Canapés · Micadoni","Micadoni LUNO 3 places velours",2100,1000,680,"#a58f74"],
+  ["canape","Canapés · Micadoni","Micadoni LUNO 4 places velours",2500,1000,680,"#5a3a2a"],
+  ["canape","Canapés · Micadoni","Micadoni BELLIS 3 places velours",2820,940,700,"#9fc1d9"],
+  ["canape","Canapés · Micadoni","Micadoni BLOOM modulaire 4 places",3270,1070,970,"#b8714f"],
+  ["canape","Canapés · Micadoni","Micadoni LUPINE modulaire 3 places chenille",2300,950,700,"#5f7a5a"],
+  ["angle","Canapés · Micadoni","Micadoni LUNO angle 4 places",2500,1470,680,"#7a1f2b"],
+  ["angle","Canapés · Micadoni","Micadoni MOLINO angle 4 places bouclé",2550,1700,720,"#e3dccd"],
+  ["angle","Canapés · Micadoni","Micadoni MARTINA angle 4 places",2800,1760,750,"#2d4a6b"],
+  ["angle","Canapés · Micadoni","Micadoni MILEY angle 4 places chenille",2550,1560,700,"#1f5f66"],
+  ["angle","Canapés · Micadoni","Micadoni OPHELIA angle 4 places",2560,1640,840,"#6b4a33"],
+  ["angle","Canapés · Micadoni","Micadoni OPHELIA angle convertible + coffre",2560,1600,840,"#d9ccb8"],
+  ["angle","Canapés · Micadoni","Micadoni LUPINE angle convertible",2700,1770,700,"#e6dccb"],
+  ["angle","Canapés · Micadoni","Micadoni JODIE angle 3 places",2240,1620,770,"#1f4f5f"],
+  ["angle","Canapés · Micadoni","Micadoni NEO angle 3 places chenille",2450,1650,830,"#c9a03a"],
+  ["canape","Canapés · Sklum","Sklum COCO 3 places chenille",2300,1030,650,"#a4876a"],
+  ["canape","Canapés · Sklum","Sklum ARAMIS 3 places",2350,1000,920,"#5b6347"],
+  ["angle","Canapés · Sklum","Sklum GIORGIA angle modulaire 3 pièces",4300,1700,730,"#cdbb9f"],
+  ["angle","Canapés · Sklum","Sklum CASPIAN angle 3 places chenille",2440,1680,850,"#ece4d4"],
+  ["table","Tables · Sklum","Sklum GALA ovale extensible 160-200 × 100",1600,1000,750,"#6b4a33"],
+  ["table","Tables · Sklum","Sklum AUREAN ovale ciment 260 × 110",2600,1100,750,"#b8b2a8"],
+  ["table","Tables · Sklum","Sklum PURIO verre trempé 180 × 90",1800,900,750,"#cfd8d6"],
+  ["ronde","Tables · Sklum","Sklum SEKIZ ronde bois Ø 100",1000,1000,750,"#c49a68"],
+  ["ronde","Tables · Sklum","Sklum VELIA ronde aspect travertin Ø 100",1000,1000,750,"#d8ccb6"],
+  ["ronde","Tables · Sklum","Sklum MONTANA extensible chêne 120-160 × 120",1200,1200,750,"#c49a68"],
+  ["table","Tables · Sklum","Sklum TREVERIS extensible bois 220-320 × 95",2200,950,760,"#a07850"],
+  ["table","Tables · Sklum","Sklum MILFORD ovale 200 × 105",2000,1050,750,"#f3f2ee"],
+  ["basse","Tables · Sklum","Sklum TINSLEY table basse 75 × 75",750,750,400,"#c49a68"],
+  ["basse","Tables · Sklum","Sklum IURAIMA table basse inox 100 × 70",1000,700,400,"#c9ced3"],
+  ["bureau","Tables · Sklum","Sklum COLMAN bureau 120 × 50",1200,500,750,"#c49a68"],
+  ["chevet","Tables · Sklum","Sklum ABRAMS chevet manguier 50 × 35",500,350,550,"#8a6a4a"],
+  ["chevet","Tables · Sklum","Sklum ELAIA chevet manguier 55 × 35",550,350,550,"#8a6a4a"],
+  ["chaise","Chaises · Sklum","Sklum JOLIE chaise chenille et fer (≈)",500,580,820,"#a4876a"],
+  ["chaise","Chaises · Sklum","Sklum OLEA chaise chêne avec accoudoirs (≈)",560,560,800,"#d9ccb8"],
+  ["chaise","Chaises · Sklum","Sklum BIANCA chaise bouclé et chêne (≈)",500,560,800,"#efe9dd"],
+  ["chaise","Chaises · Sklum","Sklum TENTO chaise rotin (≈)",450,520,800,"#c8a878"],
+  ["chaise","Chaises · Sklum","Sklum UISH Edition chaise orme (≈)",450,500,780,"#b78d60"]
 ].map(([t,g,n,w,d,h,c],i)=>({id:"m"+i,t,g,n,w,d,h,c}));
 function mobDraw(T3,grp,m,mat,tg,pick){ const W=m.w/1000,D=m.d/1000,H=m.h/1000, c=m.c||"#bdbcb8", t=m.cat;
   const fab=v3Mat(c,{roughness:t==="tv"?.3:.95}), dk=v3Mat(shade(c,.8),{roughness:.9}), wood=v3Mat("#3b2d22",{roughness:.6}), lg=v3Mat("#2b2b2b",{roughness:.5,metalness:.3});
