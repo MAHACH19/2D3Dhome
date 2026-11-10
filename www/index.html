@@ -3957,7 +3957,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-lib]"); i
   if(a==="del"){ if(!confirm(`Supprimer définitivement « ${it.nom} »${clOn()?" (sur cet appareil et dans le cloud)":" de cet appareil"} ?`)) return; libDrop(id); clDelete(id); L.items=L.items.filter(i=>i!==it); libSet(L); renderHome(); return; } });
 
 /* ---------- Cloud Supabase : compte e-mail, projets sur tous les appareils ---------- */
-const SUPA_DEF={url:"",key:""};
+const SUPA_DEF={url:"https://vezkwsrzdgebjytxgkos.supabase.co",key:"sb_publishable_QXL55fNE1at40Xgfn3GAtw_HkcV4XQL"};
 const CL_KEY="calepinage-cloud";
 function clGet(){ try{ return JSON.parse(localStorage.getItem(CL_KEY))||{}; }catch(e){ return {}; } }
 function clSet(c){ try{ localStorage.setItem(CL_KEY,JSON.stringify(c)); }catch(e){} }
@@ -3970,7 +3970,7 @@ async function clToken(){ const c=clGet(); if(!c.sess) return null; if(Date.now(
   try{ const j=await clAuth("token?grant_type=refresh_token",{refresh_token:c.sess.rt}); clSaveSess(j); return j.access_token; }catch(e){ return null; } }
 async function clRest(path,opt={}){ const {url,key}=clCfg(), t=await clToken(); if(!t) throw new Error("Session expirée : reconnectez-vous.");
   const r=await fetch(`${url}/rest/v1/${path}`,{...opt,headers:{apikey:key,Authorization:"Bearer "+t,"Content-Type":"application/json",...(opt.headers||{})}});
-  if(!r.ok){ const j=await r.json().catch(()=>({})); throw new Error(j.message||("Erreur "+r.status)); } return r.status===204?null:r.json().catch(()=>null); }
+  if(!r.ok){ const j=await r.json().catch(()=>({})); const m=j.message||("Erreur "+r.status); throw new Error(/schema cache|does not exist|PGRST205/i.test(m+(j.code||""))?"la table des projets n'existe pas encore dans Supabase (étape SQL à refaire).":m); } return r.status===204?null:r.json().catch(()=>null); }
 function clOn(){ const c=clCfg(); return !!(c.url&&c.key&&clGet().sess); }
 async function clUpsert(rows){ if(!rows.length) return; await clRest("projets?on_conflict=user_id,id",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows)}); }
 let CL_T=null;
