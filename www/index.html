@@ -414,8 +414,35 @@ const ISO = [
   {f:"Steico", n:"Steico Flex 036", lambda:0.036, W:575, Lg:1220},
   {f:"Gutex", n:"Gutex Thermoflex", lambda:0.036, W:575, Lg:1350},
   {f:"Buitex", n:"Isonat Flex 55 Plus", lambda:0.038, W:600, Lg:1220},
+  {f:"Steico", n:"Steico Flex 038", lambda:0.038, W:575, Lg:1220},
+  {f:"Steico", n:"Steico Therm (rigide)", lambda:0.040, W:600, Lg:1200},
+  {f:"Soprema (Pavatex)", n:"Pavatherm (rigide)", lambda:0.040, W:580, Lg:1080},
+  {f:"Gutex", n:"Gutex Thermoflex 038", lambda:0.038, W:575, Lg:1350},
+  {f:"Homatherm", n:"Homatherm Flexcl 040", lambda:0.040, W:575, Lg:1220},
+  {f:"Buitex", n:"Isonat Duo'confort (chanvre + bois)", lambda:0.039, W:600, Lg:1220},
+  {f:"Biofib", n:"Biofib Trio (chanvre, lin, coton)", lambda:0.040, W:600, Lg:1200, typ:"chanvre"},
+  {f:"Biofib", n:"Biofib Chanvre", lambda:0.040, W:600, Lg:1200, typ:"chanvre"},
+  {f:"Biofib", n:"Biofib Ouate (ouate de cellulose)", lambda:0.039, W:600, Lg:1200, typ:"ouate"},
+  {f:"Isover", n:"Isover GR 32 revêtu kraft", lambda:0.032, W:600, Lg:1350, typ:"verre"},
+  {f:"Isover", n:"Isover Isoconfort 35", lambda:0.035, W:600, Lg:1350, typ:"verre"},
+  {f:"Isover", n:"Isover Isoconfort 32", lambda:0.032, W:600, Lg:1350, typ:"verre"},
+  {f:"Isover", n:"Isover Isofaçade 32R (rigide)", lambda:0.032, W:600, Lg:1350, typ:"verre"},
+  {f:"Knauf Insulation", n:"Knauf TP 238 (Ecose)", lambda:0.038, W:600, Lg:1350, typ:"knauf"},
+  {f:"Knauf Insulation", n:"Knauf Acoustifit 035", lambda:0.035, W:600, Lg:1350, typ:"knauf"},
+  {f:"Knauf Insulation", n:"Knauf Thermo Dalle 032", lambda:0.032, W:600, Lg:1350, typ:"knauf"},
+  {f:"URSA", n:"URSA Pure 32 RP", lambda:0.032, W:600, Lg:1350, typ:"verre"},
+  {f:"URSA", n:"URSA Pure 35 QN", lambda:0.035, W:600, Lg:1350, typ:"verre"},
+  {f:"Rockwool", n:"Rockwool Rockmur", lambda:0.035, W:600, Lg:1350, typ:"roche"},
+  {f:"Rockwool", n:"Rockwool Rockplus kraft", lambda:0.034, W:600, Lg:1350, typ:"roche"},
+  {f:"Rockwool", n:"Rockwool Rockcalm (acoustique)", lambda:0.037, W:600, Lg:1350, typ:"roche"},
+  {f:"Knauf (Rocksilk)", n:"Knauf Rocksilk RockStandard 35", lambda:0.035, W:600, Lg:1350, typ:"roche"},
+  {f:"Kingspan", n:"Kingspan Kooltherm K112 (phénolique)", lambda:0.020, W:600, Lg:1200, typ:"pir"},
+  {f:"Unilin", n:"Unilin Utherm Wall L (PIR)", lambda:0.022, W:600, Lg:1200, typ:"pir"},
+  {f:"Recticel", n:"Recticel Eurothane (PIR)", lambda:0.022, W:600, Lg:1200, typ:"pir"},
+  {f:"Liège", n:"Liège expansé (panneau)", lambda:0.040, W:500, Lg:1000, typ:"liege"},
   {f:"Autre", n:"Panneau fibre de bois", lambda:0.040, W:600, Lg:1200}
 ];
+const ISO_TYP={bois:["#b07a3e","fibre de bois"],chanvre:["#b9a77c","chanvre / lin"],ouate:["#9a9a95","ouate de cellulose"],verre:["#e7c64e","laine de verre"],knauf:["#9c7a4e","laine de verre (liant brun)"],roche:["#8f9a8a","laine de roche"],pir:["#cfc8b5","polyuréthane (PIR)"],liege:["#6f4a2f","liège"]};
 const PLA = [
   {f:"Placo", n:"Placoplatre BA13", W:1200, lens:[2500,2600,2700,2800,3000]},
   {f:"Placo", n:"Placo Hydro BA13 (H1)", W:1200, lens:[2500,2600,2700,2800,3000]},
@@ -1030,7 +1057,7 @@ function renderSide(){ renderQuick();
   ${kitPanel(w)}
   ${solPanel(w)}
   ${lumPanel(w)}
-  ${meubPanel(w)}
+  ${mobPanel(w)}${meubPanel(w)}
   ${creaPanel(w)}
   ${bcPanel(w)}
 
@@ -2511,7 +2538,16 @@ const SOLS=[
   {g:"Carrelage mural",n:"Faïence 10×10 blanc mat",L:100,W:100,c:"#f2f1ec",pose:"droite",pk:1,fam:"carrelage",joint:2,mur:1},
   {g:"Carrelage mural",n:"Faïence 30×60 blanc mat",L:600,W:300,c:"#efeee9",pose:"decale",pk:1.44,fam:"carrelage",joint:2,mur:1},
   {g:"Carrelage mural",n:"Zellige 10×10 vert",L:100,W:100,c:"#5f8a72",pose:"droite",pk:0.5,fam:"carrelage",joint:2,mur:1},
-  {g:"Carrelage mural",n:"Grès cérame 60×120 effet pierre (douche)",L:1200,W:600,c:"#c9c3b8",pose:"droite",pk:1.44,fam:"carrelage",joint:2,mur:1}
+  {g:"Carrelage mural",n:"Grès cérame 60×120 effet pierre (douche)",L:1200,W:600,c:"#c9c3b8",pose:"droite",pk:1.44,fam:"carrelage",joint:2,mur:1},
+  // Gammes types vues chez les grandes enseignes (nov. 2026) : formats et finitions courants, la référence exacte change selon le magasin
+  ...[
+   ["Leroy Merlin (Artens)",[["Grès cérame effet marbre Calacatta poli 60×120",1200,600,"#efece6",2],["Grès cérame effet béton Urban 60×60",600,600,"#9f9d98",3],["Grès cérame effet bois chêne 20×120",1200,200,"#c09466",2,"tiers"],["Grès cérame effet travertin 60×120",1200,600,"#d8ccb6",2],["Grès cérame effet pierre gris 75×75",750,750,"#8e8c87",3],["Grès cérame terracotta 30×30",300,300,"#b56b48",4],["Carreau effet ciment motif 20×20",200,200,"#d6d0c4",2,"droite",1]]],
+   ["Castorama (GoodHome)",[["Grès cérame effet marbre blanc 60×60",600,600,"#eeebe5",2],["Grès cérame effet béton gris 60×120",1200,600,"#a5a39e",2,"decale"],["Grès cérame effet bois naturel 15×90",900,150,"#b98a5c",2,"tiers"],["Grès cérame effet pierre beige 60×60",600,600,"#d3c5ac",3],["Grès cérame noir mat 60×60",600,600,"#2f3032",3]]],
+   ["Brico Dépôt",[["Grès cérame effet marbre 60×120",1200,600,"#ebe8e2",2],["Grès cérame gris clair 45×45",450,450,"#c8c6c1",3],["Grès cérame effet bois 20×120",1200,200,"#a87c52",2,"tiers"],["Grès cérame effet béton 60×60",600,600,"#a3a19c",3],["Grès cérame beige 33×33",330,330,"#d7c9b1",3]]],
+   ["Saint-Maclou",[["Grès cérame effet marbre Statuario 120×120",1200,1200,"#f1efea",2],["Grès cérame effet béton ciré 80×80",800,800,"#b8b4ad",2],["Grès cérame effet parquet chevron 10×60",600,100,"#b48a5e",2,"chevron"],["Grès cérame effet pierre de Bourgogne 60×60",600,600,"#d9cfbd",3]]],
+   ["Point.P / Cedeo",[["Grès cérame pleine masse gris 60×60",600,600,"#8f8e8a",3],["Grès cérame rectifié blanc 60×120",1200,600,"#f0efeb",2],["Grès cérame effet pierre bleue 60×60",600,600,"#6f767b",3]]],
+   ["Carrelage mural (toutes enseignes)",[["Faïence métro biseautée 10×20 blanc",200,100,"#f5f5f2",2,"decale",0,1],["Faïence métro 7,5×30 vert sauge",300,75,"#9fb09a",2,"decale",0,1],["Zellige 13×13 blanc cassé",130,130,"#efe9dc",2,"droite",0,1],["Zellige 5×15 bleu canard",150,50,"#2f6f73",2,"decale",0,1],["Faïence 20×20 terracotta",200,200,"#b8714f",2,"droite",0,1],["Faïence 30×90 effet marbre",900,300,"#ece9e3",2,"decale",0,1],["Mosaïque turquoise 30×30 (plaques)",300,300,"#2fa7a0",2,"droite",0,1],["Grès cérame 60×120 effet béton (douche)",1200,600,"#a8a59f",2,"droite",0,1]]]
+  ].flatMap(([shop,L])=>L.map(([n,l,w,c,j,pose,motif,mur])=>({g:shop,n:`${shop.split(" (")[0]} · ${n}`,L:l,W:w,c,pose:pose||"droite",pk:Math.max(1,Math.round(l*w*Math.ceil(1.4e6/(l*w))/1e4)/100),fam:"carrelage",joint:j,...(motif?{motif:1}:{}),...(mur?{mur:1}:{})})))
 ];
 const POSES=[["droite","Droite (alignée)"],["decale","Décalée 1/2"],["tiers","Décalée 1/3"],["aleatoire","Coupe perdue (aléatoire)"],["chevron","Chevron / bâton rompu"],["diagonale","Diagonale 45°"]];
 function floorCfg(room){ if(!S.floor) S.floor={}; if(!S.floor[room]) S.floor[room]={on:true,n:SOLS[0].n,c:"",L:0,W:0,pose:"",ori:0,joint:0}; return S.floor[room]; }
@@ -2652,7 +2688,7 @@ function mdfCut(m){
   const paint=(2*(H*D)+W*D+W*H*2+(m.etag||0)*W*D*2)/1e6;
   return {rows,fond,area,sheets,paint}; }
 function meubMaterials(room){
-  const M=meubles(room); if(!M.length) return []; const rows=[], by={};
+  const M=meubles(room).filter(m=>!m.cat); if(!M.length) return []; const rows=[], by={};
   const add=(des,det,q,u)=>{ if(q>0) rows.push({cat:"Mes meubles",des,det,q,u}); };
   let fonds=0, charn=0, coul=0;
   M.forEach(m=>{ const c=mdfCut(m), k=`Panneau MDF ${m.ep||19} mm · 280×207 cm`; by[k]=(by[k]||0)+c.area;
@@ -2677,7 +2713,9 @@ function texCanvas(key,w,h,draw){ V3.tex=V3.tex||{}; if(V3.tex[key]) return V3.t
   const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.anisotropy=4; V3.tex[key]=t; return t; }
 function texStone(){ return texCanvas("stone",512,256,(x,w,h)=>{ x.fillStyle="#8a8070"; x.fillRect(0,0,w,h); let r=1; const R=()=>{ r=(r*16807)%2147483647; return r/2147483647; };
   for(let y=0;y<h;y+=42){ for(let X=-(y/42%2)*40;X<w;){ const ww=50+R()*60; const c=150+R()*50|0; x.fillStyle=`rgb(${c},${c-8},${c-22})`; x.beginPath(); x.roundRect?x.roundRect(X+3,y+3,ww-6,36,9):x.rect(X+3,y+3,ww-6,36); x.fill(); X+=ww; } } }); }
-function texFibre(){ return texCanvas("fibre",256,256,(x,w,h)=>{ x.fillStyle="#b07a3e"; x.fillRect(0,0,w,h); for(let i=0;i<1400;i++){ x.strokeStyle=`rgba(${90+Math.random()*90|0},${55+Math.random()*50|0},20,.55)`; x.beginPath(); const X=Math.random()*w, Y=Math.random()*h, a=Math.random()*6.28; x.moveTo(X,Y); x.lineTo(X+Math.cos(a)*14,Y+Math.sin(a)*14); x.stroke(); } }); }
+function texFibre(){ const ty=(ISO.find(i=>i.n===S.iso.n)||{}).typ||"bois", col=(ISO_TYP[ty]||ISO_TYP.bois)[0], [r0,g0,b0]=[1,3,5].map(i=>parseInt(col.slice(i,i+2),16));
+  return texCanvas("fibre-"+ty,256,256,(x,w,h)=>{ x.fillStyle=col; x.fillRect(0,0,w,h); if(ty==="pir"){ x.fillStyle="#d9d4c6"; x.fillRect(0,0,w,6); x.fillRect(0,h-6,w,6); }
+    for(let i=0;i<(ty==="pir"?300:1400);i++){ x.strokeStyle=`rgba(${Math.max(0,r0-50+Math.random()*80)|0},${Math.max(0,g0-50+Math.random()*70)|0},${Math.max(0,b0-40+Math.random()*50)|0},.55)`; x.beginPath(); const X=Math.random()*w, Y=Math.random()*h, a=Math.random()*6.28; x.moveTo(X,Y); x.lineTo(X+Math.cos(a)*14,Y+Math.sin(a)*14); x.stroke(); } }); }
 function texMem(){ const v=S.mem.dir!=="h"; return texCanvas("mem3"+(v?"v":"h"),512,512,(x,w,h)=>{ const k=w/1000; x.fillStyle="#f2f2ee"; x.fillRect(0,0,w,h);
   if(v){ x.translate(0,h); x.rotate(-Math.PI/2); } x.scale(k,k);
   x.strokeStyle="rgba(40,40,38,.7)"; x.lineWidth=4; x.setLineDash([16,12]); for(let i=0;i<=1000;i+=100){ x.beginPath(); x.moveTo(i,0); x.lineTo(i,1000); x.stroke(); x.beginPath(); x.moveTo(0,i); x.lineTo(1000,i); x.stroke(); } x.setLineDash([]);
@@ -3083,6 +3121,7 @@ function buildScene(){
       // meubles libres
       meubles(room).forEach((m,mi)=>{ const grp=new T3.Group(), e=(m.ep||19)/1000, W=m.w/1000, D=m.d/1000, H=m.h/1000, soc=m.socle?0.08:0, col=m.c||"#e9e4da";
         const cm3=v3Mat(col,{roughness:.6}), tg={kind:"meub",room,idx:mi};
+        if(m.cat){ mobDraw(T3,grp,m,cm3,tg,pick); const [px,py]=X.p(m.x,m.y); grp.position.set(px/1000,0,-py/1000); grp.rotation.y=-((m.rot||0)+(V.all?roomLayout(room).rot:0))*Math.PI/180; scene.add(grp); return; }
         const bx=(w0,h0,d0,x,y,z,mat)=>{ const b=new T3.Mesh(new T3.BoxGeometry(w0,h0,d0),mat||cm3); b.position.set(x,y,z); b.userData=tg; grp.add(b); pick.push(b); };
         bx(e,H-soc,D,-W/2+e/2,soc+(H-soc)/2,0); bx(e,H-soc,D,W/2-e/2,soc+(H-soc)/2,0); bx(W-2*e,e,D,0,H-e/2,0); bx(W-2*e,e,D,0,soc+e/2,0); bx(W-0.004,H-soc-0.004,0.003,0,soc+(H-soc)/2,-D/2+0.0015,v3Mat(shade(col,0.85)));
         if(soc) bx(W-2*e,soc,e,0,soc/2,D/2-0.04,v3Mat(shade(col,0.7)));
@@ -3244,6 +3283,9 @@ function v3PopHtml(){ const s=V3.sel, paints=[...DIVERS.filter(d=>/laque|Finish|
   if(s.kind==="lum"){ const L=lumList(s.room)[s.idx]; return `${close}<b>${esc((LUM.find(t=>t.id===L.t)||{}).n||"")}</b><div class="btns" style="margin-top:6px"><button type="button" data-pop="lumdel" class="ghost">Supprimer</button></div><p class="hint">Déplacez-le dans l'onglet Plafond.</p>`; }
   const isK=s.kind==="kit", it=isK?kitCfg(s.room).items[s.idx]:meubles(s.room)[s.idx]; if(!it) return close;
   const name=isK?(kitItem(it)||{}).n:(it.n||"Meuble MDF"), col=isK?(it.c||(FACADES.find(f=>f.n===kitCfg(s.room).facade)||FACADES[0]).c):(it.c||"#e9e4da");
+  if(!isK&&it.cat) return `${close}<b>${esc(name)}</b> <span class="cap">${cm(it.w)} × ${cm(it.d)} cm</span>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">${MOB_COLS.map(([n,c])=>`<button type="button" data-pop="sw:${c}" title="${n}" aria-label="${n}" style="width:26px;height:26px;padding:0;border-radius:50%;background:${c};border:2px solid ${c===col?"#1d63c4":"#0003"}"></button>`).join("")}</div>
+    <div class="btns" style="margin-top:6px"><button type="button" data-pop="rot">Tourner 90°</button><button type="button" data-pop="del" class="ghost">Supprimer</button></div><p class="hint">Faites glisser le meuble sélectionné pour le placer.</p>`;
   return `${close}<b>${esc(name)}</b>
     <label class="f" style="margin-top:6px">Couleur<input type="color" data-popk="col" value="${col}" style="height:34px;padding:2px"></label>${sw(col)}
     <label class="f">Peinture (je peins moi-même)<select data-popk="peint"><option value="">${isK?"Façade IKEA d'origine":"Pas encore choisie"}</option>${paints.map(n=>`<option${n===it.peint?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
@@ -3279,9 +3321,80 @@ function lumPanel(w){ const room=w.room||"", L=lumList(room);
     ${lumChecks(room).map(k=>`<div class="ck ${k.ok?"ok":"ko"}"><b>${k.ok?"✓":"!"}</b><span>${esc(k.t)}</span>${k.ref?`<em>${esc(k.ref)}</em>`:""}</div>`).join("")}
     <h3 style="margin:10px 0 4px;font-size:15px">Réseaux : règles DTU et NF C 15-100</h3>${ckHtml(netChecks(room))}
     <p class="hint">Les boîtes de dérivation et le caisson VMC reçoivent automatiquement une trappe de visite. Le bouton « Réseaux » de la Visite 3D montre les gaines, câbles et tuyaux. Positions mesurées depuis le mur brut. Le plus simple : onglet « Plafond », faites glisser chaque élément. Les luminaires éclairent la visite 3D en mode « Nuit ».</p></section>`; }
+
+/* ---------- Mobilier et déco du commerce (catalogue, dimensions indicatives L × P × H en mm) ---------- */
+const MOB_COLS=[["Turquoise","#2fa9a3"],["Bleu canard","#1f5f66"],["Vert sauge","#9aab92"],["Vert bouteille","#2f4f3a"],["Terracotta","#b8714f"],["Moutarde","#c9a03a"],["Rose poudré","#d9aaa4"],["Beige","#d9ccb8"],["Gris clair","#bdbcb8"],["Gris anthracite","#47494c"],["Bleu nuit","#25324a"],["Bouclette écrue","#efe9dd"],["Cuir cognac","#94562e"],["Noir","#1f1f20"],["Chêne","#c49a68"],["Noyer","#6b4a33"],["Blanc","#f3f2ee"]];
+const MOB=[
+  // canapés
+  ["canape","Canapés","IKEA KIVIK 3 places",2280,950,830,"#bdbcb8"],["canape","Canapés","IKEA SÖDERHAMN 3 places",1980,990,830,"#d9ccb8"],["canape","Canapés","IKEA EKTORP 3 places",2180,880,880,"#efe9dd"],
+  ["canape","Canapés","IKEA LANDSKRONA 3 places",2040,890,780,"#47494c"],["canape","Canapés","IKEA VIMLE 3 places",2410,980,830,"#9aab92"],
+  ["angle","Canapés","Conforama VERA angle convertible 4 places",2500,1600,850,"#d9aaa4"],["angle","Canapés","IKEA FRIHETEN angle convertible",2300,1510,660,"#47494c"],
+  ["angle","Canapés","But · canapé d'angle convertible 5 places (type)",2700,1700,850,"#bdbcb8"],["angle","Canapés","Maisons du Monde · canapé d'angle velours (type)",2600,1600,800,"#2fa9a3"],
+  ["canape","Canapés","Maisons du Monde · canapé 3 places velours (type)",2100,900,800,"#1f5f66"],["canape","Canapés","La Redoute Intérieurs · canapé 3 places lin (type)",2100,950,780,"#d9ccb8"],
+  ["canape","Canapés","Conforama · canapé 2 places tissu (type)",1600,850,850,"#bdbcb8"],["canape","Canapés","Canapé convertible 3 places (type)",2000,950,900,"#47494c"],
+  // fauteuils
+  ["fauteuil","Fauteuils","IKEA POÄNG",680,820,1000,"#d9ccb8"],["fauteuil","Fauteuils","IKEA STRANDMON",820,960,1010,"#2f4f3a"],["fauteuil","Fauteuils","Fauteuil velours (type)",800,800,800,"#2fa9a3"],
+  ["pouf","Fauteuils","Pouf rond (type)",450,450,400,"#c9a03a"],
+  // tables et chaises
+  ["table","Tables","IKEA EKEDALEN extensible 120 cm",1200,800,750,"#f3f2ee"],["table","Tables","IKEA MÖRBYLÅNGA 220 cm",2200,1000,740,"#6b4a33"],["table","Tables","Table à manger 6 places 180 cm (type)",1800,900,750,"#c49a68"],
+  ["ronde","Tables","Table ronde Ø 120 (type)",1200,1200,750,"#c49a68"],["basse","Tables","IKEA LACK table basse",1180,780,450,"#1f1f20"],["basse","Tables","Table basse chêne (type)",1100,600,400,"#c49a68"],
+  ["chaise","Chaises","IKEA ADDE",390,470,770,"#f3f2ee"],["chaise","Chaises","IKEA TOBIAS",550,560,820,"#bdbcb8"],["chaise","Chaises","Chaise velours (type)",470,560,830,"#2fa9a3"],
+  ["tabouret","Chaises","Tabouret de bar h. assise 65 (type)",400,400,900,"#1f1f20"],
+  // lits
+  ["lit","Lits","IKEA MALM 160×200",1770,2090,1000,"#f3f2ee"],["lit","Lits","IKEA HEMNES 160×200",1740,2110,1120,"#f3f2ee"],["lit","Lits","Lit 140×190 (type)",1500,2000,1000,"#c49a68"],
+  ["lit","Lits","Lit 180×200 tête de lit capitonnée (type)",1900,2150,1200,"#bdbcb8"],["lit","Lits","Lit 90×190 (type)",1000,2000,900,"#f3f2ee"],["chevet","Lits","Table de chevet (type)",450,400,550,"#c49a68"],
+  // rangements
+  ["armoire","Rangements","IKEA PAX 100 cm",1000,580,2360,"#f3f2ee"],["armoire","Rangements","IKEA PAX 150 cm",1500,580,2360,"#f3f2ee"],["etagere","Rangements","IKEA BILLY 80 cm",800,280,2020,"#f3f2ee"],
+  ["etagere","Rangements","IKEA KALLAX 4×4",1470,390,1470,"#f3f2ee"],["etagere","Rangements","IKEA KALLAX 2×4",770,390,1470,"#f3f2ee"],["buffet","Rangements","Buffet 3 portes (type)",1600,450,800,"#6b4a33"],
+  ["buffet","Rangements","IKEA BESTÅ meuble TV 180 cm",1800,420,390,"#f3f2ee"],["buffet","Rangements","Commode 3 tiroirs (type)",800,480,780,"#f3f2ee"],
+  // déco et équipement
+  ["tv","Déco et équipement","Télévision 55 pouces",1230,60,710,"#1f1f20"],["tv","Déco et équipement","Télévision 65 pouces",1450,60,830,"#1f1f20"],["tapis","Déco et équipement","Tapis 160×230",2300,1600,10,"#d9ccb8"],
+  ["tapis","Déco et équipement","Tapis 200×290",2900,2000,10,"#bdbcb8"],["plante","Déco et équipement","Plante en pot (grande)",500,500,1600,"#3f6b3a"],["lampe","Déco et équipement","Lampadaire (type)",400,400,1650,"#1f1f20"],
+  ["bureau","Déco et équipement","Bureau 120 cm (type)",1200,600,750,"#f3f2ee"],["frigo","Déco et équipement","Réfrigérateur américain",910,720,1780,"#c9ced3"]
+].map(([t,g,n,w,d,h,c],i)=>({id:"m"+i,t,g,n,w,d,h,c}));
+function mobDraw(T3,grp,m,mat,tg,pick){ const W=m.w/1000,D=m.d/1000,H=m.h/1000, c=m.c||"#bdbcb8", t=m.cat;
+  const fab=v3Mat(c,{roughness:t==="tv"?.3:.95}), dk=v3Mat(shade(c,.8),{roughness:.9}), wood=v3Mat("#3b2d22",{roughness:.6}), lg=v3Mat("#2b2b2b",{roughness:.5,metalness:.3});
+  const bx=(w0,h0,d0,x,y,z,mt)=>{ const b=new T3.Mesh(new T3.BoxGeometry(Math.max(.005,w0),Math.max(.005,h0),Math.max(.005,d0)),mt||fab); b.position.set(x,y,z); b.userData=tg; grp.add(b); pick.push(b); return b; };
+  const cyl=(r,h0,x,y,z,mt)=>{ const b=new T3.Mesh(new T3.CylinderGeometry(r,r,h0,24),mt||fab); b.position.set(x,y,z); b.userData=tg; grp.add(b); pick.push(b); return b; };
+  const legs=(w0,d0,h0,y0)=>[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>bx(.04,h0,.04,a*(w0/2-.04),(y0||0)+h0/2,b*(d0/2-.04),lg));
+  const sofa=(w0,d0,x0,z0,arms)=>{ const ah=Math.min(.62,H*.75), aw=arms?.16:0, sh=.44, bd=.2; legs(w0,d0,.07); bx(w0,sh-.07-.12,d0,x0,.07+(sh-.07-.12)/2,z0,dk);
+    const nc=Math.max(1,Math.round((w0-2*aw)/.75)); for(let i=0;i<nc;i++){ const cw=(w0-2*aw)/nc; bx(cw-.01,.13,d0-bd-.02,x0-w0/2+aw+cw*(i+.5),sh-.065,z0+bd/2+.01); bx(cw-.01,H-sh+.02,.2,x0-w0/2+aw+cw*(i+.5),sh+(H-sh)/2-.02,z0-d0/2+.1); }
+    if(arms){ bx(aw,ah-.07,d0,x0-w0/2+aw/2,.07+(ah-.07)/2,z0); bx(aw,ah-.07,d0,x0+w0/2-aw/2,.07+(ah-.07)/2,z0); } };
+  if(t==="canape") sofa(W,D,0,0,true);
+  else if(t==="angle"){ const dd=Math.min(.98,D*.6); sofa(W,dd,0,-D/2+dd/2,true); const cw=Math.min(.95,W*.36); bx(cw,.3,D-dd,W/2-cw/2,.07+.15,dd/2,dk); bx(cw-.02,.13,D-dd-.02,W/2-cw/2,.44-.065,dd/2); legs(cw,D-dd,.07); }
+  else if(t==="fauteuil"){ legs(W,D,.12); bx(W,.3,D,0,.27,0,dk); bx(W-.2,.12,D-.25,0,.48,.1); bx(W-.08,H-.45,.18,0,.45+(H-.45)/2,-D/2+.09); bx(.12,.28,D,-W/2+.06,.55,0); bx(.12,.28,D,W/2-.06,.55,0); }
+  else if(t==="pouf") cyl(W/2,H,0,H/2,0);
+  else if(t==="table"||t==="bureau"||t==="basse"){ bx(W,.035,D,0,H-.0175,0,v3Mat(c,{roughness:.55})); legs(W,D,H-.035); }
+  else if(t==="ronde"){ cyl(W/2,.035,0,H-.0175,0,v3Mat(c,{roughness:.55})); cyl(.05,H-.035,0,(H-.035)/2,0,lg); cyl(.28,.03,0,.015,0,lg); }
+  else if(t==="chaise"||t==="tabouret"){ const sh=t==="tabouret"?.65:.46; legs(W,D,sh-.03); bx(W,.04,D,0,sh-.02,0); if(t==="chaise") bx(W,H-sh,.04,0,sh+(H-sh)/2,-D/2+.02); else bx(W*.8,.02,.02,0,.3,D/2-.04,lg); }
+  else if(t==="lit"){ legs(W,D,.12); bx(W,.2,D,0,.22,0,v3Mat(c,{roughness:.7})); bx(W-.08,.2,D-.12,0,.42,.04,v3Mat("#f6f4ef",{roughness:.95})); bx(W-.1,.06,.55,0,.55,D/2-.35,v3Mat("#e9e3d6",{roughness:.95}));
+    bx(W,H,.08,0,H/2,-D/2+.04,v3Mat(shade(c,.92),{roughness:.8})); [-1,1].forEach(sd=>bx(Math.min(.6,W/2-.08),.12,.4,sd*W/4,.58,-D/2+.32,v3Mat("#ffffff",{roughness:.95}))); }
+  else if(t==="chevet"||t==="buffet"||t==="armoire"){ const wm=v3Mat(c,{roughness:.6}); bx(W,H-.06,D,0,.06+(H-.06)/2,0,wm); legs(W,D,.06); const nd=t==="armoire"?Math.max(2,Math.round(W/.5)):t==="buffet"?Math.max(2,Math.round(W/.55)):1;
+    for(let i=1;i<nd;i++) bx(.004,H-.08,.004,-W/2+W*i/nd,.06+(H-.06)/2,D/2+.002,v3Mat(shade(c,.75))); for(let i=0;i<nd;i++) bx(.015,.12,.02,-W/2+W*(i+.5)/nd+(i%2?-.06:.06)*(nd>1?1:0),.06+(H-.06)*.55,D/2+.01,lg); }
+  else if(t==="etagere"){ const wm=v3Mat(c,{roughness:.6}); bx(.02,H,D,-W/2+.01,H/2,0,wm); bx(.02,H,D,W/2-.01,H/2,0,wm); bx(W,H,.005,0,H/2,-D/2+.003,wm); const n=Math.max(3,Math.round(H/.37)); for(let i=0;i<=n;i++) bx(W,.02,D,0,.01+(H-.02)*i/n,0,wm);
+    if(/KALLAX/.test(m.n)){ const nc=Math.round(W/.37); for(let i=1;i<nc;i++) bx(.02,H,D,-W/2+W*i/nc,H/2,0,wm); } }
+  else if(t==="tv"){ bx(W,H,.04,0,.75+H/2,0,v3Mat("#111214",{roughness:.2,metalness:.3})); bx(W-.02,H-.02,.002,0,.75+H/2,.021,v3Mat("#0b0c10",{roughness:.08,metalness:.1})); }
+  else if(t==="tapis") bx(W,.01,D,0,.005,0,v3Mat(c,{roughness:1}));
+  else if(t==="plante"){ cyl(W*.32,.4,0,.2,0,v3Mat("#c9b8a0",{roughness:.8})); for(let i=0;i<9;i++){ const s0=new T3.Mesh(new T3.SphereGeometry(.18+Math.random()*.1,10,8),v3Mat(shade(c,.85+Math.random()*.3),{roughness:.9})); s0.position.set((Math.random()-.5)*W*.7,.6+Math.random()*(H-.8),(Math.random()-.5)*W*.7); s0.userData=tg; grp.add(s0); pick.push(s0); } }
+  else if(t==="lampe"){ cyl(.15,.02,0,.01,0,lg); cyl(.012,H-.3,0,(H-.3)/2,0,lg); const sh=new T3.Mesh(new T3.CylinderGeometry(.16,.22,.3,24,1,true),v3Mat("#f2ead9",{emissive:new T3.Color(S.v3.nuit?"#ffd9a0":"#000"),emissiveIntensity:.8,roughness:.9})); sh.position.set(0,H-.15,0); sh.userData=tg; grp.add(sh); pick.push(sh); }
+  else if(t==="frigo"){ bx(W,H,D,0,H/2,0,v3Mat(c,{roughness:.3,metalness:.5})); bx(.004,H-.05,.004,0,H/2,D/2+.002,lg); }
+  else bx(W,H,D,0,H/2,0); }
+function mobPanel(w){ const room=w.room||"", M=meubles(room), L=M.map((m,i)=>[m,i]).filter(([m])=>m.cat), groups=[...new Set(MOB.map(o=>o.g))];
+  return `<section class="box"><h2><span class="sw" style="background:#2fa9a3"></span>Mobilier et déco : ${esc(room)}</h2>
+    ${L.map(([m,i])=>`<div style="border-top:1px solid var(--line,#ddd);padding-top:8px;margin-top:8px"><div class="op-head" style="display:flex;gap:6px;align-items:center"><b style="flex:1">${esc(m.n)}</b><span class="cap">${cm(m.w)} × ${cm(m.d)} × ${cm(m.h)} cm</span></div>
+      <div class="row"><label class="f">Couleur<select data-mb="${i}" data-mk="c">${MOB_COLS.map(([n,c])=>`<option value="${c}"${c===m.c?" selected":""}>${n}</option>`).join("")}${MOB_COLS.some(q=>q[1]===m.c)?"":`<option value="${m.c}" selected>Autre</option>`}</select></label>
+        <label class="f">Autre teinte<input type="color" data-mb="${i}" data-mk="c" value="${m.c||"#bdbcb8"}" style="height:34px;padding:2px"></label>
+        <label class="f">Rotation<select data-mb="${i}" data-mk="rot">${[0,90,180,270].map(v=>`<option value="${v}"${(m.rot||0)===v?" selected":""}>${v}°</option>`).join("")}</select></label></div>
+      <div class="row"><label class="f">Largeur (cm)<input type="number" min="10" step="1" data-mb="${i}" data-mk="w" value="${m.w/10}"></label><label class="f">Profondeur (cm)<input type="number" min="1" step="1" data-mb="${i}" data-mk="d" value="${m.d/10}"></label><label class="f">Hauteur (cm)<input type="number" min="1" step="1" data-mb="${i}" data-mk="h" value="${m.h/10}"></label>
+        <label class="f">X (cm)<input type="number" step="1" data-mb="${i}" data-mk="x" value="${Math.round(m.x/10)}"></label><label class="f">Y (cm)<input type="number" step="1" data-mb="${i}" data-mk="y" value="${Math.round(m.y/10)}"></label></div>
+      <div class="btns"><button type="button" data-act="mbdup" data-i="${i}">Dupliquer</button><button type="button" data-act="mbdel" data-i="${i}" class="ghost">Retirer</button></div></div>`).join("")}
+    <div class="row" style="grid-template-columns:1fr;margin-top:8px"><label class="f">Ajouter un meuble du catalogue<select id="mobpick"><option value="">Choisir…</option>${groups.map(g=>`<optgroup label="${esc(g)}">${MOB.filter(o=>o.g===g).map(o=>`<option value="${o.id}">${esc(o.n)} · ${cm(o.w)}×${cm(o.d)} cm</option>`).join("")}</optgroup>`).join("")}</select></label></div>
+    <p class="hint">Dimensions indicatives (largeur × profondeur × hauteur), à vérifier sur la fiche du magasin avant d'acheter. « (type) » = modèle courant de cette enseigne, pas une référence précise. Le meuble apparaît au centre de la pièce : dans « Visite 3D », mode Maquette, touchez-le pour changer sa couleur, le tourner ou le faire glisser.</p></section>`; }
+document.addEventListener("change",e=>{ if(e.target.id!=="mobpick"||!e.target.value) return; const o=MOB.find(q=>q.id===e.target.value); if(!o) return; const w=S.walls[S.cur], room=w.room||"", c=roomCenter(room);
+  meubles(room).push({n:o.n,cat:o.t,x:Math.round(c[0]),y:Math.round(c[1]),rot:0,w:o.w,d:o.d,h:o.h,c:o.c}); save(); renderAll(); if(S.view==="visite"&&typeof v3Rebuild==="function") v3Rebuild(); });
 function meubPanel(w){ const room=w.room||"", M=meubles(room), paints=[...DIVERS.filter(d=>/laque|Finish|Window/i.test(d.n)).map(d=>d.n),...PEINT.map(p=>p.n)];
   return `<section class="box"><h2><span class="sw" style="background:#d8c7a8"></span>Mes meubles en MDF : ${esc(room)}</h2>
-    ${M.map((m,i)=>{ const c=mdfCut(m); return `<div style="border-top:1px solid var(--line,#ddd);padding-top:8px;margin-top:8px">
+    ${M.map((m,i)=>{ if(m.cat) return ""; const c=mdfCut(m); return `<div style="border-top:1px solid var(--line,#ddd);padding-top:8px;margin-top:8px">
       <div class="row" style="grid-template-columns:1fr"><label class="f">Nom<input data-mb="${i}" data-mk="n" value="${esc(m.n||"")}"></label></div>
       <div class="row"><label class="f">Largeur (cm)<input type="number" min="10" step="0.5" data-mb="${i}" data-mk="w" value="${m.w/10}"></label><label class="f">Profondeur (cm)<input type="number" min="10" step="0.5" data-mb="${i}" data-mk="d" value="${m.d/10}"></label><label class="f">Hauteur (cm)<input type="number" min="10" step="0.5" data-mb="${i}" data-mk="h" value="${m.h/10}"></label></div>
       <div class="row"><label class="f">MDF<select data-mb="${i}" data-mk="ep">${[10,16,19,22].map(v=>`<option value="${v}"${(m.ep||19)===v?" selected":""}>${v} mm</option>`).join("")}</select></label>
@@ -4079,7 +4192,7 @@ const SCREENS=[
   {k:"proj",ic:"💾",t:"Mon projet",d:"Enregistrer, ouvrir, récupérer, scanner une pièce",side:[],views:[],v:null,main:[],noPlan:1}
 ];
 let SCR="home"; const LOGO_SVG=(document.querySelector("#splash svg")||{outerHTML:""}).outerHTML;
-const SIDE_TAG=[["Pièces et murs","murs"],["Ouvertures","ouv"],["Ossature","oss"],["Isolant","iso"],["Plaques","pla"],["Membrane","mem"],["Électricité","elec"],["Enduits","fin"],["Plafond","plaf"],["Cuisine","cuis"],["Sol","sol"],["Luminaires","lum"],["Mes meubles","meub"],["Créations en placo","crea"],["Béton ciré","bc"]];
+const SIDE_TAG=[["Pièces et murs","murs"],["Ouvertures","ouv"],["Ossature","oss"],["Isolant","iso"],["Plaques","pla"],["Membrane","mem"],["Électricité","elec"],["Enduits","fin"],["Plafond","plaf"],["Cuisine","cuis"],["Sol","sol"],["Luminaires","lum"],["Mes meubles","meub"],["Mobilier et déco","meub"],["Créations en placo","crea"],["Béton ciré","bc"]];
 function tagSide(){ document.querySelectorAll("#side>section.box").forEach(sec=>{ const h=(sec.querySelector("h2")||{}).textContent||""; const t=SIDE_TAG.find(([n])=>h.trim().startsWith(n)); sec.dataset.ss=t?t[1]:"autre"; }); }
 function isExample(){ const ex=example().walls.map(w=>w.name).join("|"); return S.walls.map(w=>w.name).join("|")===ex; }
 function scrStatus(k){ const w=S.walls[S.cur];
