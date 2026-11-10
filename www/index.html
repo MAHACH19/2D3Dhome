@@ -688,7 +688,10 @@ function ffd(pieces, stock, overlap=0){
 const opName = (o,i)=> (o.type==="Porte"?"PT":o.type==="Fenêtre"?"F":"O")+(i+1);
 
 /* ---------- Calcul d'un mur ---------- */
-function wT(w){ return w&&w.noDbl?0:doublageT(); } // épaisseur du doublage d'un mur (0 si le mur n'est pas doublé)
+const COLLE_T=22.5; // doublage collé : plots de MAP ≈ 10 mm + plaque 12,5 mm (DTU 25.42)
+const isCol=w=>!!(w&&(w.dbl==="colle"||w.noDbl));
+const contreT=()=>S.oss.g+12.5*S.pla.couches; // ossature fixée contre le mur brut, sans isolant
+function wT(w){ return isCol(w)?COLLE_T:w&&w.dbl==="contre"?contreT():doublageT(); } // épaisseur du doublage d'un mur
 function doublageT(){ return ((WCFG?WCFG.iso:S.iso.on) && S.iso.pose==="mur" ? (S.iso.decol||0) : 0) + S.oss.g + 12.5*S.pla.couches; }
 function roomWalls(wall){ return S.walls.filter(w=>(w.room||"")===(wall.room||"")); }
 function roomAdjust(wall){
@@ -1029,7 +1032,10 @@ function renderQuick(){ const q=document.getElementById("quick"); if(!q) return;
   q.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><select data-qroom aria-label="Pièce" style="max-width:100%;font-weight:600">${roomNames().map(n=>`<option${n===(w.room||"")?" selected":""}>${esc(n)}</option>`).join("")}</select>
     ${S.walls.map((x,i)=>(x.room||"")===(w.room||"")?`<button type="button" data-qwall="${i}" aria-pressed="${i===S.cur}" style="padding:5px 10px;font-size:13px">${esc((x.name||"Mur "+(i+1)).replace((x.room||"")+" — ",""))}</button>`:"").join("")}
     <span class="cap">${S.walls.length} mur(s) au total, ${roomNames().length} pièce(s)</span></div>
-    ${`<div class="qcfg"><span class="cap">Sur ce mur :</span><button type="button" data-qcfg="noDbl" aria-pressed="${!w.noDbl}">${!w.noDbl?"✓":"✕"} Doublage</button>${w.noDbl?`<span class="cap">mur laissé brut (cloison, passage…) : pas de plaques ni d'ossature, les murs voisins vont jusqu'à lui</span>`:""}${!w.noDbl&&S.iso.on?`<button type="button" data-qcfg="noIso" aria-pressed="${!w.noIso}">${!w.noIso?"✓":"✕"} Isolant</button>`:""}${!w.noDbl&&S.mem.on?`<button type="button" data-qcfg="noMem" aria-pressed="${!w.noMem}">${!w.noMem?"✓":"✕"} Membrane</button>`:""}<span class="cap">les autres murs ne changent pas</span></div>`}`; }
+    ${`<div class="qcfg"><span class="cap">Sur ce mur :</span>${(()=>{ const cur=isCol(w)?"colle":w.dbl==="contre"?"contre":"oss", off="background:var(--card);color:var(--ink);border-color:var(--line)";
+      return [["oss","Ossature + isolant"],["contre","Ossature contre le mur brut"],["colle","Placo collé au mur brut"]].map(([k,t])=>`<button type="button" data-qdbl="${k}" aria-pressed="${cur===k}" style="${cur===k?"":off}">${t}</button>`).join("")
+      +(cur==="colle"?`<span class="cap">plots de mortier adhésif (MAP) sur la pierre, ${fr(COLLE_T/10,2)} cm d'épaisseur, sans ossature ni isolant</span>`:cur==="contre"?`<span class="cap">rails et montants ${S.oss.g} mm chevillés contre la pierre, sans isolant ni membrane : ${fr(contreT()/10,2)} cm d'épaisseur</span>`:""); })()}${!w.dbl&&!w.noDbl&&S.iso.on?`<button type="button" data-qcfg="noIso" aria-pressed="${!w.noIso}">${!w.noIso?"✓":"✕"} Isolant</button>`:""}${!w.dbl&&!w.noDbl&&S.mem.on?`<button type="button" data-qcfg="noMem" aria-pressed="${!w.noMem}">${!w.noMem?"✓":"✕"} Membrane</button>`:""}<span class="cap">les autres murs ne changent pas</span></div>`}`; }
+document.getElementById("quick").addEventListener("click",e=>{ const q=e.target.closest("[data-qdbl]"); if(q){ const w=S.walls[S.cur]; delete w.noDbl; if(q.dataset.qdbl==="oss") delete w.dbl; else w.dbl=q.dataset.qdbl; save(); renderAll(); return; } });
 document.getElementById("quick").addEventListener("click",e=>{ const b=e.target.closest("[data-qcfg]"); if(!b) return; const w=S.walls[S.cur], k=b.dataset.qcfg; if(w[k]) delete w[k]; else w[k]=true; save(); renderAll(); });
 function renderSide(){ renderQuick();
   const w=S.walls[S.cur], {oss,iso,pla}=S;
@@ -1532,7 +1538,7 @@ function renderPiece(r){
   const gap=Math.hypot(px,py), closed=rw.length>2 && rw[rw.length-1].angle!=="libre";
   const Yf=y=>-y, pts=[], parts=[`<defs>${texDefs()}</defs>`];
   const Q=(x,y)=>{ pts.push([x,Yf(y)]); return `${x.toFixed(0)},${Yf(y).toFixed(0)}`; };
-  segs.forEach(sg=>{ const T=sg.w.noDbl?0:doublageT();
+  segs.forEach(sg=>{ const T=wT(sg.w);
     const {x0,y0,x1,y1,dx,dy,w}=sg, nlx=dy, nly=-dx, nrx=-dy, nry=dx, sel=sg.i===S.cur;
     parts.push(`<g data-pick="${sg.i}" style="cursor:pointer">`);
     parts.push(`<polygon points="${Q(x0,y0)} ${Q(x1,y1)} ${Q(x1+nrx*STN,y1+nry*STN)} ${Q(x0+nrx*STN,y0+nry*STN)}" fill="url(#tx-stone)"/>`);
@@ -1879,7 +1885,7 @@ function roomGeom(room){
     segs.push({w,i:S.walls.indexOf(w),x0:px,y0:py,x1,y1,dx,dy,nx:dy,ny:-dx}); px=x1; py=y1;
     [dx,dy]=turnDir(dx,dy,w); });
   const n=segs.length, closed=n>2 && rw[n-1].angle!=="libre", gap=Math.hypot(px,py);
-  const Ts=rw.map(w=>w.noDbl?0:T), of=(sg,off)=>Math.min(off,Ts[segs.indexOf(sg)]);
+  const Ts=rw.map(w=>isCol(w)?COLLE_T:w.dbl==="contre"?contreT():T), of=(sg,off)=>Math.min(off,Ts[segs.indexOf(sg)]);
   const corner=(a,b,off)=>{ const oa=of(a,off), ob=of(b,off);
     const A=[a.x0+a.nx*oa,a.y0+a.ny*oa], B=[b.x0+b.nx*ob,b.y0+b.ny*ob], den=a.dx*b.dy-a.dy*b.dx;
     if(Math.abs(den)<1e-9) return [a.x1+a.nx*oa,a.y1+a.ny*oa];
@@ -3121,8 +3127,10 @@ function buildScene(){
       const tag={kind:"wall",i:s.i};
       const Ls=wallLayers().filter(l=>lay[l.k]!==false), n=Ls.length;
       const layered=cut==="ecorche"||LAY.some(l=>lay[l.k]===false)||V.couches;
-      if(w.noDbl){ const [a1,b1]=ext2(-g.STN,0), pc=paintColor(w); // mur non doublé : maçonnerie enduite et peinte
-        [v3Slab(s,a1,b1,-g.STN,-10,0,h,holes,[M.stone,M.cap]), v3Slab(s,a1,b1,-10,0,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } }); }
+      if(isCol(w)){ const [a1,b1]=ext2(-g.STN,0), [a2,b2]=ext2(g.T-12.5,g.T), pc=paintColor(w); // placo collé au MAP sur la pierre
+        if(cut==="ecorche"||V.couches){ const [pa,pb]=ext(10), mp=v3Mat("#d9d4c9",{roughness:.9}); for(let x=pa+150;x<pb-100;x+=350) for(let z=250;z<h-100;z+=400){ if(holes.some(q=>x>q.a-60&&x<q.b+60&&z>q.c-60&&z<q.d+60)) continue; scene.add(v3Box(s,x-45,x+45,0,10,z-45,z+45,mp)); } }
+        if(!(w.tile&&w.tile.on)&&!(typeof bcOnWall==="function"&&bcOnWall(w))) v3Joints(scene,s,w,g.T,h,a2,b2,holes);
+        [v3Slab(s,a1,b1,-g.STN,0,0,h,holes,[M.stone,M.cap]), (cut==="ecorche"||V.couches)?v3Slab(s,a2+(b2-a2)*0.45,b2,g.T-12.5,g.T,0,h,holes,[M.pla,M.pla]):v3Slab(s,a2,b2,g.T-12.5,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } }); }
       else if(!layered){
         const [a1,b1]=ext2(-g.STN,0), [a2,b2]=ext2(0,g.T), pc=paintColor(w);
         if(V.res){ const pl=12.5*S.pla.couches, oM=Math.max(2,g.T-pl-S.oss.g), [a3,b3]=ext(oM/2), mm=S.mem.on?null:v3Slab(s,a3,b3,0,oM,0,h,holes,[M.fibre,M.cap]); if(mm){ mm.userData=tag; scene.add(mm); } if(S.mem.on){ const f=v3Slab(s,a3,b3,0,oM-3,0,h,holes,[M.fibre,M.cap]); if(f) scene.add(f); v3MemLes(scene,pick,s,w,a3,b3,oM-3,oM,h,holes,M.memO,M.cap,tag); } v3Tapes(scene,s,w,oM,h,M.tape);
@@ -4365,12 +4373,18 @@ var WCFG=null;
 function withWallCfg(w,fn){
   const outer=!WCFG; if(outer) WCFG={iso:S.iso.on,mem:S.mem.on};
   const pi=S.iso.on, pm=S.mem.on;
-  S.iso.on=WCFG.iso&&!(w&&w.noIso); S.mem.on=WCFG.mem&&!(w&&w.noMem);
+  S.iso.on=WCFG.iso&&!(w&&(w.noIso||w.dbl||w.noDbl)); S.mem.on=WCFG.mem&&!(w&&(w.noMem||w.dbl||w.noDbl));
   try{ return fn(); } finally{ S.iso.on=pi; S.mem.on=pm; if(outer) WCFG=null; }
 }
-{ const c0=compute; compute=function(w){ const r=withWallCfg(w,()=>c0(w)); r._w=w; if(w.noDbl){ r.noDbl=true; r.netArea=0; } r.isoOn=(WCFG?WCFG.iso:S.iso.on)&&!w.noIso; r.memOn=(WCFG?WCFG.mem:S.mem.on)&&!w.noMem; return r; }; }
-{ const m0=materials; materials=function(r){ return r.noDbl?[]:withWallCfg(r._w,()=>m0(r)); }; }
-{ const f=chantierSteps; chantierSteps=function(w,r){ return w&&w.noDbl?[]:withWallCfg(w,()=>f(w,r)); }; }
+{ const c0=compute; compute=function(w){ const col=isCol(w), r=withWallCfg(col?{...w,noIso:true,noMem:true}:w,()=>c0(w)); r._w=w; if(col){ r.colle=true; r.studs=[]; r.rails=[]; r.chevs=[]; } r.isoOn=(WCFG?WCFG.iso:S.iso.on)&&!w.noIso; r.memOn=(WCFG?WCFG.mem:S.mem.on)&&!w.noMem; return r; }; }
+{ const m0=materials; materials=function(r){ if(!r.colle) return withWallCfg(r._w,()=>m0(r));
+  const R=withWallCfg({...r._w,noIso:true,noMem:true},()=>m0(r)).filter(x=>x.cat!=="Ossature"&&x.cat!=="Isolant"&&x.cat!=="Membrane"&&!/^Vis TTPC/.test(x.des)), i=R.findIndex(x=>x.cat==="Plaques")+1;
+  R.splice(i,0,{cat:"Plaques",des:"Mortier adhésif MAP (placo collé)",det:`plots Ø 10 cm tous les 30 à 40 cm, ≈ 4 kg/m², ${fr(r.netArea,2)} m²`,q:Math.max(1,Math.ceil(r.netArea*4/25)),u:"sac 25 kg"});
+  return R; }; }
+{ const f=chantierSteps; chantierSteps=function(w,r){ if(!isCol(w)) return withWallCfg(w,()=>f(w,r));
+  const st=withWallCfg({...w,noIso:true,noMem:true},()=>f(w,r)).filter(x=>!["iso","mem","studs","rails","pla"].includes(x.k)), i=Math.max(0,st.findIndex(x=>x.k==="prep")+1);
+  st.splice(i,0,{k:"colle",t:"Coller les plaques au MAP",d:[`${r.plateCount} plaque(s) ${esc(S.pla.n)} à coller, dans le même sens que le calepinage.`,"Mur brossé, sain et dépoussiéré ; sur pierre très absorbante, humidifier ou primaire d'accrochage. Planéité : écarts de plus de 15 mm à rattraper avant.","Plots de MAP Ø 10 cm, 2 cm d'épaisseur, tous les 30 à 40 cm en quinconce, plus un cordon en périphérie et autour des ouvertures et boîtiers.","Plaque calée à 1 cm du sol, battue à la règle jusqu'à 10 mm environ du mur, aplomb vérifié. Joints décalés, bandes après 24 h de séchage.","Pas de collage sur mur humide ou salpêtré : là, ossature obligatoire (DTU 25.42)."]});
+  return st; }; }
 { const f=renderPlan; renderPlan=function(r){ return withWallCfg(r._w,()=>f(r)); }; }
 { const f=v3Tapes; v3Tapes=function(scene,s,w,...a){ return withWallCfg(w,()=>f(scene,s,w,...a)); }; }
 document.getElementById("side").addEventListener("change",e=>{ const el=e.target; if(!el.dataset||!el.dataset.wcfg) return; const w=S.walls[S.cur]; if(el.checked) delete w[el.dataset.wcfg]; else w[el.dataset.wcfg]=true; save(); renderAll(); });
