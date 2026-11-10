@@ -3423,7 +3423,7 @@ function v3MoveSel(px,py){ const s=V3.sel; if(!s) return;
   v3Rebuild(); }
 function v3Select(ud){ V3.sel=ud&&(ud.kind==="meub"||ud.kind==="kit"||ud.kind==="wall"||ud.kind==="lum"||ud.kind==="door")?ud:null; const pop=document.getElementById("v3pop"); if(!V3.sel){ pop.style.display="none"; return; }
   if(V3.sel.kind==="wall"&&S.walls[V3.sel.i]&&V3.sel.i!==S.cur){ S.cur=V3.sel.i; save(); renderSide(); if(S.v3.cut==="ecorche") v3Rebuild(); }
-  pop.style.display="block"; pop.innerHTML=v3PopHtml(); }
+  pop.style.display="block"; pop.innerHTML=v3PopHtml(); fillThumbs(pop); }
 function v3PopHtml(){ const s=V3.sel, paints=[...DIVERS.filter(d=>/laque|Finish|Window/i.test(d.n)).map(d=>d.n),...PEINT.map(p=>p.n)];
   const sw=(cur)=>`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">${NUANCIER.map(([n,c])=>`<button type="button" data-pop="sw:${c}" title="${n}" aria-label="${n}" style="width:26px;height:26px;padding:0;border-radius:50%;background:${c};border:2px solid ${c===cur?"#1d63c4":"#0003"}"></button>`).join("")}</div>`;
   const close=`<button type="button" data-pop="close" class="ghost" style="float:right;padding:2px 8px">✕</button>`;
@@ -3436,12 +3436,17 @@ function v3PopHtml(){ const s=V3.sel, paints=[...DIVERS.filter(d=>/laque|Finish|
     <label class="f" style="margin-top:6px">Modèle<select data-popk="dstyle">${DOORS.map(([k,l])=>`<option value="${k}"${(o.style||"pleine")===k?" selected":""}>${l}</option>`).join("")}</select></label>
     <label class="f">Couleur<input type="color" data-popk="dcol" value="${o.color||"#ece7dc"}" style="height:34px;padding:2px"></label>${sw(o.color)}
     <label class="f">Ouverture (°)<input type="range" min="0" max="110" data-popk="dopen" value="${o.open??70}"></label>`; }
-  if(s.kind==="lum"){ const L=lumList(s.room)[s.idx]; return `${close}<b>${esc((LUM.find(t=>t.id===L.t)||{}).n||"")}</b><div class="btns" style="margin-top:6px"><button type="button" data-pop="lumdel" class="ghost">Supprimer</button></div><p class="hint">Déplacez-le dans l'onglet Plafond.</p>`; }
+  if(s.kind==="lum"){ const L=lumList(s.room)[s.idx], lm=lusOf(L); if(L.t==="susp"||L.t==="plaf") return `${close}<b>${esc(lm?lm.n:(LUM.find(t=>t.id===L.t)||{}).n||"")}</b>
+    <p class="cap" style="margin:6px 0 0">Autres modèles : touchez pour remplacer (images 3D indicatives)</p>${altGrid(LUSTRES,"lus",lm&&lm.id,"lus")}
+    <div class="btns"><button type="button" data-pop="lus:">Générique</button><button type="button" data-pop="lumdel" class="ghost">Supprimer</button></div>`;
+    return `${close}<b>${esc((LUM.find(t=>t.id===L.t)||{}).n||"")}</b><div class="btns" style="margin-top:6px"><button type="button" data-pop="lumdel" class="ghost">Supprimer</button></div><p class="hint">Déplacez-le dans l'onglet Plafond.</p>`; }
   const isK=s.kind==="kit", it=isK?kitCfg(s.room).items[s.idx]:meubles(s.room)[s.idx]; if(!it) return close;
   const name=isK?(kitItem(it)||{}).n:(it.n||"Meuble MDF"), col=isK?(it.c||(FACADES.find(f=>f.n===kitCfg(s.room).facade)||FACADES[0]).c):(it.c||"#e9e4da");
   if(!isK&&it.cat) return `${close}<b>${esc(name)}</b> <span class="cap">${cm(it.w)} × ${cm(it.d)} cm</span>
     <div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">${MOB_COLS.map(([n,c])=>`<button type="button" data-pop="sw:${c}" title="${n}" aria-label="${n}" style="width:26px;height:26px;padding:0;border-radius:50%;background:${c};border:2px solid ${c===col?"#1d63c4":"#0003"}"></button>`).join("")}</div>
-    <div class="btns" style="margin-top:6px"><button type="button" data-pop="rot">Tourner 90°</button><button type="button" data-pop="del" class="ghost">Supprimer</button></div><p class="hint">Faites glisser le meuble sélectionné pour le placer.</p>`;
+    <div class="btns" style="margin-top:6px"><button type="button" data-pop="rot">Tourner 90°</button><button type="button" data-pop="del" class="ghost">Supprimer</button></div>
+    ${(()=>{ const cur=MOB.find(o=>o.n===it.n), alts=MOB.filter(o=>o.t===it.cat||(cur&&o.g===cur.g)); return alts.length>1?`<p class="cap" style="margin:8px 0 0"><b>Autres articles</b> : touchez pour remplacer, même place (images 3D indicatives)</p>${altGrid(alts,"mob",cur&&cur.id,"mobsw")}`:""; })()}
+    <p class="hint">Faites glisser le meuble sélectionné pour le placer.</p>`;
   return `${close}<b>${esc(name)}</b>
     <label class="f" style="margin-top:6px">Couleur<input type="color" data-popk="col" value="${col}" style="height:34px;padding:2px"></label>${sw(col)}
     <label class="f">Peinture (je peins moi-même)<select data-popk="peint"><option value="">${isK?"Façade IKEA d'origine":"Pas encore choisie"}</option>${paints.map(n=>`<option${n===it.peint?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
@@ -3460,10 +3465,12 @@ function v3PopBtn(k){ const s=V3.sel; if(!s) return;
   if(k.startsWith("sw:")){ const c=k.slice(3); if(s.kind==="wall") S.walls[s.i].teinte=c; else if(s.kind==="door") S.walls[s.i].openings[s.op].color=c; else (s.kind==="kit"?kitCfg(s.room).items[s.idx]:meubles(s.room)[s.idx]).c=c; }
   if(k==="wreset") delete S.walls[s.i].teinte;
   if(k==="lumdel"){ lumList(s.room).splice(s.idx,1); V3.sel=null; }
+  if(k.startsWith("lus:")){ const L=lumList(s.room)[s.idx], id=k.slice(4); if(id) L.m=id; else delete L.m; }
+  if(k.startsWith("mobsw:")){ const o=MOB.find(q=>q.id===k.slice(6)), m=meubles(s.room)[s.idx]; if(o&&m) Object.assign(m,{n:o.n,cat:o.t,w:o.w,d:o.d,h:o.h,c:o.c}); }
   if(k==="open"){ const it=s.kind==="kit"?kitCfg(s.room).items[s.idx]:s.kind==="meub"?meubles(s.room)[s.idx]:null; if(it) it.open=!it.open; }
   if(s.kind==="kit"){ const it=kitCfg(s.room).items[s.idx]; if(k==="l") it.x=Math.max(0,it.x-50); if(k==="r") it.x+=50; if(k==="del"){ kitCfg(s.room).items.splice(s.idx,1); V3.sel=null; } }
   if(s.kind==="meub"){ const M=meubles(s.room), m=M[s.idx]; if(k==="rot") m.rot=((m.rot||0)+90)%360; if(k==="del"){ M.splice(s.idx,1); V3.sel=null; } }
-  save(); v3Rebuild(); renderSide(); const pop=document.getElementById("v3pop"); if(V3.sel) pop.innerHTML=v3PopHtml(); else pop.style.display="none"; }
+  save(); v3Rebuild(); renderSide(); const pop=document.getElementById("v3pop"); if(V3.sel){ const st=pop.scrollTop; pop.innerHTML=v3PopHtml(); fillThumbs(pop); pop.scrollTop=st; } else pop.style.display="none"; }
 
 /* trajet de la gaine d'une bouche, repère de la pièce : bouche, points de passage, piquage caisson */
 function lumRoute(room,i){ const L=lumList(room)[i], X=makeXf(room), d=vmcHouse().ducts.find(q=>q.room===room&&q.bi===i), e=d?X.inv(...d.pts[d.pts.length-1]):[L.x+800,L.y+800];
@@ -3557,6 +3564,18 @@ const MOB=[
   ["chaise","Chaises · Sklum","Sklum TENTO chaise rotin (≈)",450,520,800,"#c8a878"],
   ["chaise","Chaises · Sklum","Sklum UISH Edition chaise orme (≈)",450,500,780,"#b78d60"]
 ].map(([t,g,n,w,d,h,c],i)=>({id:"m"+i,t,g,n,w,d,h,c}));
+/* Vignettes 3D des articles (rendu hors écran, mises en cache) */
+const THUMBS={}; let THR=null;
+function thumbOf(kind,o){ const key=kind+":"+o.id+":"+(o.c||o.col||""); if(THUMBS[key]) return THUMBS[key]; if(typeof THREE==="undefined") return "";
+  try{ const T3=THREE; if(!THR){ const cv=document.createElement("canvas"); cv.width=240; cv.height=180; THR=new T3.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:true,alpha:true}); THR.setSize(240,180,false); }
+    const sc=new T3.Scene(); sc.background=new T3.Color("#eef0f2"); sc.add(new T3.HemisphereLight("#ffffff","#9a8f80",0.9)); const dl=new T3.DirectionalLight("#ffffff",0.6); dl.position.set(2,4,3); sc.add(dl);
+    const grp=new T3.Group(); if(kind==="mob") mobDraw(T3,grp,{...o,cat:o.t},v3Mat(o.c||"#bdbcb8"),{},[]); else { lustre3D(T3,grp,o,o.sh==="lin"?250:180,v3Mat("#fff3d8",{emissive:new T3.Color("#ffe9b0"),emissiveIntensity:.8}),.5); }
+    sc.add(grp); const bb=new T3.Box3().setFromObject(grp), c=bb.getCenter(new T3.Vector3()), sz=bb.getSize(new T3.Vector3()), r=Math.max(sz.x,sz.y,sz.z)*0.5||0.5;
+    const cam=new T3.PerspectiveCamera(35,4/3,0.01,100); const dir=new T3.Vector3(kind==="mob"?-0.9:0.6,kind==="mob"?0.75:0.1,1.25).normalize(); cam.position.copy(c).addScaledVector(dir,r/Math.sin(17.5*Math.PI/180)*1.05); cam.lookAt(c);
+    THR.render(sc,cam); const url=THR.domElement.toDataURL("image/jpeg",0.82);
+    sc.traverse(x=>{ if(x.geometry) x.geometry.dispose(); }); THUMBS[key]=url; return url; }catch(e){ return ""; } }
+function fillThumbs(root){ const L=[...root.querySelectorAll("img[data-th]")]; let i=0; const step=()=>{ const t=performance.now(); while(i<L.length&&performance.now()-t<30){ const im=L[i++], [k,id]=im.dataset.th.split(":"), o=k==="mob"?MOB.find(q=>q.id===id):LUSTRES.find(q=>q.id===id); if(o) im.src=thumbOf(k,o); } if(i<L.length) requestAnimationFrame(step); }; requestAnimationFrame(step); }
+function altGrid(list,kind,curId,act){ return `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:6px 0">${list.map(o=>`<button type="button" data-pop="${act}:${o.id}" style="display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:4px;text-align:left;border-radius:8px;${o.id===curId?"border:2px solid #1d63c4;":""}"><img data-th="${kind}:${o.id}" alt="" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:5px;background:#eef0f2"><span style="font-size:12px;line-height:1.2;font-weight:600">${esc(o.n)}</span><span class="cap" style="font-size:11px">${kind==="mob"?`${cm(o.w)} × ${cm(o.d)} × ${cm(o.h)} cm`:o.sh==="lin"?`${cm(o.d)} cm de long`:`Ø ${cm(o.d)} cm${o.n2>1?` · ${o.n2} têtes`:""}`}</span></button>`).join("")}</div>`; }
 function mobDraw(T3,grp,m,mat,tg,pick){ const W=m.w/1000,D=m.d/1000,H=m.h/1000, c=m.c||"#bdbcb8", t=m.cat;
   const fab=v3Mat(c,{roughness:t==="tv"?.3:.95}), dk=v3Mat(shade(c,.8),{roughness:.9}), wood=v3Mat("#3b2d22",{roughness:.6}), lg=v3Mat("#2b2b2b",{roughness:.5,metalness:.3});
   const bx=(w0,h0,d0,x,y,z,mt)=>{ const b=new T3.Mesh(new T3.BoxGeometry(Math.max(.005,w0),Math.max(.005,h0),Math.max(.005,d0)),mt||fab); b.position.set(x,y,z); b.userData=tg; grp.add(b); pick.push(b); return b; };
