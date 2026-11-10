@@ -2168,10 +2168,10 @@ function renderRoom3D(){
         if(c.t==="niche") box(x,x+P.w,T,T+3,P.y,P.y+P.h,"#b9b2a4");
         if(c.t==="rideau"){ box(x,x+P.L,T+P.pf,T+P.pf+60,hh-P.h,hh,pc); box(x+10,x+10+P.L*.3,T+P.pf*.3,T+P.pf*.7,15,hh-40,P.col||"#e9e2d4"); box(x+P.L*.7-10,x+P.L-10,T+P.pf*.3,T+P.pf*.7,15,hh-40,P.col||"#e9e2d4"); }
         if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; box(x,x+40,T,T+P.pf,y0,y0+P.h,pc); box(x+P.L-40,x+P.L,T,T+P.pf,y0,y0+P.h,pc); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; box(x,x+P.L,T,T+P.pf,Math.max(0,yy-20),Math.max(20,yy+20),pc); } }
-        if(c.t==="led"){ const lc=P.k<=2700?"#ff9a2e":P.k>=4000?"#3d9bff":"#ffb800", gl=lc;
-          if(+P.pos===1) ledSegs(w,P,x,hh).forEach(([a,b])=>box(x,x+50,T,T+15,a,b,gl,"#6b7178"));
-          else if(+P.pos===2) box(x,x+P.L,T+P.y,T+P.y+40,hh-12,hh,gl,"#6b7178");
-          else ledSegs(w,P,x,hh).forEach(([a,b])=>box(a,b,T,T+12,P.y,P.y+40,gl,"#6b7178")); }
+        if(c.t==="led"){ const gl=P.k<=2700?"#ffe0b0":P.k>=4000?"#f7fbff":"#fff0d6";
+          if(+P.pos===1) ledSegs(w,P,x,hh).forEach(([a,b])=>box(x,x+50,T,T+3,a,b,gl,"#9aa0a6"));
+          else if(+P.pos===2) box(x,x+P.L,T+P.y,T+P.y+40,hh-3,hh,gl,"#9aa0a6");
+          else ledSegs(w,P,x,hh).forEach(([a,b])=>box(a,b,T,T+3,P.y,P.y+40,gl,"#9aa0a6")); }
         for(let i=n0;i<faces.length;i++) faces[i].d=Math.max(faces[i].d,wd+1); // toujours devant son mur
       });
       if(K.on && V.kit) kitRuns(room).filter(rn=>rn.w===w).forEach(rn=>{
@@ -3293,12 +3293,15 @@ function buildScene(){
             for(let i=0;i<pa.count;i++){ const u=pa.getX(i); pa.setZ(i,Math.sin(u*1000/(b-a)*nx*Math.PI)*0.035); } gg.computeVertexNormals(); gg.translate((a+b)/2000,(15+drop/2)/1000,(T0+P.pf*.5)/1000); gg.applyMatrix4(wallMatrix(sg,0));
             const mm=new T3.Mesh(gg,fab); scene.add(mm); });
           if(P.led){ const lm=v3Mat("#fff3d6",{emissive:new T3.Color("#ffd89a"),emissiveIntensity:V.nuit?1.6:.6}); add(v3Box(sg,x,x+P.L,jo-14,jo,hh-40,hh-28,lm)); if(V.nuit&&lights.length<10){ const q=new T3.PointLight("#ffd89a",.5,4,1.6); const m=v3Box(sg,x+P.L/2,x+P.L/2+1,T0+P.pf/2,T0+P.pf/2+1,hh-60,hh-59,M.white); m.geometry.computeBoundingSphere(); q.position.copy(m.geometry.boundingSphere.center); scene.add(q); lights.push(q); } } }
-        if(c.t==="led"){ const kc=P.k<=2700?"#ffc06a":P.k>=4000?"#f2f7ff":"#ffdc96", dc=P.k<=2700?"#ff9a2e":P.k>=4000?"#3d9bff":"#ffb800", lm=V.nuit?v3Mat("#ffffff",{emissive:new T3.Color(kc),emissiveIntensity:1.8}):v3Mat(dc,{emissive:new T3.Color(dc),emissiveIntensity:.55,roughness:.4}); let m;
-          const alu=v3Mat("#8d949b",{metalness:.6,roughness:.35});
-          if(P.pos===1){ ledSegs(ww,P,x,hh).forEach(([a,b])=>{ add(v3Box(sg,x-8,x+48,T0-2,T0+6,a,b,alu)); m=v3Box(sg,x,x+40,T0,T0+10,a+3,b-3,lm); add(m); }); }
-          else if(P.pos===2){ add(v3Box(sg,x,x+P.L,T0+P.y-8,T0+P.y+48,hh-6,hh+2,alu)); m=v3Box(sg,x+3,x+P.L-3,T0+P.y,T0+P.y+40,hh-10,hh,lm); }
-          else if(P.pos!==2){ ledSegs(ww,P,x,hh).forEach(([a,b])=>{ add(v3Box(sg,a,b,T0-2,T0+6,P.y-8,P.y+48,alu)); m=v3Box(sg,a+3,b-3,T0,T0+10,P.y,P.y+40,lm); add(m); }); }
-          if(P.pos===2) add(m); if(!m) return; if(V.nuit&&lights.length<10){ m.geometry.computeBoundingSphere(); const q=new T3.PointLight(kc,.45,3.5,1.6), cpos=m.geometry.boundingSphere.center.clone(); const nn=new T3.Vector3(sg.nx,0,-sg.ny).multiplyScalar(.25); q.position.copy(cpos.add(nn)); scene.add(q); lights.push(q); } }
+        if(c.t==="led"){ const kc=P.k<=2700?"#ffd29a":P.k>=4000?"#f4f8ff":"#ffe2b8", po={polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2};
+          const lm=v3Mat("#ffffff",{emissive:new T3.Color(kc),emissiveIntensity:V.nuit?2:1.1,roughness:.3,...po}), alu=v3Mat("#a3a9af",{metalness:.5,roughness:.35,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+          const halo=(ca,cb,za,zb,vert)=>{ const pad=V.nuit?260:150, w0=vert?(cb-ca)+2*pad:(cb-ca), h0=vert?(zb-za):(zb-za)+2*pad, gg=new T3.PlaneGeometry(w0/1000,h0/1000); gg.translate((ca+cb)/2000,(za+zb)/2000,(T0+2.5)/1000); gg.applyMatrix4(wallMatrix(sg,0));
+            const hm=new T3.MeshBasicMaterial({map:ledGlow(vert,kc),transparent:true,opacity:V.nuit?.9:.45,depthWrite:false,blending:T3.AdditiveBlending,side:T3.DoubleSide}); scene.add(new T3.Mesh(gg,hm)); };
+          let m=null;
+          if(P.pos===1) ledSegs(ww,P,x,hh).forEach(([a,b])=>{ add(v3Box(sg,x-6,x+46,T0,T0+0.8,a,b,alu)); m=v3Box(sg,x,x+40,T0,T0+1.5,a+3,b-3,lm); add(m); halo(x,x+40,a,b,true); });
+          else if(P.pos===2){ add(v3Box(sg,x,x+P.L,T0+P.y-6,T0+P.y+46,hh-0.8,hh,alu)); m=v3Box(sg,x+3,x+P.L-3,T0+P.y,T0+P.y+40,hh-1.5,hh,lm); add(m); }
+          else ledSegs(ww,P,x,hh).forEach(([a,b])=>{ add(v3Box(sg,a,b,T0,T0+0.8,P.y-6,P.y+46,alu)); m=v3Box(sg,a+3,b-3,T0,T0+1.5,P.y,P.y+40,lm); add(m); halo(a+3,b-3,P.y,P.y+40,false); });
+          if(m&&V.nuit&&lights.length<10){ m.geometry.computeBoundingSphere(); const q=new T3.PointLight(kc,.45,3.5,1.6), cpos=m.geometry.boundingSphere.center.clone(); const nn=new T3.Vector3(sg.nx,0,-sg.ny).multiplyScalar(.25); q.position.copy(cpos.add(nn)); scene.add(q); lights.push(q); } }
         if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; add(v3Box(sg,x,x+40,T0,T0+P.pf,y0,y0+P.h,pm)); add(v3Box(sg,x+P.L-40,x+P.L,T0,T0+P.pf,y0,y0+P.h,pm)); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; add(v3Box(sg,x,x+P.L,T0,T0+P.pf,Math.max(0,yy-35),Math.max(35,yy+35),pm)); } }
       });
       // meubles libres
@@ -4151,9 +4154,12 @@ const CREA={
   led:{n:"Ruban LED encastré dans le placo",p:[["L","Longueur",2000],["pos","Emplacement",0,[[0,"Horizontal sur le mur"],[1,"Vertical sur le mur"],[2,"Au plafond, parallèle au mur"]]],["x","Depuis la gauche",0],["y","Hauteur (ou distance du mur au plafond)",1000],["k","Couleur de lumière",3000,[[2700,"2700 K blanc très chaud"],[3000,"3000 K blanc chaud"],[4000,"4000 K blanc neutre"]]]]}
 };
 const CREA_INT=["n","joues","rails","led","pos","k"];
-function creas(room){ if(!S.crea) S.crea={}; if(!S.crea[room]) S.crea[room]=[]; return S.crea[room]; }
+function creas(room){ if(!S.crea) S.crea={}; if(!S.crea[room]) S.crea[room]=[]; const C=S.crea[room]; C.forEach(c=>{ ["pos","k","n","rails","led","joues"].forEach(k=>{ if(typeof c[k]==="string"&&c[k]!=="") c[k]=+c[k]; }); }); return C; }
 function creaSpan(w){ const g=roomGeom(w.room||""), k=g.segs.findIndex(q=>q.w===w); if(k<0) return {a:0,len:w.L};
   const s=g.segs[k], e=g.inner[k], pr=p=>(p[0]-s.x0)*s.dx+(p[1]-s.y0)*s.dy, a=pr(e.a), b=pr(e.b); return {a, len:Math.max(0,b-a)}; }
+const GLOWT={}; function ledGlow(vert,col){ const k=(vert?"v":"h")+col; if(GLOWT[k]) return GLOWT[k]; const c=document.createElement("canvas"); c.width=vert?128:4; c.height=vert?4:128; const x=c.getContext("2d");
+  const g=vert?x.createLinearGradient(0,0,128,0):x.createLinearGradient(0,0,0,128); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(.5,col); g.addColorStop(1,"rgba(0,0,0,0)"); x.fillStyle=g; x.fillRect(0,0,c.width,c.height);
+  return GLOWT[k]=new THREE.CanvasTexture(c); }
 /* morceaux d'un ruban LED mural hors ouvertures : [[a,b]] le long du mur (horizontal) ou en hauteur (vertical) ; x en repère du mur brut */
 function ledSegs(w,P,x,hh){ const vert=+P.pos===1, ops=(w.openings||[]).filter(o=>o.w>0&&o.h>0); let S0=vert?[[P.y,Math.min(hh,P.y+P.L)]]:[[x,x+P.L]];
   ops.forEach(o=>{ const g=20; let a,b; if(vert){ if(x+40<o.x-g||x>o.x+o.w+g) return; a=o.y-g; b=o.y+o.h+g; } else { if(P.y+40<o.y-g||P.y>o.y+o.h+g) return; a=o.x-g; b=o.x+o.w+g; }
@@ -4226,7 +4232,7 @@ function creaSvg(c,room){ const k=creaCalc(c,room), w=creaWall(c,room)||{L:3000,
   if(c.t==="muret"){ box(x,0,P.L,P.h,"#ece8df"); dim(x,0,P.L,P.h); }
   if(c.t==="rideau"){ box(x,H-P.h,P.L,P.h,"#ece8df"); dim(x,H-P.h,P.L,P.h); const cc=P.col||"#e9e2d4"; for(let i=0;i<14;i++){ const xx=x+P.L*(i+.5)/14; g+=`<line x1="${X(xx)}" x2="${X(xx)}" y1="${Y(H-P.h)}" y2="${Y(15)}" stroke="${cc}" stroke-width="${Math.max(2,P.L/14*sc*.8)}" opacity=".75"/>`; }
     g+=`<text x="${X(x)+2}" y="${Y(H-P.h)+12}" font-size="10" fill="var(--ink)">rail caché à ${cm(P.pf/2)} cm du mur${P.led?" · LED dans la gorge":""}</text>`; }
-  if(c.t==="led"){ const v=P.pos===1, col=P.k<=2700?"#ffb44a":P.k>=4000?"#7fb6f0":"#ffc95a"; if(v) g+=`<line x1="${X(x)}" x2="${X(x)}" y1="${Y(P.y||0)}" y2="${Y(Math.min(H,(P.y||0)+P.L))}" stroke="${col}" stroke-width="5"/><line x1="${X(x)}" x2="${X(x)}" y1="${Y(P.y||0)}" y2="${Y(Math.min(H,(P.y||0)+P.L))}" stroke="#1d63c4" stroke-width="1"/>`;
+  if(c.t==="led"){ const v=P.pos===1, col=P.k<=2700?"#ffcf8a":P.k>=4000?"#dfe9f5":"#ffe3b0"; if(v) g+=`<line x1="${X(x)}" x2="${X(x)}" y1="${Y(P.y||0)}" y2="${Y(Math.min(H,(P.y||0)+P.L))}" stroke="${col}" stroke-width="5"/><line x1="${X(x)}" x2="${X(x)}" y1="${Y(P.y||0)}" y2="${Y(Math.min(H,(P.y||0)+P.L))}" stroke="#1d63c4" stroke-width="1"/>`;
     else { const yy=P.pos===2?H:P.y; g+=`<line x1="${X(x)}" x2="${X(x+P.L)}" y1="${Y(yy)}" y2="${Y(yy)}" stroke="${col}" stroke-width="6"/><line x1="${X(x)}" x2="${X(x+P.L)}" y1="${Y(yy)}" y2="${Y(yy)}" stroke="#1d63c4" stroke-width="1"/><text x="${X(x+P.L/2)}" y="${Y(yy)+(P.pos===2?14:-6)}" text-anchor="middle" font-size="10" fill="#1d63c4">${cm(P.L)}</text>`; }
     g+=`<text x="${X(x)}" y="${Y(0)+24}" font-size="10" fill="var(--muted)">${P.pos===2?`au plafond, à ${cm(P.y)} cm du mur`:P.pos===1?`vertical, ${cm(P.L)} cm de haut, de ${cm(P.y||0)} à ${cm((P.y||0)+P.L)} cm`:`à ${cm(P.y)} cm du sol`}</text>`; }
   if(c.t==="etag"){ box(x,P.y||0,P.L,P.h,"none"); const n=Math.max(1,P.n||1); for(let i=0;i<=n;i++){ const yy=(P.y||0)+P.h*i/n; g+=`<line x1="${X(x)}" x2="${X(x+P.L)}" y1="${Y(yy)}" y2="${Y(yy)}" stroke="#1d63c4" stroke-width="3"/>`; } dim(x,P.y||0,P.L,P.h); }
