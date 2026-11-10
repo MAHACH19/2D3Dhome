@@ -2282,7 +2282,7 @@ function roomLayout(room){
   return S.layout[room];
 }
 function makeXf(room){ const L=roomLayout(room), a=L.rot*Math.PI/180, c=Math.cos(a), s=Math.sin(a);
-  return {p:(x,y)=>[x*c-y*s+L.x, x*s+y*c+L.y], v:(x,y)=>[x*c-y*s, x*s+y*c]}; }
+  return {p:(x,y)=>[x*c-y*s+L.x, x*s+y*c+L.y], v:(x,y)=>[x*c-y*s, x*s+y*c], inv:(X,Y)=>{ const dx=X-L.x, dy=Y-L.y; return [dx*c+dy*s, -dx*s+dy*c]; }}; }
 function geomXf(g,room){
   const X=makeXf(room), P=p=>X.p(p[0],p[1]), E=e=>({a:P(e.a),b:P(e.b)});
   return {...g, segs:g.segs.map(s=>{ const [x0,y0]=X.p(s.x0,s.y0), [x1,y1]=X.p(s.x1,s.y1), [dx,dy]=X.v(s.dx,s.dy), [nx,ny]=X.v(s.nx,s.ny); return {...s,x0,y0,x1,y1,dx,dy,nx,ny}; }),
@@ -2715,6 +2715,62 @@ const LUM=[
   {id:"regl",n:"Réglette / ruban LED",c:"lum"},{id:"vmc",n:"Bouche d'extraction VMC hygro",c:"vmc"},{id:"vmcins",n:"Bouche d'insufflation VMC double flux",c:"vmc"},
   {id:"caisson",n:"Caisson VMC (combles ou plénum)",c:"vmcbox"},{id:"trappe",n:"Trappe de visite plafond",c:"trappe"}
 ];
+/* Suspensions et lustres Sklum (dimensions ≈, à vérifier sur la fiche produit). sh : forme 3D, d : Ø ou longueur (mm), h : hauteur abat-jour, n : nb de têtes */
+const LUSTRES=[
+  {id:"benavid",n:"Sklum Benavid Ø75 lin et coton",sh:"drum",d:750,h:300,col:"#e9e1d3"},
+  {id:"vidson",n:"Sklum Vidson Ø50 lin et coton",sh:"drum",d:500,h:260,col:"#e4dccd"},
+  {id:"patraix",n:"Sklum Patraix lin",sh:"drum",d:450,h:350,col:"#ddd2bf"},
+  {id:"zelvon",n:"Sklum Zelvon tissu LED",sh:"drum",d:600,h:150,col:"#ece6db"},
+  {id:"worel",n:"Sklum Worel soie",sh:"sphere",d:600,h:500,col:"#f1ebe0"},
+  {id:"kena",n:"Sklum Kena papier tressé",sh:"sphere",d:500,h:450,col:"#e3d4b8"},
+  {id:"lumira",n:"Sklum Lumira",sh:"sphere",d:400,h:380,col:"#f4efe6"},
+  {id:"chaifer",n:"Sklum Chaifer bambou",sh:"bell",d:450,h:350,col:"#c8a874"},
+  {id:"heulyn",n:"Sklum Heulyn rotin",sh:"bell",d:500,h:400,col:"#b88c55"},
+  {id:"davise",n:"Sklum Davise pierre travertin Ø12",sh:"stone",d:120,h:180,col:"#d8cbb5"},
+  {id:"davise6",n:"Sklum Davise pierre travertin Ø6,5",sh:"stone",d:65,h:150,col:"#d8cbb5"},
+  {id:"rauma",n:"Sklum Rauma albâtre et bois",sh:"dome",d:300,h:200,col:"#efe6da"},
+  {id:"alicia",n:"Sklum Alicia fer",sh:"dome",d:380,h:300,col:"#2b2b2b"},
+  {id:"hilma",n:"Sklum Hilma fer",sh:"dome",d:400,h:260,col:"#2f2f2f"},
+  {id:"bagioli",n:"Sklum Bagioli fer",sh:"dome",d:350,h:280,col:"#3a3a3a"},
+  {id:"bruner",n:"Sklum Bruner métal et verre",sh:"dome",d:300,h:250,col:"#b08d57"},
+  {id:"plusie",n:"Sklum Plusie orientable",sh:"dome",d:200,h:220,col:"#1f1f20"},
+  {id:"uvol",n:"Sklum Uvol fer et boule cristal",sh:"globes",n2:1,d:250,col:"#f6f6f4"},
+  {id:"castefi",n:"Sklum Castefi 5 boules verre",sh:"globes",n2:5,d:150,col:"#f3f3f0"},
+  {id:"garland6",n:"Sklum Garland 6 boules",sh:"globes",n2:6,d:120,col:"#f2f0ea"},
+  {id:"garland3",n:"Sklum Garland 3 boules",sh:"globes",n2:3,d:120,col:"#f2f0ea"},
+  {id:"bezany",n:"Sklum Bezany Colors verre 3 points",sh:"globes",n2:3,d:200,col:"#d9a46b"},
+  {id:"amarante",n:"Sklum Amarante 5 points",sh:"globes",n2:5,d:140,col:"#efe8dc"},
+  {id:"quintelia",n:"Sklum Quintelia lin 3 points",sh:"drums",n2:3,d:300,h:250,col:"#e2d8c6"},
+  {id:"bergene",n:"Sklum Bergene linéaire LED 120 cm",sh:"lin",d:1200,col:"#1f1f20"},
+  {id:"lirela",n:"Sklum Lirela linéaire LED 120 cm",sh:"lin",d:1200,col:"#2a2a2a"},
+  {id:"maulenis",n:"Sklum Maulenis linéaire LED 120 cm",sh:"lin",d:1200,col:"#b08d57"},
+  {id:"airali",n:"Sklum Airali linéaire LED 120 cm",sh:"lin",d:1200,col:"#e9e7e2"},
+  {id:"mairen",n:"Sklum Mairen linéaire LED 120 cm",sh:"lin",d:1200,col:"#1f1f20"},
+  {id:"danile",n:"Sklum Danile linéaire LED 120 cm",sh:"lin",d:1200,col:"#c49a68"},
+  {id:"wilen",n:"Sklum Wilen linéaire LED 120 cm",sh:"lin",d:1200,col:"#3a3a3a"},
+  {id:"astley",n:"Sklum Astley linéaire LED 120 cm",sh:"lin",d:1200,col:"#b08d57"}
+];
+const lusOf=L=>L&&L.m?LUSTRES.find(q=>q.id===L.m):null;
+const lusDrop=(L,m)=>L.dr!=null?L.dr:(m?(m.sh==="lin"?700:600):800);
+function lustre3D(T3,grp,m,drop,emis,glow){ // groupe posé au point DCL, y vers le bas
+  const mat=v3Mat(m.col,{roughness:.75,side:T3.DoubleSide,emissive:new T3.Color(m.col),emissiveIntensity:glow*0.25}), cab=v3Mat("#222");
+  const at=(geo,mt,x,y,z)=>{ const o=new T3.Mesh(geo,mt); o.position.set(x,-y,z); grp.add(o); return o; };
+  const r=m.d/2000, h=(m.h||m.d)/1000, D=drop/1000;
+  at(new T3.CylinderGeometry(0.05,0.05,0.02,20),cab,0,0.01,0);
+  if(m.sh==="lin"){ [-0.45,0.45].forEach(x=>at(new T3.CylinderGeometry(0.0015,0.0015,D,4),cab,x,D/2,0)); at(new T3.BoxGeometry(m.d/1000,0.035,0.05),mat,0,D+0.018,0); at(new T3.BoxGeometry(m.d/1000-0.02,0.004,0.03),emis,0,D+0.037,0); return D+0.04; }
+  if(m.sh==="globes"||m.sh==="drums"){ const n=m.n2||1, R=n>1?Math.max(0.12,r*1.6):0;
+    for(let i=0;i<n;i++){ const a=i*2*Math.PI/n, x=R*Math.cos(a), z=R*Math.sin(a), dd=D-(n>3?(i%2)*0.12:0);
+      at(new T3.CylinderGeometry(0.0025,0.0025,dd,4),cab,x,dd/2,z);
+      if(m.sh==="globes"){ at(new T3.SphereGeometry(r,18,12),v3Mat(m.col,{roughness:.15,transparent:true,opacity:.55,emissive:new T3.Color("#fff3d8"),emissiveIntensity:glow*.6}),x,dd+r,z); at(new T3.SphereGeometry(Math.min(r*.35,0.03),8,6),emis,x,dd+r,z); }
+      else { at(new T3.CylinderGeometry(r,r,h,24,1,true),mat,x,dd+h/2,z); at(new T3.SphereGeometry(0.03,8,6),emis,x,dd+h/2,z); } }
+    return D+(m.sh==="globes"?2*r:h); }
+  at(new T3.CylinderGeometry(0.003,0.003,D,4),cab,0,D/2,0);
+  if(m.sh==="drum"){ at(new T3.CylinderGeometry(r,r,h,32,1,true),mat,0,D+h/2,0); at(new T3.SphereGeometry(0.04,10,8),emis,0,D+h/2,0); return D+h; }
+  if(m.sh==="sphere"){ const g=new T3.SphereGeometry(r,28,18); g.scale(1,h/(2*r),1); at(g,mat,0,D+h/2,0); at(new T3.SphereGeometry(0.04,10,8),emis,0,D+h/2,0); return D+h; }
+  if(m.sh==="bell"){ const g=new T3.SphereGeometry(r,24,14,0,Math.PI*2,0,Math.PI*0.62); g.scale(1,h/r*0.8,1); at(g,mat,0,D,0); at(new T3.SphereGeometry(0.04,10,8),emis,0,D+h*0.6,0); return D+h; }
+  if(m.sh==="stone"){ at(new T3.CylinderGeometry(r,r*0.9,h,20),v3Mat(m.col,{roughness:.9}),0,D+h/2,0); at(new T3.CylinderGeometry(r*0.6,r*0.6,0.004,16),emis,0,D+h+0.002,0); return D+h; }
+  // dome
+  at(new T3.ConeGeometry(r,h,28,1,true),v3Mat(m.col,{roughness:.5,side:T3.DoubleSide,metalness:/#b0|#c4/.test(m.col)?.5:.1}),0,D+h/2,0); at(new T3.SphereGeometry(0.045,10,8),emis,0,D+h*0.85,0); return D+h; }
 function ckHtml(L){ return L.map(k=>`<div class="ck ${k.ok?"ok":"ko"}"><b>${k.ok?"✓":"!"}</b><span>${esc(k.t)}</span>${k.ref?`<em>${esc(k.ref)}</em>`:""}</div>`).join(""); }
 function lumList(room){ if(!S.lum) S.lum={}; if(!S.lum[room]) S.lum[room]=[]; return S.lum[room]; }
 function roomCenter(room){ const g=roomGeom(room), P=g.poly||g.inner.flatMap(e=>[e.a,e.b]); return P.reduce((a,p)=>[a[0]+p[0]/P.length,a[1]+p[1]/P.length],[0,0]); }
@@ -2733,7 +2789,9 @@ function lumMaterials(room){
   L.forEach(x=>{ cnt[x.t]=(cnt[x.t]||0)+1; });
   const add=(cat,des,det,q,u)=>{ if(q>0) rows.push({cat,des,det,q,u}); };
   add("Électricité","Boîte DCL plafond + douille + fiche","plafonnier et suspension",(cnt.plaf||0)+(cnt.susp||0),"u");
-  add("Électricité","Plafonnier (luminaire au choix)","",cnt.plaf||0,"u"); add("Électricité","Suspension (luminaire au choix)","",cnt.susp||0,"u");
+  { const mc={}, gen={plaf:0,susp:0}; L.forEach(x=>{ if(x.t!=="plaf"&&x.t!=="susp") return; const m=lusOf(x); if(m) mc[m.n]=(mc[m.n]||0)+1; else gen[x.t]++; });
+    add("Électricité","Plafonnier (luminaire au choix)","",gen.plaf,"u"); add("Électricité","Suspension (luminaire au choix)","",gen.susp,"u");
+    Object.keys(mc).forEach(n=>add("Électricité","Suspension "+n,"dimensions ≈, voir sklum.com",mc[n],"u")); }
   add("Électricité","Spot LED encastrable + boîtier étanche à l'air","",cnt.spot||0,"u"); add("Électricité","Réglette / ruban LED + alimentation","",cnt.regl||0,"u");
   const gR=roomGeom(room), NR=gR.segs.length?netRoom(room,gR):{tubes:[]}, nlum=(cnt.plaf||0)+(cnt.susp||0)+(cnt.spot||0)+(cnt.regl||0), lL=NR.tubes.filter(t=>t.k==="ictaL").reduce((a,t)=>a+plen(t.pts),0)/1000;
   add("Électricité","Câble 3G1,5 + gaine ICTA Ø16 (éclairage)",lL?"tracé jusqu'à la boîte + 1 m par point":"≈ 6 m par point",Math.ceil(lL?lL*1.1+nlum:nlum*6),"m");
@@ -2936,15 +2994,15 @@ function netRoom(room,g,X){
 function vmcDucts(bouches,caissons,autoAt){
   const R=[]; if(!bouches.length) return {ducts:R,caissons};
   if(!caissons.length) caissons=[{p:autoAt,auto:true}];
-  bouches.forEach(b=>{ const c=caissons.reduce((m,c)=>Math.hypot(c.p[0]-b.p[0],c.p[1]-b.p[1])<Math.hypot(m.p[0]-b.p[0],m.p[1]-b.p[1])?c:m,caissons[0]);
-    const dx=b.p[0]-c.p[0], dy=b.p[1]-c.p[1], d=Math.hypot(dx,dy)||1, port=[c.p[0]+dx/d*Math.min(d,240),c.p[1]+dy/d*Math.min(d,200),c.p[2]-40];
-    const mid=[(b.p[0]+port[0])/2,(b.p[1]+port[1])/2,Math.max(b.p[2]+220,port[2]-60)];
-    const pts=[[b.p[0],b.p[1],b.p[2]],[b.p[0],b.p[1],b.p[2]+160],mid,port];
-    R.push({pts,r:b.t==="vmcins"?62:40,col:b.t==="vmcins"?NETC.ins:NETC.vmc,t:b.t,len:plen(pts)*1.1+300,room:b.room}); });
+  bouches.forEach(b=>{ const W=b.path||[], q=W.length?W[W.length-1]:b.p, c=caissons.reduce((m,c)=>Math.hypot(c.p[0]-q[0],c.p[1]-q[1])<Math.hypot(m.p[0]-q[0],m.p[1]-q[1])?c:m,caissons[0]);
+    const dx=q[0]-c.p[0], dy=q[1]-c.p[1], d=Math.hypot(dx,dy)||1, port=[c.p[0]+dx/d*Math.min(d,240),c.p[1]+dy/d*Math.min(d,200),c.p[2]-40];
+    const zr=Math.max(b.p[2]+220,port[2]-60), mid=[(q[0]+port[0])/2,(q[1]+port[1])/2,zr];
+    const pts=W.length?[[b.p[0],b.p[1],b.p[2]],[b.p[0],b.p[1],b.p[2]+160],...W.map(w=>[w[0],w[1],zr]),port]:[[b.p[0],b.p[1],b.p[2]],[b.p[0],b.p[1],b.p[2]+160],mid,port];
+    R.push({pts,r:b.t==="vmcins"?62:40,col:b.t==="vmcins"?NETC.ins:NETC.vmc,t:b.t,len:plen(pts)*1.1+300,room:b.room,bi:b.bi,man:!!W.length}); });
   return {ducts:R,caissons}; }
 function vmcHouse(){ // bouches et caissons de tout le logement, repère du logement
   const B=[], Cs=[]; roomNames().forEach(n=>{ const g=roomGeom(n); if(!g.segs.length) return; const X=makeXf(n), H=g.H;
-    lumList(n).forEach(x=>{ const [px,py]=X.p(x.x,x.y); if(x.t==="vmc"||x.t==="vmcins") B.push({p:[px,py,H],t:x.t,room:n}); if(x.t==="caisson") Cs.push({p:[px,py,H+420],room:n}); }); });
+    lumList(n).forEach((x,i)=>{ const [px,py]=X.p(x.x,x.y); if(x.t==="vmc"||x.t==="vmcins") B.push({p:[px,py,H],t:x.t,room:n,bi:i,path:(x.path||[]).map(q=>X.p(q[0],q[1]))}); if(x.t==="caisson") Cs.push({p:[px,py,H+420],room:n}); }); });
   let auto=null; if(B.length&&!Cs.length){ const n=B[0].room, g=roomGeom(n), P=g.poly||g.inner.flatMap(e=>[e.a,e.b]), c=P.reduce((a,p)=>[a[0]+p[0]/P.length,a[1]+p[1]/P.length],[0,0]), q=makeXf(n).p(c[0]-500,c[1]-500); auto=[q[0],q[1],g.H+420]; }
   return vmcDucts(B,Cs,auto); }
 /* Dessin three.js */
@@ -2974,7 +3032,7 @@ function g0T(){ return doublageT(); }
 function v3Vmc(scene,pick,rooms){ const T3=THREE, V=S.v3, all=V.all;
   const B=[], Cs=[]; let auto=null;
   rooms.forEach(n=>{ const g=all?geomXf(roomGeom(n),n):roomGeom(n); if(!g.segs.length) return; const X=g.xf||{p:(x,y)=>[x,y]};
-    lumList(n).forEach((x,i)=>{ const [px,py]=X.p(x.x,x.y); if(x.t==="vmc"||x.t==="vmcins") B.push({p:[px,py,g.H],t:x.t,room:n}); if(x.t==="caisson") Cs.push({p:[px,py,g.H+420],room:n,idx:i}); });
+    lumList(n).forEach((x,i)=>{ const [px,py]=X.p(x.x,x.y); if(x.t==="vmc"||x.t==="vmcins") B.push({p:[px,py,g.H],t:x.t,room:n,bi:i,path:(x.path||[]).map(q=>X.p(q[0],q[1]))}); if(x.t==="caisson") Cs.push({p:[px,py,g.H+420],room:n,idx:i}); });
     if(!auto&&lumList(n).some(x=>x.t==="vmc"||x.t==="vmcins")){ const P=g.poly||g.inner.flatMap(e=>[e.a,e.b]), c=P.reduce((a,p)=>[a[0]+p[0]/P.length,a[1]+p[1]/P.length],[0,0]); auto=[c[0]-500,c[1]-500,g.H+420]; } });
   const R=vmcDucts(B,Cs,auto); R.ducts.forEach(d=>v3Pipe(scene,d.pts,d.r,d.col,true));
   const df=B.some(b=>b.t==="vmcins");
@@ -3164,12 +3222,14 @@ function buildScene(){
       lumList(room).forEach((L,li)=>{ const [px,py]=X.p(L.x,L.y), H0=g.H/1000, pos=new T3.Vector3(px/1000,H0,-py/1000), t=L.t, tg={kind:"lum",room,idx:li};
         const mk=(geo,mat,dy)=>{ const m=new T3.Mesh(geo,mat); m.position.copy(pos); m.position.y-=dy; m.userData=tg; scene.add(m); pick.push(m); return m; };
         const emis=v3Mat("#fff7e0",{emissive:new T3.Color(V.nuit?"#ffe9b0":"#fff3d8"),emissiveIntensity:V.nuit?1:0.35});
+        const lm=(t==="susp"||t==="plaf")&&lusOf(L); let lowY=t==="susp"?1.0:0.15;
         if(t==="spot") mk(new T3.CylinderGeometry(0.045,0.045,0.01,20),emis,0.006);
-        if(t==="plaf") mk(new T3.SphereGeometry(0.2,24,12,0,Math.PI*2,0,Math.PI/2).scale(1,0.35,1).rotateX(Math.PI),emis,0.0);
-        if(t==="susp"){ mk(new T3.CylinderGeometry(0.004,0.004,0.8,6),M.dark,0.4); mk(new T3.ConeGeometry(0.18,0.2,24,1,true),v3Mat("#3a3a3a"),0.88); mk(new T3.SphereGeometry(0.05,12,8),emis,0.92); }
+        if(t==="plaf"&&!lm) mk(new T3.SphereGeometry(0.2,24,12,0,Math.PI*2,0,Math.PI/2).scale(1,0.35,1).rotateX(Math.PI),emis,0.0);
+        if(lm){ const grp=new T3.Group(); grp.position.copy(pos); grp.rotation.y=-(L.rot||0)*Math.PI/180; lowY=lustre3D(T3,grp,lm,t==="plaf"?Math.min(150,lusDrop(L,lm)):lusDrop(L,lm),emis,V.nuit?1:0.3); grp.children.forEach(c=>{ c.userData=tg; pick.push(c); }); scene.add(grp); }
+        else if(t==="susp"){ mk(new T3.CylinderGeometry(0.004,0.004,0.8,6),M.dark,0.4); mk(new T3.ConeGeometry(0.18,0.2,24,1,true),v3Mat("#3a3a3a"),0.88); mk(new T3.SphereGeometry(0.05,12,8),emis,0.92); }
         if(t==="regl") mk(new T3.BoxGeometry(1.2,0.03,0.06),emis,0.02);
         if(t==="vmc"||t==="vmcins"){ mk(new T3.CylinderGeometry(0.075,0.075,0.02,24),M.white,0.01); mk(new T3.TorusGeometry(0.05,0.006,6,24).rotateX(Math.PI/2),v3Mat("#c9c9c9"),0.022); }
-        if((t==="spot"||t==="plaf"||t==="susp"||t==="regl") && lights.length<8){ const pl=new T3.PointLight("#ffe7b8",V.nuit?(t==="spot"?0.55:0.9):0.18,6,1.6); pl.position.copy(pos); pl.position.y-=t==="susp"?1.0:0.15; scene.add(pl); lights.push(pl); } });
+        if((t==="spot"||t==="plaf"||t==="susp"||t==="regl") && lights.length<8){ const pl=new T3.PointLight("#ffe7b8",V.nuit?(t==="spot"?0.55:0.9):0.18,6,1.6); pl.position.copy(pos); pl.position.y-=lm?lowY*0.9:t==="susp"?1.0:0.15; scene.add(pl); lights.push(pl); } });
       // créations en placo
       creas(room).forEach(c=>{ const sg=g.segs.find(q=>wid(q.w)===c.wall)||g.segs[0]; if(!sg) return; const ww=sg.w, sp=creaSpan(ww), T0=g.T, hh=Math.min(ww.H,g.H), pm=v3Mat("#efebe3",{roughness:.8}), P={...c}, x=sp.a+Math.max(0,Math.min(P.x||0,sp.len-20)); { const k=c.t==="coffv"?"l":c.t==="niche"?"w":"L"; P[k]=Math.max(20,Math.min(P[k],sp.a+sp.len-x)); }
         const add=m=>{ if(m){ scene.add(m); } };
@@ -3381,18 +3441,30 @@ function v3PopBtn(k){ const s=V3.sel; if(!s) return;
   if(s.kind==="meub"){ const M=meubles(s.room), m=M[s.idx]; if(k==="rot") m.rot=((m.rot||0)+90)%360; if(k==="del"){ M.splice(s.idx,1); V3.sel=null; } }
   save(); v3Rebuild(); renderSide(); const pop=document.getElementById("v3pop"); if(V3.sel) pop.innerHTML=v3PopHtml(); else pop.style.display="none"; }
 
-function lumSvg(room,fs){ return lumList(room).map((L,i)=>{ const t=LUM.find(q=>q.id===L.t)||LUM[0], vmc=t.c!=="lum", r=fs*(L.t==="spot"?0.35:L.t==="caisson"||L.t==="trappe"?0.8:0.6);
-  return `<g data-lumi="${i}" style="cursor:move"><circle cx="${L.x}" cy="${-L.y}" r="${r}" fill="${vmc?"#ffffff":"#ffe08a"}" stroke="${vmc?"#2f7fd0":"#b8860b"}" stroke-width="${fs*.1}"/>${vmc?`<circle cx="${L.x}" cy="${-L.y}" r="${r*0.55}" fill="none" stroke="#2f7fd0" stroke-width="${fs*.06}"/>`:""}<text x="${L.x}" y="${-L.y+r+fs*0.9}" text-anchor="middle" font-size="${fs*.6}" style="fill:var(--ink);pointer-events:none">${L.t==="caisson"?"Caisson":L.t==="trappe"?"Trappe":vmc?"VMC":L.t==="spot"?"S":L.t==="susp"?"Susp.":L.t==="regl"?"LED":"DCL"}</text></g>`; }).join(""); }
+/* trajet de la gaine d'une bouche, repère de la pièce : bouche, points de passage, piquage caisson */
+function lumRoute(room,i){ const L=lumList(room)[i], X=makeXf(room), d=vmcHouse().ducts.find(q=>q.room===room&&q.bi===i), e=d?X.inv(...d.pts[d.pts.length-1]):[L.x+800,L.y+800];
+  return [[L.x,L.y],...(L.path||[]),e]; }
+function lumDuctSvg(room,fs){ const LL=lumList(room); if(!LL.some(x=>x.t==="vmc"||x.t==="vmcins")) return ""; let VR; try{ VR=vmcHouse(); }catch(e){ return ""; } const X=makeXf(room);
+  return LL.map((L,i)=>{ if(L.t!=="vmc"&&L.t!=="vmcins") return ""; const d=VR.ducts.find(q=>q.room===room&&q.bi===i); if(!d) return ""; const e=X.inv(...d.pts[d.pts.length-1]), P=[[L.x,L.y],...(L.path||[]),e], col=L.t==="vmcins"?"#1f9d8a":"#2f7fd0";
+    const pl=P.map(p=>`${Math.round(p[0])},${Math.round(-p[1])}`).join(" ");
+    return `<polyline points="${pl}" fill="none" stroke="${col}" stroke-width="${fs*.22}" ${L.path&&L.path.length?"":`stroke-dasharray="${fs*.5} ${fs*.3}"`} opacity=".85" style="pointer-events:none"/>`+
+      P.slice(1).map((p,k)=>`<line data-lseg="${i}:${k}" x1="${P[k][0]}" y1="${-P[k][1]}" x2="${p[0]}" y2="${-p[1]}" stroke="transparent" stroke-width="${fs*1.3}" style="cursor:copy"/>`).join("")+
+      (L.path||[]).map((p,j)=>`<circle data-lwp="${i}:${j}" cx="${p[0]}" cy="${-p[1]}" r="${fs*.45}" fill="#fff" stroke="${col}" stroke-width="${fs*.14}" style="cursor:move"/>`).join("")+
+      `<text x="${e[0]}" y="${-e[1]-fs*.6}" text-anchor="middle" font-size="${fs*.5}" style="fill:${col};pointer-events:none">${fr(d.len/1000,1)} m</text>`; }).join(""); }
+function lumSvg(room,fs){ return lumDuctSvg(room,fs)+lumList(room).map((L,i)=>{ const lm=lusOf(L), fp=!lm?"":lm.sh==="lin"?`<rect x="${L.x-lm.d/2}" y="${-L.y-30}" width="${lm.d}" height="60" transform="rotate(${L.rot||0} ${L.x} ${-L.y})" fill="${lm.col}" opacity=".55" style="pointer-events:none"/>`:`<circle cx="${L.x}" cy="${-L.y}" r="${(lm.sh==="globes"||lm.sh==="drums")&&lm.n2>1?Math.max(120,lm.d*0.8)+lm.d/2:lm.d/2}" fill="${lm.col}" fill-opacity=".35" stroke="#b8860b" stroke-width="${fs*.06}" stroke-dasharray="${fs*.3} ${fs*.2}" style="pointer-events:none"/>`; const t=LUM.find(q=>q.id===L.t)||LUM[0], vmc=t.c!=="lum", r=fs*(L.t==="spot"?0.35:L.t==="caisson"||L.t==="trappe"?0.8:0.6);
+  return `<g data-lumi="${i}" style="cursor:move">${fp}<circle cx="${L.x}" cy="${-L.y}" r="${r}" fill="${vmc?"#ffffff":"#ffe08a"}" stroke="${vmc?"#2f7fd0":"#b8860b"}" stroke-width="${fs*.1}"/>${vmc?`<circle cx="${L.x}" cy="${-L.y}" r="${r*0.55}" fill="none" stroke="#2f7fd0" stroke-width="${fs*.06}"/>`:""}<text x="${L.x}" y="${-L.y+r+fs*0.9}" text-anchor="middle" font-size="${fs*.6}" style="fill:var(--ink);pointer-events:none">${L.t==="caisson"?"Caisson":L.t==="trappe"?"Trappe":vmc?"VMC":L.t==="spot"?"S":lm?esc(lm.n.replace("Sklum ","").split(" ")[0]):L.t==="susp"?"Susp.":L.t==="regl"?"LED":"DCL"}</text></g>`; }).join(""); }
 function lumPanel(w){ const room=w.room||"", L=lumList(room);
   return `<section class="box"><h2><span class="sw" style="background:#ffe08a"></span>Luminaires et VMC : ${esc(room)}</h2>
     ${L.map((x,i)=>`<div class="row"><label class="f">Élément<select data-lum="${i}" data-lk="t">${LUM.map(t=>`<option value="${t.id}"${t.id===x.t?" selected":""}>${esc(t.n)}</option>`).join("")}</select></label>
       <label class="f">Le long du 1er mur (cm)<input type="number" step="1" data-lum="${i}" data-lk="x" value="${Math.round(x.x/10)}"></label>
       <label class="f">Depuis le 1er mur (cm)<input type="number" step="1" data-lum="${i}" data-lk="y" value="${Math.round(x.y/10)}"></label>
+      ${x.t==="susp"||x.t==="plaf"?`<label class="f">Modèle<select data-lum="${i}" data-lk="m"><option value="">Générique</option>${LUSTRES.map(m=>`<option value="${m.id}"${m.id===x.m?" selected":""}>${esc(m.n)}</option>`).join("")}</select></label>${x.t==="susp"?`<label class="f">Câble (cm)<input type="number" step="5" data-lum="${i}" data-lk="dr" value="${Math.round(lusDrop(x,lusOf(x))/10)}"></label>`:""}${(lusOf(x)||{}).sh==="lin"?`<label class="f">Orientation (°)<input type="number" step="15" data-lum="${i}" data-lk="rot" value="${x.rot||0}"></label>`:""}`:""}
+      ${x.t==="vmc"||x.t==="vmcins"?`<div class="btns" style="align-self:end"><button type="button" data-act="lumpath" data-i="${i}" class="ghost">${(x.path||[]).length?"+ Point de passage":"✎ Guider la gaine"}</button>${(x.path||[]).length?`<button type="button" data-act="lumpathdel" data-i="${i}" class="ghost">Tracé auto (${x.path.length} pt)</button>`:""}</div>`:""}
       <button type="button" data-act="lumdel" data-i="${i}" class="ghost" style="align-self:end">✕</button></div>`).join("")}
-    <div class="btns"><button type="button" data-act="lumadd" data-t="plaf">+ Plafonnier</button><button type="button" data-act="lumadd" data-t="susp">+ Suspension</button><button type="button" data-act="lumadd" data-t="spotgrid">+ Spots (grille)</button><button type="button" data-act="lumadd" data-t="regl">+ Ruban LED</button><button type="button" data-act="lumadd" data-t="vmc">+ Bouche VMC</button><button type="button" data-act="lumadd" data-t="vmcins">+ Insufflation</button><button type="button" data-act="lumadd" data-t="caisson">+ Caisson VMC</button><button type="button" data-act="lumadd" data-t="trappe">+ Trappe de visite</button></div>
+    <div class="btns"><button type="button" data-act="lumadd" data-t="plaf">+ Plafonnier</button><button type="button" data-act="lumadd" data-t="susp">+ Suspension</button><button type="button" data-act="lumadd" data-t="lustre">+ Lustre Sklum</button><button type="button" data-act="lumadd" data-t="spotgrid">+ Spots (grille)</button><button type="button" data-act="lumadd" data-t="regl">+ Ruban LED</button><button type="button" data-act="lumadd" data-t="vmc">+ Bouche VMC</button><button type="button" data-act="lumadd" data-t="vmcins">+ Insufflation</button><button type="button" data-act="lumadd" data-t="caisson">+ Caisson VMC</button><button type="button" data-act="lumadd" data-t="trappe">+ Trappe de visite</button></div>
     ${lumChecks(room).map(k=>`<div class="ck ${k.ok?"ok":"ko"}"><b>${k.ok?"✓":"!"}</b><span>${esc(k.t)}</span>${k.ref?`<em>${esc(k.ref)}</em>`:""}</div>`).join("")}
     <h3 style="margin:10px 0 4px;font-size:15px">Réseaux : règles DTU et NF C 15-100</h3>${ckHtml(netChecks(room))}
-    <p class="hint">Les boîtes de dérivation et le caisson VMC reçoivent automatiquement une trappe de visite. Le bouton « Réseaux » de la Visite 3D montre les gaines, câbles et tuyaux. Positions mesurées depuis le mur brut. Le plus simple : onglet « Plafond », faites glisser chaque élément. Les luminaires éclairent la visite 3D en mode « Nuit ».</p></section>`; }
+    <p class="hint">Les boîtes de dérivation et le caisson VMC reçoivent automatiquement une trappe de visite. Le bouton « Réseaux » de la Visite 3D montre les gaines, câbles et tuyaux. Positions mesurées depuis le mur brut. Le plus simple : onglet « Plafond », faites glisser chaque élément. Gaines VMC : touchez la gaine bleue pour ajouter un point de passage et le faire glisser, touchez deux fois un point pour le retirer. Les luminaires éclairent la visite 3D en mode « Nuit ».</p></section>`; }
 
 /* ---------- Mobilier et déco du commerce (catalogue, dimensions indicatives L × P × H en mm) ---------- */
 const MOB_COLS=[["Turquoise","#2fa9a3"],["Bleu canard","#1f5f66"],["Vert sauge","#9aab92"],["Vert bouteille","#2f4f3a"],["Terracotta","#b8714f"],["Moutarde","#c9a03a"],["Rose poudré","#d9aaa4"],["Beige","#d9ccb8"],["Gris clair","#bdbcb8"],["Gris anthracite","#47494c"],["Bleu nuit","#25324a"],["Bouclette écrue","#efe9dd"],["Cuir cognac","#94562e"],["Noir","#1f1f20"],["Chêne","#c49a68"],["Noyer","#6b4a33"],["Blanc","#f3f2ee"]];
@@ -3626,7 +3698,7 @@ function onField(e){
     else { const i=S.walls.findIndex(x=>(x.room||"")===el.value); if(i>=0) S.cur=i; }
     renderAll(); return; }
   if(el.dataset.wcol){ const w=S.walls[S.cur]; if(el.value) w.teinte=el.value; else delete w.teinte; renderAll(); return; }
-  if(el.dataset.lum!==undefined){ const L=lumList(S.walls[S.cur].room||"")[+el.dataset.lum], k=el.dataset.lk; if(k==="t"){ L.t=el.value; renderAll(); return; } const v=parseFloat(el.value); if(isNaN(v)) return; L[k]=Math.round(v*10); renderOut(); return; }
+  if(el.dataset.lum!==undefined){ const L=lumList(S.walls[S.cur].room||"")[+el.dataset.lum], k=el.dataset.lk; if(k==="t"){ L.t=el.value; renderAll(); return; } if(k==="m"){ if(el.value) L.m=el.value; else delete L.m; renderAll(); return; } if(k==="rot"){ L.rot=parseFloat(el.value)||0; renderOut(); return; } const v=parseFloat(el.value); if(isNaN(v)) return; L[k]=Math.round(v*10); renderOut(); return; }
   if(el.dataset.mb!==undefined){ const m=meubles(S.walls[S.cur].room||"")[+el.dataset.mb], k=el.dataset.mk;
     if(el.type==="checkbox"){ m[k]=el.checked; renderAll(); return; }
     if(["x","y","w","d","h"].includes(k)){ const v=parseFloat(el.value); if(isNaN(v)) return; m[k]=Math.round(v*10); renderOut(); return; }
@@ -3709,9 +3781,16 @@ document.getElementById("extra").addEventListener("click",e=>{ const b=e.target.
   save(); renderRoom3D(); });
 document.getElementById("plan").addEventListener("wheel",e=>{ if(S.view!=="room3d") return; e.preventDefault(); const V=S.r3; V.zoom=Math.max(0.4,Math.min(6,(V.zoom||1)*(e.deltaY<0?1.12:1/1.12))); renderRoom3D(); },{passive:false});
 (()=>{ const pl=document.getElementById("plan"); let ld=null;
-  pl.addEventListener("pointerdown",e=>{ if(S.view!=="plafond") return; const g=e.target.closest("[data-lumi]"); if(!g) return; const svg=pl.querySelector("svg"), vb=JSON.parse(pl.dataset.vb||"[0,0,1,1]"), L=lumList(S.walls[S.cur].room||"")[+g.dataset.lumi];
+  let lastTap={k:"",t:0};
+  const svgPt=e=>{ const svg=pl.querySelector("svg"), p=svg.createSVGPoint(); p.x=e.clientX; p.y=e.clientY; const q=p.matrixTransform(svg.getScreenCTM().inverse()); return [Math.round(q.x/10)*10,Math.round(-q.y/10)*10]; };
+  pl.addEventListener("pointerdown",e=>{ if(S.view!=="plafond") return; const room=S.walls[S.cur].room||"";
+    const wp=e.target.closest("[data-lwp]"), sg=!wp&&e.target.closest("[data-lseg]");
+    if(wp||sg){ const [i,k]=(wp||sg).dataset[wp?"lwp":"lseg"].split(":").map(Number), L=lumList(room)[i]; if(!L) return; e.preventDefault(); L.path=L.path||[];
+      if(wp){ const now=Date.now(); if(lastTap.k===wp.dataset.lwp&&now-lastTap.t<400){ L.path.splice(k,1); if(!L.path.length) delete L.path; lastTap={k:"",t:0}; save(); renderAll(); return; } lastTap={k:wp.dataset.lwp,t:now}; ld={P:L.path[k]}; return; }
+      const p=svgPt(e); L.path.splice(k,0,p); ld={P:p}; renderCeil(); return; }
+    const g=e.target.closest("[data-lumi]"); if(!g) return; const svg=pl.querySelector("svg"), vb=JSON.parse(pl.dataset.vb||"[0,0,1,1]"), L=lumList(S.walls[S.cur].room||"")[+g.dataset.lumi];
     ld={L,x:e.clientX,y:e.clientY,x0:L.x,y0:L.y,k:vb[2]/svg.clientWidth}; e.preventDefault(); });
-  window.addEventListener("pointermove",e=>{ if(!ld) return; ld.L.x=Math.round((ld.x0+(e.clientX-ld.x)*ld.k)/10)*10; ld.L.y=Math.round((ld.y0-(e.clientY-ld.y)*ld.k)/10)*10; renderCeil(); });
+  window.addEventListener("pointermove",e=>{ if(!ld) return; if(ld.P){ const p=svgPt(e); ld.P[0]=p[0]; ld.P[1]=p[1]; renderCeil(); return; } ld.L.x=Math.round((ld.x0+(e.clientX-ld.x)*ld.k)/10)*10; ld.L.y=Math.round((ld.y0-(e.clientY-ld.y)*ld.k)/10)*10; renderCeil(); });
   window.addEventListener("pointerup",()=>{ if(!ld) return; ld=null; save(); renderAll(); });
 })();
 document.getElementById("jump").addEventListener("click",()=>{ const sd=document.getElementById("side"), r=sd.getBoundingClientRect(); if(r.top>innerHeight*0.5||r.bottom<0){ sd.scrollIntoView({behavior:"smooth"}); document.getElementById("jump").textContent="▲ Vues"; } else { document.getElementById("tabs").scrollIntoView({behavior:"smooth"}); document.getElementById("jump").textContent="⚙ Réglages"; } });
@@ -3756,7 +3835,10 @@ side.addEventListener("click",e=>{
   else if(b.dataset.act==="lumadd"){ const room=w.room||"", c=roomCenter(room), t=b.dataset.t;
     if(t==="spotgrid"){ const g=roomGeom(room), P=g.poly||g.inner.flatMap(e=>[e.a,e.b]), xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), X0=Math.min(...xs), X1=Math.max(...xs), Y0=Math.min(...ys), Y1=Math.max(...ys), nx=Math.max(2,Math.round((X1-X0)/1300)), ny=Math.max(2,Math.round((Y1-Y0)/1300));
       for(let i=0;i<nx;i++) for(let j=0;j<ny;j++) lumList(room).push({t:"spot",x:Math.round(X0+(X1-X0)*(i+0.5)/nx),y:Math.round(Y0+(Y1-Y0)*(j+0.5)/ny)}); }
+    else if(t==="lustre") lumList(room).push({t:"susp",m:"benavid",x:Math.round(c[0]),y:Math.round(c[1])});
     else lumList(room).push({t,x:Math.round(c[0]+(t==="vmc"?600:0)),y:Math.round(c[1]+(t==="vmc"?600:t==="caisson"?-500:t==="trappe"?-900:0))}); }
+  else if(b.dataset.act==="lumpath"){ const room=w.room||"", L=lumList(room)[+b.dataset.i], R=lumRoute(room,+b.dataset.i), a=R[R.length-2], z=R[R.length-1]; (L.path=L.path||[]).push([Math.round((a[0]+z[0])/20)*10,Math.round((a[1]+z[1])/20)*10]); }
+  else if(b.dataset.act==="lumpathdel"){ delete lumList(w.room||"")[+b.dataset.i].path; }
   else if(b.dataset.act==="lumdel"){ lumList(w.room||"").splice(+b.dataset.i,1); }
   else if(b.dataset.act==="mbadd"){ const room=w.room||"", c=roomCenter(room); meubles(room).push({n:"Meuble MDF "+(meubles(room).length+1),x:Math.round(c[0]),y:Math.round(c[1]),rot:0,w:800,d:400,h:900,ep:19,etag:2,portes:2,tiroirs:0,socle:true,c:"#e9e4da",peint:"Mildecor MIL'54 laque satinée PU ultra résistante blanc"}); }
   else if(b.dataset.act==="mbdel"){ meubles(w.room||"").splice(+b.dataset.i,1); }
