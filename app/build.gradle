@@ -1,0 +1,29 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'fr.maison.calepinage'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'fr.maison.calepinage'
+        minSdk 24
+        targetSdk 34
+        versionCode((System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger())
+        versionName "1.${System.getenv('GITHUB_RUN_NUMBER') ?: '0'}"
+    }
+    // Clé fixe : chaque nouvelle version s'installe par-dessus l'ancienne sans perdre les projets
+    signingConfigs {
+        maison {
+            storeFile file('calepinage.keystore')
+            storePassword 'android'
+            keyAlias 'calepinage'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        debug { debuggable false; signingConfig signingConfigs.maison }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
