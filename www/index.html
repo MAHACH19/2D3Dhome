@@ -690,9 +690,11 @@ const opName = (o,i)=> (o.type==="Porte"?"PT":o.type==="Fenêtre"?"F":"O")+(i+1)
 /* ---------- Calcul d'un mur ---------- */
 const COLLE_T=22.5; // doublage collé : plots de MAP ≈ 10 mm + plaque 12,5 mm (DTU 25.42)
 const isCol=w=>!!(w&&(w.dbl==="colle"||w.noDbl));
-const contreT=()=>S.oss.g+12.5*S.pla.couches; // ossature fixée contre le mur brut, sans isolant
-function wT(w){ return isCol(w)?COLLE_T:w&&w.dbl==="contre"?contreT():doublageT(); } // épaisseur du doublage d'un mur
-function doublageT(){ return ((WCFG?WCFG.iso:S.iso.on) && S.iso.pose==="mur" ? (S.iso.decol||0) : 0) + S.oss.g + 12.5*S.pla.couches; }
+var WGAP=0; // ossature autoportante : vide entre la pierre et le dos des rails (mur irrégulier, pas de fixation au mur)
+const gapOf=w=>w&&w.dbl==="contre"?(w.ec??20):0, contreT=w=>gapOf(w)+S.oss.g+12.5*S.pla.couches;
+const autoMax=()=>{ const t={48:[2600,2950],70:[3150,3550],90:[3700,4150]}[S.oss.g]||[2600,2950]; return S.oss.e<=400?t[1]:t[0]; }; // ≈ Placostil, montants simples
+function wT(w){ return isCol(w)?COLLE_T:w&&w.dbl==="contre"?contreT(w):doublageT()-WGAP; } // épaisseur du doublage d'un mur
+function doublageT(){ return WGAP + ((WCFG?WCFG.iso:S.iso.on) && S.iso.pose==="mur" ? (S.iso.decol||0) : 0) + S.oss.g + 12.5*S.pla.couches; }
 function roomWalls(wall){ return S.walls.filter(w=>(w.room||"")===(wall.room||"")); }
 function roomAdjust(wall){
   const rw=roomWalls(wall), i=rw.indexOf(wall), T=doublageT();
@@ -1033,8 +1035,9 @@ function renderQuick(){ const q=document.getElementById("quick"); if(!q) return;
     ${S.walls.map((x,i)=>(x.room||"")===(w.room||"")?`<button type="button" data-qwall="${i}" aria-pressed="${i===S.cur}" style="padding:5px 10px;font-size:13px">${esc((x.name||"Mur "+(i+1)).replace((x.room||"")+" — ",""))}</button>`:"").join("")}
     <span class="cap">${S.walls.length} mur(s) au total, ${roomNames().length} pièce(s)</span></div>
     ${`<div class="qcfg"><span class="cap">Sur ce mur :</span>${(()=>{ const cur=isCol(w)?"colle":w.dbl==="contre"?"contre":"oss", off="background:var(--card);color:var(--ink);border-color:var(--line)";
-      return [["oss","Ossature + isolant"],["contre","Ossature contre le mur brut"],["colle","Placo collé au mur brut"]].map(([k,t])=>`<button type="button" data-qdbl="${k}" aria-pressed="${cur===k}" style="${cur===k?"":off}">${t}</button>`).join("")
-      +(cur==="colle"?`<span class="cap">plots de mortier adhésif (MAP) sur la pierre, ${fr(COLLE_T/10,2)} cm d'épaisseur, sans ossature ni isolant</span>`:cur==="contre"?`<span class="cap">rails et montants ${S.oss.g} mm chevillés contre la pierre, sans isolant ni membrane : ${fr(contreT()/10,2)} cm d'épaisseur</span>`:""); })()}${!w.dbl&&!w.noDbl&&S.iso.on?`<button type="button" data-qcfg="noIso" aria-pressed="${!w.noIso}">${!w.noIso?"✓":"✕"} Isolant</button>`:""}${!w.dbl&&!w.noDbl&&S.mem.on?`<button type="button" data-qcfg="noMem" aria-pressed="${!w.noMem}">${!w.noMem?"✓":"✕"} Membrane</button>`:""}<span class="cap">les autres murs ne changent pas</span></div>`}`; }
+      return [["oss","Ossature + isolant"],["contre","Ossature autoportante"],["colle","Placo collé au mur brut"]].map(([k,t])=>`<button type="button" data-qdbl="${k}" aria-pressed="${cur===k}" style="${cur===k?"":off}">${t}</button>`).join("")
+      +(cur==="colle"?`<span class="cap">plots de mortier adhésif (MAP) sur la pierre, ${fr(COLLE_T/10,2)} cm d'épaisseur, sans ossature ni isolant</span>`:cur==="contre"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Écart à la pierre (cm)<input type="number" step="0.5" min="0" data-qgap value="${gapOf(w)/10}" style="width:70px"></label><span class="cap">rails ${S.oss.g} mm fixés au sol et au plafond seulement, rien dans la pierre, sans isolant : ${fr(contreT(w)/10,2)} cm d'épaisseur${w.H>autoMax()?` · ⚠ hauteur ${cm(w.H)} cm > ≈ ${cm(autoMax())} cm admis en autoportant (M${S.oss.g}, entraxe ${S.oss.e/10}) : montants doublés ou entraxe 40`:""}</span>`:""); })()}${!w.dbl&&!w.noDbl&&S.iso.on?`<button type="button" data-qcfg="noIso" aria-pressed="${!w.noIso}">${!w.noIso?"✓":"✕"} Isolant</button>`:""}${!w.dbl&&!w.noDbl&&S.mem.on?`<button type="button" data-qcfg="noMem" aria-pressed="${!w.noMem}">${!w.noMem?"✓":"✕"} Membrane</button>`:""}<span class="cap">les autres murs ne changent pas</span></div>`}`; }
+document.getElementById("quick").addEventListener("change",e=>{ if(e.target.matches("[data-qgap]")){ const v=parseFloat(e.target.value); if(isNaN(v)) return; S.walls[S.cur].ec=Math.max(0,Math.round(v*10)); save(); renderAll(); } });
 document.getElementById("quick").addEventListener("click",e=>{ const q=e.target.closest("[data-qdbl]"); if(q){ const w=S.walls[S.cur]; delete w.noDbl; if(q.dataset.qdbl==="oss") delete w.dbl; else w.dbl=q.dataset.qdbl; save(); renderAll(); return; } });
 document.getElementById("quick").addEventListener("click",e=>{ const b=e.target.closest("[data-qcfg]"); if(!b) return; const w=S.walls[S.cur], k=b.dataset.qcfg; if(w[k]) delete w[k]; else w[k]=true; save(); renderAll(); });
 function renderSide(){ renderQuick();
@@ -1879,13 +1882,13 @@ document.getElementById("extra").addEventListener("click",e=>{ const t=e.target.
 /* ---------- Géométrie de la pièce, plafond et maquette 3D ---------- */
 function roomNames(){ return [...new Set(S.walls.map(x=>x.room||"Pièce 1"))]; }
 function roomGeom(room){
-  const rw=S.walls.filter(w=>(w.room||"")===room), T=doublageT(), STN=300;
+  const rw=S.walls.filter(w=>(w.room||"")===room), T=doublageT()-WGAP, STN=300;
   let px=0,py=0,dx=1,dy=0; const segs=[];
   rw.forEach(w=>{ const x1=px+dx*w.L, y1=py+dy*w.L;
     segs.push({w,i:S.walls.indexOf(w),x0:px,y0:py,x1,y1,dx,dy,nx:dy,ny:-dx}); px=x1; py=y1;
     [dx,dy]=turnDir(dx,dy,w); });
   const n=segs.length, closed=n>2 && rw[n-1].angle!=="libre", gap=Math.hypot(px,py);
-  const Ts=rw.map(w=>isCol(w)?COLLE_T:w.dbl==="contre"?contreT():T), of=(sg,off)=>Math.min(off,Ts[segs.indexOf(sg)]);
+  const Ts=rw.map(w=>isCol(w)?COLLE_T:w.dbl==="contre"?contreT(w):T), of=(sg,off)=>Math.min(off,Ts[segs.indexOf(sg)]);
   const corner=(a,b,off)=>{ const oa=of(a,off), ob=of(b,off);
     const A=[a.x0+a.nx*oa,a.y0+a.ny*oa], B=[b.x0+b.nx*ob,b.y0+b.ny*ob], den=a.dx*b.dy-a.dy*b.dx;
     if(Math.abs(den)<1e-9) return [a.x1+a.nx*oa,a.y1+a.ny*oa];
@@ -1997,7 +2000,7 @@ function wallLayers(){
     L.push({k:"oss",n:`Ossature ${oss.g} mm, entraxe ${oss.e/10} cm`,o0:T-oss.g-pl,o1:T-pl,c:"#a9b1b8",studs:1});
   } else {
     if(iso.on) L.push({k:"fibre",n:`Fibre de bois ${iso.ep} mm entre montants`,o0:0,o1:oss.g,fill:"url(#tx-fibre)",c:"#c4914f"});
-    L.push({k:"oss",n:`Ossature ${oss.g} mm, entraxe ${oss.e/10} cm`,o0:0,o1:oss.g,c:"#a9b1b8",studs:1});
+    L.push({k:"oss",n:`Ossature ${oss.g} mm, entraxe ${oss.e/10} cm${WGAP?` autoportante, à ${fr(WGAP/10,1)} cm de la pierre`:""}`,o0:WGAP,o1:WGAP+oss.g,c:"#a9b1b8",studs:1});
     if(mem.on) L.push({k:"mem",n:mem.n,o0:oss.g,o1:oss.g+2,fill:"url(#tx-mem)",c:"#ecebe4"});
   }
   L.push({k:"pla",n:`${pla.n}${pla.couches>1?" × 2":""}`,o0:T-pl,o1:T-1,fill:"url(#tx-plaque)",c:"#e9e8e3"});
@@ -4373,15 +4376,17 @@ var WCFG=null;
 function withWallCfg(w,fn){
   const outer=!WCFG; if(outer) WCFG={iso:S.iso.on,mem:S.mem.on};
   const pi=S.iso.on, pm=S.mem.on;
-  S.iso.on=WCFG.iso&&!(w&&(w.noIso||w.dbl||w.noDbl)); S.mem.on=WCFG.mem&&!(w&&(w.noMem||w.dbl||w.noDbl));
-  try{ return fn(); } finally{ S.iso.on=pi; S.mem.on=pm; if(outer) WCFG=null; }
+  S.iso.on=WCFG.iso&&!(w&&(w.noIso||w.dbl||w.noDbl)); S.mem.on=WCFG.mem&&!(w&&(w.noMem||w.dbl||w.noDbl)); const pg=WGAP; WGAP=gapOf(w);
+  try{ return fn(); } finally{ S.iso.on=pi; S.mem.on=pm; WGAP=pg; if(outer) WCFG=null; }
 }
-{ const c0=compute; compute=function(w){ const col=isCol(w), r=withWallCfg(col?{...w,noIso:true,noMem:true}:w,()=>c0(w)); r._w=w; if(col){ r.colle=true; r.studs=[]; r.rails=[]; r.chevs=[]; } r.isoOn=(WCFG?WCFG.iso:S.iso.on)&&!w.noIso; r.memOn=(WCFG?WCFG.mem:S.mem.on)&&!w.noMem; return r; }; }
+{ const c0=compute; compute=function(w){ const col=isCol(w), r=withWallCfg(col?{...w,noIso:true,noMem:true}:w,()=>c0(w)); r._w=w; if(col){ r.colle=true; r.studs=[]; r.rails=[]; r.chevs=[]; }
+  if(w.dbl==="contre"&&r.checks&&!r._ac){ r._ac=1; const mx=autoMax(); r.checks.push(w.H>mx?{ok:false,t:`Ossature autoportante : ${cm(w.H)} cm de haut, au-delà d'≈ ${cm(mx)} cm pour des montants M${S.oss.g} simples à ${S.oss.e/10} cm. Montants doublés dos à dos, entraxe 40 cm ou montants plus larges.`,ref:"DTU 25.41 / Placo"}:{ok:true,t:`Ossature autoportante : ${cm(w.H)} cm de haut ≤ ≈ ${cm(mx)} cm admis pour M${S.oss.g} à ${S.oss.e/10} cm. Montants tenus uniquement par les rails haut et bas.`,ref:"DTU 25.41 / Placo"}); } r.isoOn=(WCFG?WCFG.iso:S.iso.on)&&!w.noIso; r.memOn=(WCFG?WCFG.mem:S.mem.on)&&!w.noMem; return r; }; }
 { const m0=materials; materials=function(r){ if(!r.colle) return withWallCfg(r._w,()=>m0(r));
   const R=withWallCfg({...r._w,noIso:true,noMem:true},()=>m0(r)).filter(x=>x.cat!=="Ossature"&&x.cat!=="Isolant"&&x.cat!=="Membrane"&&!/^Vis TTPC/.test(x.des)), i=R.findIndex(x=>x.cat==="Plaques")+1;
   R.splice(i,0,{cat:"Plaques",des:"Mortier adhésif MAP (placo collé)",det:`plots Ø 10 cm tous les 30 à 40 cm, ≈ 4 kg/m², ${fr(r.netArea,2)} m²`,q:Math.max(1,Math.ceil(r.netArea*4/25)),u:"sac 25 kg"});
   return R; }; }
-{ const f=chantierSteps; chantierSteps=function(w,r){ if(!isCol(w)) return withWallCfg(w,()=>f(w,r));
+{ const f=chantierSteps; chantierSteps=function(w,r){ if(w&&w.dbl==="contre"){ const st=withWallCfg(w,()=>f(w,r)), R=st.find(x=>x.k==="rails"); if(R) R.d=[`Ossature autoportante : tracer au sol et au plafond à ${fr(gapOf(w)/10,1)} cm du point le plus saillant de la pierre (face arrière du rail), au laser, puis reporter à l'aplomb.`,"Fixer les rails uniquement au sol et au plafond (chevilles ou clous tous les 60 cm), rien dans la pierre : le mur est irrégulier, l'ossature est indépendante.",`Montants emboîtés dans les rails haut et bas, sans appui intermédiaire. Hauteur maxi ≈ ${cm(autoMax())} cm en M${S.oss.g} simple à ${S.oss.e/10} cm.`]; return st; }
+  if(!isCol(w)) return withWallCfg(w,()=>f(w,r));
   const st=withWallCfg({...w,noIso:true,noMem:true},()=>f(w,r)).filter(x=>!["iso","mem","studs","rails","pla"].includes(x.k)), i=Math.max(0,st.findIndex(x=>x.k==="prep")+1);
   st.splice(i,0,{k:"colle",t:"Coller les plaques au MAP",d:[`${r.plateCount} plaque(s) ${esc(S.pla.n)} à coller, dans le même sens que le calepinage.`,"Mur brossé, sain et dépoussiéré ; sur pierre très absorbante, humidifier ou primaire d'accrochage. Planéité : écarts de plus de 15 mm à rattraper avant.","Plots de MAP Ø 10 cm, 2 cm d'épaisseur, tous les 30 à 40 cm en quinconce, plus un cordon en périphérie et autour des ouvertures et boîtiers.","Plaque calée à 1 cm du sol, battue à la règle jusqu'à 10 mm environ du mur, aplomb vérifié. Joints décalés, bandes après 24 h de séchage.","Pas de collage sur mur humide ou salpêtré : là, ossature obligatoire (DTU 25.42)."]});
   return st; }; }
