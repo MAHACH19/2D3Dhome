@@ -146,8 +146,16 @@ public class MainActivity extends BridgeActivity {
             runOnUiThread(() -> {
                 String t = title == null ? "Calepinage" : title;
                 PrintManager pm = (PrintManager) getSystemService(Context.PRINT_SERVICE);
-                PrintDocumentAdapter ad = getBridge().getWebView().createPrintDocumentAdapter(t);
-                pm.print(t, ad, new PrintAttributes.Builder().build());
+                WebView web = getBridge().getWebView();
+                web.setBackgroundColor(0xFFFFFFFF); // marges du PDF en blanc, pas le bleu de l'appli
+                final PrintDocumentAdapter in = web.createPrintDocumentAdapter(t);
+                PrintDocumentAdapter ad = new PrintDocumentAdapter() {
+                    @Override public void onStart() { in.onStart(); }
+                    @Override public void onLayout(PrintAttributes o, PrintAttributes n, android.os.CancellationSignal c, LayoutResultCallback cb, Bundle b) { in.onLayout(o, n, c, cb, b); }
+                    @Override public void onWrite(android.print.PageRange[] p, android.os.ParcelFileDescriptor d, android.os.CancellationSignal c, WriteResultCallback cb) { in.onWrite(p, d, c, cb); }
+                    @Override public void onFinish() { in.onFinish(); web.setBackgroundColor(0xFF1D63C4); web.evaluateJavascript("document.body.classList.remove('pdoc','pshop')", null); }
+                };
+                pm.print(t, ad, new PrintAttributes.Builder().setMinMargins(PrintAttributes.Margins.NO_MARGINS).build());
             });
         }
         @JavascriptInterface
