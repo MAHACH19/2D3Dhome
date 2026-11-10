@@ -3255,7 +3255,7 @@ function buildScene(){
         if(t==="vmc"||t==="vmcins"){ mk(new T3.CylinderGeometry(0.075,0.075,0.02,24),M.white,0.01); mk(new T3.TorusGeometry(0.05,0.006,6,24).rotateX(Math.PI/2),v3Mat("#c9c9c9"),0.022); }
         if((t==="spot"||t==="plaf"||t==="susp"||t==="regl") && lights.length<8){ const pl=new T3.PointLight("#ffe7b8",V.nuit?(t==="spot"?0.55:0.9):0.18,6,1.6); pl.position.copy(pos); pl.position.y-=lm?lowY*0.9:t==="susp"?1.0:0.15; scene.add(pl); lights.push(pl); } });
       // créations en placo
-      creas(room).forEach(c=>{ const sg=g.segs.find(q=>wid(q.w)===c.wall)||g.segs[0]; if(!sg) return; const ww=sg.w, sp=creaSpan(ww), T0=g.T, hh=Math.min(ww.H,g.H), pm=v3Mat("#efebe3",{roughness:.8}), P={...c}, x=sp.a+Math.max(0,Math.min(P.x||0,sp.len-20)); { const k=c.t==="coffv"?"l":c.t==="niche"?"w":"L"; P[k]=Math.max(20,Math.min(P[k],sp.a+sp.len-x)); }
+      creas(room).forEach(c=>{ const sg=g.segs.find(q=>wid(q.w)===c.wall)||g.segs[0]; if(!sg) return; const ww=sg.w, sp=creaSpan(ww), T0=g.Ts?g.Ts[g.segs.indexOf(sg)]:g.T, hh=Math.min(ww.H,g.H), pm=v3Mat("#efebe3",{roughness:.8}), P={...c}, x=sp.a+Math.max(0,Math.min(P.x||0,sp.len-20)); { const k=c.t==="coffv"?"l":c.t==="niche"?"w":"L"; P[k]=Math.max(20,Math.min(P[k],sp.a+sp.len-x)); }
         const add=m=>{ if(m){ scene.add(m); } };
         if(c.t==="coffh") add(v3Box(sg,x,x+P.L,T0,T0+P.l,hh-P.h,hh,pm));
         if(c.t==="coffv") add(v3Box(sg,x,x+P.l,T0,T0+P.pf,0,hh,pm));
