@@ -3454,6 +3454,17 @@ function v3MoveSel(px,py){ const s=V3.sel; if(!s) return;
 function v3Select(ud){ V3.sel=ud&&(ud.kind==="meub"||ud.kind==="kit"||ud.kind==="wall"||ud.kind==="lum"||ud.kind==="door")?ud:null; const pop=document.getElementById("v3pop"); if(!V3.sel){ pop.style.display="none"; return; }
   if(V3.sel.kind==="wall"&&S.walls[V3.sel.i]&&V3.sel.i!==S.cur){ S.cur=V3.sel.i; save(); renderSide(); if(S.v3.cut==="ecorche") v3Rebuild(); }
   pop.style.display="block"; pop.innerHTML=v3PopHtml(); fillThumbs(pop); }
+function v3MovePad(){ const st=S.v3.step||50, s=V3.sel, it=s.kind==="lum"?lumList(s.room)[s.idx]:s.kind==="meub"?meubles(s.room)[s.idx]:null, B=(k,t)=>`<button type="button" data-pop="mv:${k}" style="min-width:44px;padding:6px 8px">${t}</button>`;
+  return `<div style="margin-top:8px;border-top:1px solid var(--line,#0002);padding-top:6px"><b>Déplacer</b> <span class="cap">pas de</span> ${[10,50,100].map(v=>`<button type="button" data-pop="step:${v}" class="${v===st?"pri":"ghost"}" style="padding:2px 8px">${v/10} cm</button>`).join(" ")}
+    <div style="display:grid;grid-template-columns:repeat(3,auto);gap:4px;justify-content:center;margin:6px 0"><span></span>${B("f","▲ Loin")}<span></span>${B("l","◀ Gauche")}${B("b","▼ Vers moi")}${B("r","Droite ▶")}</div>
+    ${it?`<div style="display:flex;gap:6px"><label class="f" style="flex:1">X (cm)<input type="number" step="0.5" data-popk="mvx" value="${(it.x||0)/10}"></label><label class="f" style="flex:1">Y (cm)<input type="number" step="0.5" data-popk="mvy" value="${(it.y||0)/10}"></label></div>`:""}
+    <p class="hint" style="margin:2px 0 0">Les flèches suivent votre regard. X et Y sont mesurés dans le plan de la pièce.</p></div>`; }
+function v3MoveStep(k){ const s=V3.sel, st=S.v3.step||50; if(!s) return; const v=new THREE.Vector3(); V3.cam.getWorldDirection(v); let fx=v.x, fy=-v.z; const n=Math.hypot(fx,fy)||1; fx/=n; fy/=n;
+  let [dx,dy]=k==="f"?[fx,fy]:k==="b"?[-fx,-fy]:k==="r"?[fy,-fx]:[-fy,fx]; // repère plan (y vers le haut du plan)
+  if(S.v3.all){ const a=-roomLayout(s.room).rot*Math.PI/180; [dx,dy]=[dx*Math.cos(a)-dy*Math.sin(a), dx*Math.sin(a)+dy*Math.cos(a)]; }
+  if(s.kind==="kit"){ const it=kitCfg(s.room).items[s.idx], sg=roomGeom(s.room).segs.find(q=>wid(q.w)===it.wall)||roomGeom(s.room).segs[0], ki=kitItem(it); if(!sg) return; const u=dx*sg.dx+dy*sg.dy; if(Math.abs(u)<0.2) return; it.x=Math.max(0,Math.min(sg.w.L-(ki?ki.w:0),(it.x||0)+Math.sign(u)*st)); return; }
+  if(Math.abs(dx)>=Math.abs(dy)){ dx=Math.sign(dx)*st; dy=0; } else { dy=Math.sign(dy)*st; dx=0; }
+  const it=s.kind==="lum"?lumList(s.room)[s.idx]:s.kind==="meub"?meubles(s.room)[s.idx]:null; if(!it) return; it.x=Math.round((it.x||0)+dx); it.y=Math.round((it.y||0)+dy); }
 function v3PopHtml(){ const s=V3.sel, paints=[...DIVERS.filter(d=>/laque|Finish|Window/i.test(d.n)).map(d=>d.n),...PEINT.map(p=>p.n)];
   const sw=(cur)=>`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">${NUANCIER.map(([n,c])=>`<button type="button" data-pop="sw:${c}" title="${n}" aria-label="${n}" style="width:26px;height:26px;padding:0;border-radius:50%;background:${c};border:2px solid ${c===cur?"#1d63c4":"#0003"}"></button>`).join("")}</div>`;
   const close=`<button type="button" data-pop="close" class="ghost" style="float:right;padding:2px 8px">✕</button>`;
@@ -3467,25 +3478,26 @@ function v3PopHtml(){ const s=V3.sel, paints=[...DIVERS.filter(d=>/laque|Finish|
     <label class="f">Couleur<input type="color" data-popk="dcol" value="${o.color||"#ece7dc"}" style="height:34px;padding:2px"></label>${sw(o.color)}
     <label class="f">Ouverture (°)<input type="range" min="0" max="110" data-popk="dopen" value="${o.open??70}"></label>`; }
   if(s.kind==="lum"){ const L=lumList(s.room)[s.idx], lm=lusOf(L); if(L.t==="susp"||L.t==="plaf") return `${close}<b>${esc(lm?lm.n:(LUM.find(t=>t.id===L.t)||{}).n||"")}</b>
-    <p class="cap" style="margin:6px 0 0">Autres modèles : touchez pour remplacer (images 3D indicatives)</p>${altGrid(LUSTRES,"lus",lm&&lm.id,"lus")}
-    <div class="btns"><button type="button" data-pop="lus:">Générique</button><button type="button" data-pop="lumdel" class="ghost">Supprimer</button></div>`;
-    return `${close}<b>${esc((LUM.find(t=>t.id===L.t)||{}).n||"")}</b><div class="btns" style="margin-top:6px"><button type="button" data-pop="lumdel" class="ghost">Supprimer</button></div><p class="hint">Déplacez-le dans l'onglet Plafond.</p>`; }
+    ${v3MovePad()}<div class="btns"><button type="button" data-pop="lus:">Générique</button><button type="button" data-pop="lumdel" class="ghost">Supprimer</button></div>
+    <p class="cap" style="margin:6px 0 0">Autres modèles : touchez pour remplacer (images 3D indicatives)</p>${altGrid(LUSTRES,"lus",lm&&lm.id,"lus")}`;
+    return `${close}<b>${esc((LUM.find(t=>t.id===L.t)||{}).n||"")}</b><div class="btns" style="margin-top:6px"><button type="button" data-pop="lumdel" class="ghost">Supprimer</button></div>${v3MovePad()}`; }
   const isK=s.kind==="kit", it=isK?kitCfg(s.room).items[s.idx]:meubles(s.room)[s.idx]; if(!it) return close;
   const name=isK?(kitItem(it)||{}).n:(it.n||"Meuble MDF"), col=isK?(it.c||(FACADES.find(f=>f.n===kitCfg(s.room).facade)||FACADES[0]).c):(it.c||"#e9e4da");
   if(!isK&&it.cat) return `${close}<b>${esc(name)}</b> <span class="cap">${cm(it.w)} × ${cm(it.d)} cm</span>
     <div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">${MOB_COLS.map(([n,c])=>`<button type="button" data-pop="sw:${c}" title="${n}" aria-label="${n}" style="width:26px;height:26px;padding:0;border-radius:50%;background:${c};border:2px solid ${c===col?"#1d63c4":"#0003"}"></button>`).join("")}</div>
-    <div class="btns" style="margin-top:6px"><button type="button" data-pop="rot">Tourner 90°</button><button type="button" data-pop="del" class="ghost">Supprimer</button></div>
+    <div class="btns" style="margin-top:6px"><button type="button" data-pop="rot">Tourner 90°</button><button type="button" data-pop="del" class="ghost">Supprimer</button></div>${v3MovePad()}
     ${(()=>{ const cur=MOB.find(o=>o.n===it.n), alts=MOB.filter(o=>o.t===it.cat||(cur&&o.g===cur.g)); return alts.length>1?`<p class="cap" style="margin:8px 0 0"><b>Autres articles</b> : touchez pour remplacer, même place (images 3D indicatives)</p>${altGrid(alts,"mob",cur&&cur.id,"mobsw")}`:""; })()}
-    <p class="hint">Faites glisser le meuble sélectionné pour le placer.</p>`;
+    <p class="hint">Vous pouvez aussi faire glisser le meuble sélectionné.</p>`;
   return `${close}<b>${esc(name)}</b>
     <label class="f" style="margin-top:6px">Couleur<input type="color" data-popk="col" value="${col}" style="height:34px;padding:2px"></label>${sw(col)}
     <label class="f">Peinture (je peins moi-même)<select data-popk="peint"><option value="">${isK?"Façade IKEA d'origine":"Pas encore choisie"}</option>${paints.map(n=>`<option${n===it.peint?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
-    <div class="btns" style="margin-top:6px"><button type="button" data-pop="open">${it.open?"Fermer":"Ouvrir"}</button>${isK?`<button type="button" data-pop="l">◀ 5 cm</button><button type="button" data-pop="r">5 cm ▶</button>`:`<button type="button" data-pop="rot">Tourner 90°</button>`}<button type="button" data-pop="del" class="ghost">Supprimer</button></div>
-    <p class="hint">Faites glisser le meuble sélectionné pour le déplacer${isK?" : il suit le mur le plus proche, vous pouvez le changer de mur":""}.</p>`; }
+    <div class="btns" style="margin-top:6px"><button type="button" data-pop="open">${it.open?"Fermer":"Ouvrir"}</button>${isK?"":`<button type="button" data-pop="rot">Tourner 90°</button>`}<button type="button" data-pop="del" class="ghost">Supprimer</button></div>
+    ${v3MovePad()}<p class="hint">Vous pouvez aussi faire glisser le meuble sélectionné${isK?" : il suit le mur le plus proche, vous pouvez le changer de mur":""}.</p>`; }
 const DOORS=[["pleine","Pleine lisse"],["panneaux","4 panneaux (moulurée)"],["rainuree","Rainurée"],["vitree","Vitrée"],["coulissante","Coulissante en applique"],["galandage","Galandage (dans la cloison)"]];
 function v3PopInput(e){ const el=e.target, k=el.dataset&&el.dataset.popk; if(!k) return; const s=V3.sel; if(!s) return;
   if(s.kind==="wall"){ const w=S.walls[s.i]; if(k==="wpeint") w.peintN=el.value; if(k==="wcol") w.teinte=el.value; }
   else if(s.kind==="door"){ const o=S.walls[s.i].openings[s.op]; if(k==="dstyle") o.style=el.value; if(k==="dcol") o.color=el.value; if(k==="dopen") o.open=+el.value; }
+  else if(k==="mvx"||k==="mvy"){ const it=s.kind==="lum"?lumList(s.room)[s.idx]:meubles(s.room)[s.idx]; if(it&&el.value!==""){ it[k==="mvx"?"x":"y"]=Math.round(+el.value*10); if(e.type!=="change"){ save(); v3Rebuild(); return; } } }
   else { const it=s.kind==="kit"?kitCfg(s.room).items[s.idx]:meubles(s.room)[s.idx]; if(k==="col") it.c=el.value; if(k==="peint") it.peint=el.value; }
   save(); v3Rebuild(); if(e.type==="change"){ renderSide(); const pop=document.getElementById("v3pop"); pop.innerHTML=v3PopHtml(); } }
 function v3PopBtn(k){ const s=V3.sel; if(!s) return;
@@ -3494,6 +3506,8 @@ function v3PopBtn(k){ const s=V3.sel; if(!s) return;
   if(k==="wplan"){ v3Select(null); if(document.fullscreenElement) document.exitFullscreen(); S.view="piece"; save(); renderAll(); return; }
   if(k.startsWith("sw:")){ const c=k.slice(3); if(s.kind==="wall") S.walls[s.i].teinte=c; else if(s.kind==="door") S.walls[s.i].openings[s.op].color=c; else (s.kind==="kit"?kitCfg(s.room).items[s.idx]:meubles(s.room)[s.idx]).c=c; }
   if(k==="wreset") delete S.walls[s.i].teinte;
+  if(k.startsWith("step:")) S.v3.step=+k.slice(5);
+  if(k.startsWith("mv:")) v3MoveStep(k.slice(3));
   if(k==="lumdel"){ lumList(s.room).splice(s.idx,1); V3.sel=null; }
   if(k.startsWith("lus:")){ const L=lumList(s.room)[s.idx], id=k.slice(4); if(id) L.m=id; else delete L.m; }
   if(k.startsWith("mobsw:")){ const o=MOB.find(q=>q.id===k.slice(6)), m=meubles(s.room)[s.idx]; if(o&&m) Object.assign(m,{n:o.n,cat:o.t,w:o.w,d:o.d,h:o.h,c:o.c}); }
