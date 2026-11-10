@@ -3298,9 +3298,9 @@ function buildScene(){
           const halo=(ca,cb,za,zb,vert)=>{ const pad=V.nuit?260:150, w0=vert?(cb-ca)+2*pad:(cb-ca), h0=vert?(zb-za):(zb-za)+2*pad, gg=new T3.PlaneGeometry(w0/1000,h0/1000); gg.translate((ca+cb)/2000,(za+zb)/2000,(T0+2.5)/1000); gg.applyMatrix4(wallMatrix(sg,0));
             const hm=new T3.MeshBasicMaterial({map:ledGlow(vert,kc),transparent:true,opacity:V.nuit?.9:.45,depthWrite:false,blending:T3.AdditiveBlending,side:T3.DoubleSide}); scene.add(new T3.Mesh(gg,hm)); };
           let m=null;
-          if(P.pos===1) ledSegs(ww,P,x,hh).forEach(([a,b])=>{ add(v3Box(sg,x-6,x+46,T0,T0+0.8,a,b,alu)); m=v3Box(sg,x,x+40,T0,T0+1.5,a+3,b-3,lm); add(m); halo(x,x+40,a,b,true); });
-          else if(P.pos===2){ add(v3Box(sg,x,x+P.L,T0+P.y-6,T0+P.y+46,hh-0.8,hh,alu)); m=v3Box(sg,x+3,x+P.L-3,T0+P.y,T0+P.y+40,hh-1.5,hh,lm); add(m); }
-          else ledSegs(ww,P,x,hh).forEach(([a,b])=>{ add(v3Box(sg,a,b,T0,T0+0.8,P.y-6,P.y+46,alu)); m=v3Box(sg,a+3,b-3,T0,T0+1.5,P.y,P.y+40,lm); add(m); halo(a+3,b-3,P.y,P.y+40,false); });
+          if(P.pos===1) ledSegs(ww,P,x,hh).forEach(([a,b])=>{ m=v3Box(sg,x,x+40,T0,T0+1.5,a,b,lm); add(m); });
+          else if(P.pos===2){ m=v3Box(sg,x,x+P.L,T0+P.y,T0+P.y+40,hh-1.5,hh,lm); add(m); }
+          else ledSegs(ww,P,x,hh).forEach(([a,b])=>{ m=v3Box(sg,a,b,T0,T0+1.5,P.y,P.y+40,lm); add(m); });
           if(m&&V.nuit&&lights.length<10){ m.geometry.computeBoundingSphere(); const q=new T3.PointLight(kc,.45,3.5,1.6), cpos=m.geometry.boundingSphere.center.clone(); const nn=new T3.Vector3(sg.nx,0,-sg.ny).multiplyScalar(.25); q.position.copy(cpos.add(nn)); scene.add(q); lights.push(q); } }
         if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; add(v3Box(sg,x,x+40,T0,T0+P.pf,y0,y0+P.h,pm)); add(v3Box(sg,x+P.L-40,x+P.L,T0,T0+P.pf,y0,y0+P.h,pm)); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; add(v3Box(sg,x,x+P.L,T0,T0+P.pf,Math.max(0,yy-35),Math.max(35,yy+35),pm)); } }
       });
