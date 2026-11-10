@@ -195,6 +195,10 @@ h3.grp{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.08e
 #scanhint small{display:block;color:var(--muted);font-size:12px}
 #scanhint.scr-off{display:none!important}
 #scanpanel{scroll-margin-top:96px}
+.qcfg{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.qcfg button{padding:5px 12px;border-radius:16px;font-size:13px;font-weight:600}
+.qcfg button[aria-pressed="true"]{background:var(--mem);border-color:var(--mem);color:#fff}
+.qcfg button[aria-pressed="false"]{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
 section.box{border-radius:12px}
 .plan{border-radius:12px}
 
@@ -586,7 +590,7 @@ function ffd(pieces, stock, overlap=0){
 const opName = (o,i)=> (o.type==="Porte"?"PT":o.type==="Fenêtre"?"F":"O")+(i+1);
 
 /* ---------- Calcul d'un mur ---------- */
-function doublageT(){ return (S.iso.on && S.iso.pose==="mur" ? (S.iso.decol||0) : 0) + S.oss.g + 12.5*S.pla.couches; }
+function doublageT(){ return ((WCFG?WCFG.iso:S.iso.on) && S.iso.pose==="mur" ? (S.iso.decol||0) : 0) + S.oss.g + 12.5*S.pla.couches; }
 function roomWalls(wall){ return S.walls.filter(w=>(w.room||"")===(wall.room||"")); }
 function roomAdjust(wall){
   const rw=roomWalls(wall), i=rw.indexOf(wall), T=doublageT();
@@ -916,7 +920,9 @@ function opt(list,val){ return list.map(v=>`<option${v==val?" selected":""}>${es
 function renderQuick(){ const q=document.getElementById("quick"); if(!q) return; const w=S.walls[S.cur];
   q.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><select data-qroom aria-label="Pièce" style="max-width:100%;font-weight:600">${roomNames().map(n=>`<option${n===(w.room||"")?" selected":""}>${esc(n)}</option>`).join("")}</select>
     ${S.walls.map((x,i)=>(x.room||"")===(w.room||"")?`<button type="button" data-qwall="${i}" aria-pressed="${i===S.cur}" style="padding:5px 10px;font-size:13px">${esc((x.name||"Mur "+(i+1)).replace((x.room||"")+" — ",""))}</button>`:"").join("")}
-    <span class="cap">${S.walls.length} mur(s) au total, ${roomNames().length} pièce(s)</span></div>`; }
+    <span class="cap">${S.walls.length} mur(s) au total, ${roomNames().length} pièce(s)</span></div>
+    ${S.iso.on||S.mem.on?`<div class="qcfg"><span class="cap">Sur ce mur :</span>${S.iso.on?`<button type="button" data-qcfg="noIso" aria-pressed="${!w.noIso}">${!w.noIso?"✓":"✕"} Isolant</button>`:""}${S.mem.on?`<button type="button" data-qcfg="noMem" aria-pressed="${!w.noMem}">${!w.noMem?"✓":"✕"} Membrane</button>`:""}<span class="cap">les autres murs ne changent pas</span></div>`:""}`; }
+document.getElementById("quick").addEventListener("click",e=>{ const b=e.target.closest("[data-qcfg]"); if(!b) return; const w=S.walls[S.cur], k=b.dataset.qcfg; if(w[k]) delete w[k]; else w[k]=true; save(); renderAll(); });
 function renderSide(){ renderQuick();
   const w=S.walls[S.cur], {oss,iso,pla}=S;
   const isoF=[...new Set(ISO.map(p=>p.f))], plaF=[...new Set(PLA.map(p=>p.f))];
@@ -1724,8 +1730,30 @@ function renderPlan(r){
       <div class="steps" id="steps">${steps.map((s2,i)=>`<button type="button" data-step="${i}" aria-pressed="${i===si}">${i+1}. ${esc(s2.t)}</button>`).join("")}</div>
       <div class="stepcard"><div><b>${esc(cur.t)}</b><p>${esc(cur.d)}</p></div>
       <div><span class="cap">Produit</span><b style="font-size:17px">${esc(cur.prod)}</b><span class="cap">Quantité pour ce mur</span><b>${cur.q}</b></div></div></section>`;
-  } else ex.innerHTML="";
+  } else if(v==="iso"||v==="oss"||v==="mem"){ ex.innerHTML=cutListHtml(r,v); }
+  else ex.innerHTML="";
 }
+function cutListHtml(r,v){
+  const th=a=>`<thead><tr>${a.map((x,i)=>`<th${i>1?' style="text-align:right"':""}>${x}</th>`).join("")}</tr></thead>`;
+  const tb=(h,rows)=>`<div class="tbl-wrap"><table class="cutl">${th(h)}<tbody>${rows.join("")}</tbody></table></div>`;
+  if(v==="iso"){ if(!r.isoOn) return `<section class="box"><h2>Liste de coupe de l'isolant</h2><p class="hint">Pas d'isolant sur ce mur.</p></section>`;
+    const P=cutPieces(r,"iso"), W=S.iso.W, Lg=S.iso.Lg;
+    return `<section class="box"><h2>Liste de coupe de l'isolant</h2><p class="cap" style="margin:0 0 8px">${P.length} morceaux, panneaux de ${cm(W)} × ${cm(Lg)} cm. Position = coin bas gauche du morceau, depuis le début du mur et depuis le sol. Touchez une ligne pour la fiche.</p>`+
+      tb(["N°","Position","Largeur","Hauteur","Coupe"],P.map((q,i)=>{ const ops=r.ops.filter(o=>q.x<o.x1&&q.x+q.w>o.x&&q.y<o.y1&&q.y+q.h>o.y);
+        const c=[q.w<W-1?`largeur ${cm(q.w)}`:"",q.h<Lg-1?`hauteur ${cm(q.h)}`:"",...ops.map(o=>`entaille ${opName(o,o.i)}`)].filter(Boolean).join(", ")||"entier";
+        return `<tr data-pcl="${i}" style="cursor:pointer"><td><b>I${q.n}</b></td><td>${cm(q.x)} / ${cm(q.y)} cm</td><td class="n"><b>${cm(q.w)}</b></td><td class="n"><b>${cm(q.h)}</b></td><td class="n">${c}</td></tr>`; }))+`</section>`; }
+  if(v==="oss"){ const P=cutPieces(r,"oss");
+    const rails=r.rails.map(x=>({k:x.kind,len:x.len||Math.abs((x.x1||0)-(x.x0||0)),x0:x.x0,y:x.y0}));
+    return `<section class="box"><h2>Liste de coupe de l'ossature</h2><p class="cap" style="margin:0 0 8px">${P.length} montants ${S.oss.g} mm. Axe = milieu du montant, mesuré depuis le début du mur. Touchez une ligne pour la fiche.</p>`+
+      tb(["N°","Type","Axe","Longueur","Bas à"],P.map((q,i)=>{ const ax=q.x===0?0:q.x>=r.L-FL-1?r.L:q.x+FL/2; return `<tr data-pcl="${i}" style="cursor:pointer"><td><b>M${q.n}</b></td><td>${q.sk==="cadre"?"encadrement":q.sk==="coupe"?"coupé":"courant"}</td><td class="n"><b>${cm(ax)}</b></td><td class="n"><b>${cm(q.h-(q.sk==="coupe"?0:10))}</b></td><td class="n">${cm(q.y)}</td></tr>`; }))+
+      `<h3 style="margin:12px 0 6px;font-size:15px">Rails</h3>`+tb(["Rail","Usage","Début","Longueur à couper"],rails.map((x,i)=>`<tr><td><b>R${i+1}</b></td><td>${x.k==="bas"?"rail bas (sol)":x.k==="haut"?"rail haut (plafond)":x.k==="renfort"?"renfort sortie d'eau":"traverse (linteau / appui), +10 cm de chaque côté"}</td><td class="n">${cm(x.x0||0)}${x.k==="traverse"||x.k==="renfort"?` · h ${cm(x.y||0)}`:""}</td><td class="n"><b>${cm(x.len)}</b></td></tr>`))+`</section>`; }
+  if(v==="mem"){ if(!r.memOn) return `<section class="box"><h2>Liste de coupe de la membrane</h2><p class="hint">Pas de membrane sur ce mur.</p></section>`;
+    const Hm=r.H+200;
+    return `<section class="box"><h2>Liste de coupe de la membrane</h2><p class="cap" style="margin:0 0 8px">Lés ${S.mem.dir!=="h"?"verticaux":"horizontaux"} de ${cm(S.mem.rollW)} cm, recouvrement ${cm(S.mem.recouv||100)} cm.</p>`+
+      tb(["Lé","Position","Largeur posée","Longueur à couper"],r.les.map(l=>l.v?`<tr><td><b>Lé ${l.k+1}</b></td><td>${cm(l.x0)} → ${cm(l.x1)} cm</td><td class="n">${cm(l.x1-l.x0)}</td><td class="n"><b>${cm(Hm)}</b> <small>(hauteur + 2 × 10 cm)</small></td></tr>`:`<tr><td><b>Lé ${l.k+1}</b></td><td>h ${cm(l.y0)} → ${cm(l.y1)} cm</td><td class="n">${cm(l.y1-l.y0)}</td><td class="n"><b>${cm(r.L+200)}</b></td></tr>`))+`</section>`; }
+  return "";
+}
+document.getElementById("extra").addEventListener("click",e=>{ const t=e.target.closest("[data-pcl]"); if(!t) return; CUTSEL={v:S.view,i:+t.dataset.pcl,w:S.cur}; renderOut(); cutSheet(); });
 
 /* ---------- Géométrie de la pièce, plafond et maquette 3D ---------- */
 function roomNames(){ return [...new Set(S.walls.map(x=>x.room||"Pièce 1"))]; }
@@ -3533,7 +3561,7 @@ const withCC=f=>function(...a){ const own=!CC; if(own) CC=new Map(); try{ return
 renderAll=withCC(renderAll); renderOut=withCC(renderOut); renderSide=withCC(renderSide); v3Rebuild=withCC(v3Rebuild); renderRoom3D=withCC(renderRoom3D);
 
 /* ---------- Isolant / membrane réglables mur par mur ---------- */
-let WCFG=null;
+var WCFG=null;
 function withWallCfg(w,fn){
   const outer=!WCFG; if(outer) WCFG={iso:S.iso.on,mem:S.mem.on};
   const pi=S.iso.on, pm=S.mem.on;
