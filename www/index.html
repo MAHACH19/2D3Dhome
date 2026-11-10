@@ -1995,7 +1995,7 @@ function renderRoom3D(){
         const kitX=K.on&&V.kit?K.items.filter(it=>it.wall===wid(w)).map(it=>{ const b=kitBox(it,K,w.H); return b&&b.z0<10?[it.x,it.x+b.k.w]:null; }).filter(Boolean):[];
         kitX.forEach(([u,v])=>{ segsP=segsP.flatMap(([a,b])=>{ const A=Math.max(a,u), B=Math.min(b,v); return B<=A?[[a,b]]:[[a,A],[B,b]].filter(([p,q])=>q-p>5); }); });
         const pl=segsP.map(([a,b])=>`<path d="${pathOf([at(a,T+12,0),at(b,T+12,0),at(b,T+12,80),at(a,T+12,80)])}" fill="#f7f6f2" stroke="#b9b4aa" stroke-width="5"/>`).join("");
-        if(!layered) face([[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]],{pick:s.i,op,fill:shade(F.peint.on?paintColor(w):tint,lit(s.nx,s.ny,0)),holes:holeP(T),extra:`<g stroke="#a7a398" stroke-width="7" opacity=".55">${lines.join("")}</g>${pl}${pts}`,sel});
+        if(!layered) face([[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]],{pick:s.i,op,fill:shade(F.peint.on||bcOnWall(w)?paintColor(w):tint,lit(s.nx,s.ny,0)),bc:bcOnWall(w),holes:holeP(T),extra:`<g stroke="#a7a398" stroke-width="7" opacity=".55">${lines.join("")}</g>${pl}${pts}`,sel});
         else {
           const Ls=LAY.filter(l=>V.lay[l.k]!==false), n=Ls.length, base=[[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]].reduce((a,p)=>a+pr(...p)[2],0)/4;
           Ls.forEach((l,j)=>{
@@ -2014,7 +2014,7 @@ function renderRoom3D(){
             } else {
               const ex = last ? `<g stroke="#a7a398" stroke-width="7" opacity=".55">${l.k==="pla"||l.k==="end"||l.paint?lines.filter((_,q)=>true).join(""):""}</g>${hl>=900?pl:""}${pts}` : (l.k==="pla"?`<g stroke="#a7a398" stroke-width="7" opacity=".6">${lines.join("")}</g>`:"");
               const ros = l.k==="fibre" ? (()=>{ const r=compute(w), dxs=r.adj.dx||0; return r.murMode?r.chevs.filter(c=>c.y<hl-50&&c.x-dxs>xa+40).map(c=>{ const q=pr(...at(c.x-dxs,l.o1+3,c.y)), q2=pr(...at(c.x-dxs+45,l.o1+3,c.y)), rr=Math.max(6,Math.hypot(q2[0]-q[0],q2[1]-q[1])); return `<circle cx="${q[0].toFixed(0)}" cy="${q[1].toFixed(0)}" r="${rr.toFixed(0)}" fill="#f2f2ee" stroke="#8a8a86" stroke-width="5"/><circle cx="${q[0].toFixed(0)}" cy="${q[1].toFixed(0)}" r="${(rr*0.25).toFixed(0)}" fill="#666"/>`; }).join(""):""; })() : "";
-              face([P0(E1,l.o1,0),[...E1.b,0],[...E1.b,hl],P0(E1,l.o1,hl)],{d:dd,pick:s.i,op,fill:l.paint?shade(paintColor(w),lit(s.nx,s.ny,0)):l.fill,holes:ho(l.o1),extra:ex+ros,sel:last&&sel,tone:l.paint?1:lit(s.nx,s.ny,0)});
+              face([P0(E1,l.o1,0),[...E1.b,0],[...E1.b,hl],P0(E1,l.o1,hl)],{d:dd,pick:s.i,op,fill:l.paint?shade(paintColor(w),lit(s.nx,s.ny,0)):l.fill,bc:l.paint&&bcOnWall(w),holes:ho(l.o1),extra:ex+ros,sel:last&&sel,tone:l.paint?1:lit(s.nx,s.ny,0)});
             }
             if(l.o1-l.o0>3 || V.cut==="ecorche") face([P0(E0,l.o0,hl),[...E0.b,hl],[...E1.b,hl],P0(E1,l.o1,hl)],{d:dd+0.3,pick:s.i,op,fill:l.paint?l.c:shade(l.c,1.05),stroke:"#00000055"});
           });
@@ -2099,8 +2099,10 @@ function renderRoom3D(){
     if(ceilR.ok && V.ceil){ const T2=V.all?(p=>X.p(p[0],p[1])):(p=>p); ceils.push({g,ceilR,T2}); }
   });
   faces.sort((a,b)=>a.d-b.d);
-  const parts=[`<defs>${texDefs()}</defs>`];
-  floors.forEach(({g,room},n)=>{ const fp=pathOf(g.poly.map(p=>[...p,0])), F=floorCfg(room), sp=floorSpec(F);
+  const BCF=`<filter id="bcf" x="0" y="0" width="1" height="1"><feTurbulence type="fractalNoise" baseFrequency=".0016" numOctaves="5" seed="7" result="n"/><feColorMatrix in="n" type="matrix" values="1.3 0 0 0 -.12  1.3 0 0 0 -.12  1.3 0 0 0 -.12  0 0 0 0 .15" result="g"/><feComposite in="g" in2="SourceGraphic" operator="in"/></filter>`;
+  const parts=[`<defs>${texDefs()}${BCF}</defs>`];
+  floors.forEach(({g,room},n)=>{ const fp=pathOf(g.poly.map(p=>[...p,0])), F=floorCfg(room), sp=floorSpec(F), BC=(S.bc||{})[room];
+    if(BC&&BC.on&&BC.sol){ parts.push(`<path d="${fp}" fill="${BC.col}" stroke="#7d7466" stroke-width="12"/><path d="${fp}" fill="#000" filter="url(#bcf)"/>`); return; }
     parts.push(`<path d="${fp}" fill="${F.on?sp.c:"#b9b3a8"}" stroke="#7d7466" stroke-width="12"/>`);
     if(!F.on) return;
     const s0=g.segs[0], pcs=tilePolys(g.poly,[s0.x0,s0.y0],[s0.dx,s0.dy],sp), many=pcs.length>2500, tile=sp.fam==="carrelage";
@@ -2110,7 +2112,7 @@ function renderRoom3D(){
     parts.push(`</g>`); });
   faces.forEach(f=>{
     const d=pathOf(f.pts)+(f.holes||"");
-    parts.push(`<g${f.pick!==undefined?` data-pick="${f.pick}" style="cursor:pointer"`:""} opacity="${f.op??1}"><path d="${d}" fill-rule="evenodd" fill="${f.fill}"${f.fop?` fill-opacity="${f.fop}"`:""} stroke="${f.sel?"#1d63c4":(f.stroke||"#5d574d")}" stroke-width="${f.sel?22:6}"/>${f.tone&&f.tone<1?`<path d="${d}" fill-rule="evenodd" fill="#000" opacity="${(1-f.tone).toFixed(2)}"/>`:""}${f.extra||""}</g>`);
+    parts.push(`<g${f.pick!==undefined?` data-pick="${f.pick}" style="cursor:pointer"`:""} opacity="${f.op??1}"><path d="${d}" fill-rule="evenodd" fill="${f.fill}"${f.fop?` fill-opacity="${f.fop}"`:""} stroke="${f.sel?"#1d63c4":(f.stroke||"#5d574d")}" stroke-width="${f.sel?22:6}"/>${f.bc?`<path d="${d}" fill-rule="evenodd" fill="#000" filter="url(#bcf)"/>`:""}${f.tone&&f.tone<1?`<path d="${d}" fill-rule="evenodd" fill="#000" opacity="${(1-f.tone).toFixed(2)}"/>`:""}${f.extra||""}</g>`);
   });
   ceils.forEach(({g,ceilR,T2})=>{ const H=g.H, cl=[];
     ceilR.fur.forEach(f=>{ cl.push(line([...T2([f.a,f.y]),H-5],[...T2([f.b,f.y]),H-5],` stroke="#6e7b8a" stroke-width="12" stroke-dasharray="60 40"`)); });
@@ -2689,6 +2691,46 @@ function floorTexture(room,g,sp){
   tilePolys(P,[s0.x0,s0.y0],[s0.dx,s0.dy],sp).forEach(q=>{ x.beginPath(); q.p.forEach((t,i)=>{ const u=(t[0]-X0)*k, v=(Hd-(t[1]-Y0))*k; i?x.lineTo(u,v):x.moveTo(u,v); }); x.closePath();
     x.fillStyle=shade(sp.c,tile?0.97+0.05*q.r:0.86+0.22*q.r); x.fill(); x.strokeStyle=tile?"#9c9488":"rgba(0,0,0,.25)"; x.lineWidth=tile?Math.max(1,sp.joint*k*1.2):1; x.stroke(); });
   const t=new THREE.CanvasTexture(c); t.anisotropy=8; return {t,X0,Y0,Wd,Hd}; }
+
+/* Béton ciré : texture de microciment (nuages, passes de spatule, grain, pores), sans couture, 1 tuile = 1,5 m */
+function texBeton(col,fin){ const key="bc|"+col+"|"+fin; V3.tex=V3.tex||{}; if(V3.tex[key]) return V3.tex[key];
+  const N=1024, c=document.createElement("canvas"); c.width=c.height=N; const x=c.getContext("2d"); let sd=11, K=fin==="mat"?1:.8; const R=()=>{ sd=(sd*16807)%2147483647; return sd/2147483647; };
+  x.fillStyle=col; x.fillRect(0,0,N,N);
+  const wrap9=f=>{ for(const ox of [-N,0,N]) for(const oy of [-N,0,N]){ x.save(); x.translate(ox,oy); f(); x.restore(); } };
+  for(let i=0;i<70;i++){ const cx=R()*N, cy=R()*N, r=90+R()*300, li=R()<.55, a=(.025+R()*.045)*K; wrap9(()=>{ const gr=x.createRadialGradient(cx,cy,0,cx,cy,r); gr.addColorStop(0,li?`rgba(255,255,255,${a})`:`rgba(0,0,0,${a*.8})`); gr.addColorStop(1,"rgba(0,0,0,0)"); x.fillStyle=gr; x.fillRect(cx-r,cy-r,2*r,2*r); }); }
+  x.lineCap="round";
+  for(let i=0;i<1100;i++){ const cx=R()*N, cy=R()*N, r=50+R()*190, a0=R()*6.28, da=.5+R()*1.1, lw=10+R()*40, li=R()<.6, al=(.008+R()*.02)*K;
+    wrap9(()=>{ x.strokeStyle=li?`rgba(255,255,255,${al})`:`rgba(30,25,20,${al})`; x.lineWidth=lw; x.beginPath(); x.arc(cx,cy,r,a0,a0+da); x.stroke();
+      if(R()<.35){ x.strokeStyle=`rgba(40,35,30,${al*1.3})`; x.lineWidth=1; x.beginPath(); x.arc(cx,cy,r+lw/2,a0,a0+da*.8); x.stroke(); } }); }
+  for(let i=0;i<260;i++){ const px=R()*N, py=R()*N, rr=.4+R()*1.1; x.fillStyle=`rgba(25,22,18,${.06+R()*.12})`; x.beginPath(); x.arc(px,py,rr,0,7); x.fill(); }
+  const im=x.getImageData(0,0,N,N), d=im.data; for(let i=0;i<d.length;i+=4){ const n=(R()-.5)*7; d[i]+=n; d[i+1]+=n; d[i+2]+=n; } x.putImageData(im,0,0);
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.anisotropy=8; t.encoding=THREE.sRGBEncoding; t.repeat.set(1/1.5,1/1.5); V3.tex[key]=t; return t; }
+function bcMat(B,rep){ const t=texBeton(B.col||"#c9c6c0",B.fin||"satin"); let m=t; if(rep){ m=t.clone(); m.needsUpdate=true; m.repeat.set(rep[0],rep[1]); }
+  return v3Mat("#ffffff",{map:m,bumpMap:m,bumpScale:.0015,roughness:B.fin==="brillant"?.18:B.fin==="satin"?.38:.72,envMapIntensity:B.fin==="mat"?.5:1}); }
+function finMat(w,pc){ return bcOnWall(w)?bcMat(bcCfg(w.room||"")):v3Mat(pc,{roughness:.92}); }
+/* Rendu réaliste : éclairage d'ambiance (reflets), soleil avec ombres, rendu cinéma (ACES) */
+function v3EnvTex(){ if(V3.env&&V3.envR===V3.r) return V3.env; const c=document.createElement("canvas"); c.width=512; c.height=256; const x=c.getContext("2d");
+  const g=x.createLinearGradient(0,0,0,256); g.addColorStop(0,"#fdfbf6"); g.addColorStop(.45,"#e9e4da"); g.addColorStop(.55,"#bdb3a3"); g.addColorStop(1,"#7d7364"); x.fillStyle=g; x.fillRect(0,0,512,256);
+  [[60,70],[200,80],[330,75],[450,70]].forEach(([u,v])=>{ const r=x.createRadialGradient(u,v,0,u,v,46); r.addColorStop(0,"#ffffff"); r.addColorStop(1,"rgba(255,255,255,0)"); x.fillStyle=r; x.fillRect(u-46,v-46,92,92); });
+  const t=new THREE.CanvasTexture(c); t.mapping=THREE.EquirectangularReflectionMapping; t.encoding=THREE.sRGBEncoding;
+  const pm=new THREE.PMREMGenerator(V3.r); V3.env=pm.fromEquirectangular(t).texture; pm.dispose(); t.dispose(); V3.envR=V3.r; return V3.env; }
+function aoTex(dir){ return texCanvas("ao"+dir,64,64,(x,w,h)=>{ const g=dir==="b"?x.createLinearGradient(0,h,0,0):dir==="t"?x.createLinearGradient(0,0,0,h):dir==="l"?x.createLinearGradient(0,0,w,0):x.createLinearGradient(w,0,0,0);
+  g.addColorStop(0,"rgba(255,255,255,1)"); g.addColorStop(.35,"rgba(255,255,255,.35)"); g.addColorStop(1,"rgba(255,255,255,0)"); x.fillStyle="#000"; x.fillRect(0,0,w,h); x.fillStyle=g; x.fillRect(0,0,w,h); }); }
+function v3AO(scene,s,a,b,o,h){ // ombre douce dans les angles (sol, plafond, coins)
+  const M=d=>new THREE.MeshBasicMaterial({color:"#000",alphaMap:aoTex(d),transparent:true,opacity:.24,depthWrite:false}), q=[];
+  const PL=(xa,xb,za,zb,m)=>{ const g=new THREE.PlaneGeometry((xb-xa)/1000,(zb-za)/1000); g.translate((xa+xb)/2000,(za+zb)/2000,(o+1.5)/1000); g.applyMatrix4(wallMatrix(s,0)); return new THREE.Mesh(g,m); };
+  q.push(PL(a,b,0,240,M("b")), PL(a,b,h-200,h,M("t")), PL(a,a+200,0,h,M("l")), PL(b-200,b,0,h,M("r")));
+  q.forEach(m=>{ m.userData.ao=1; m.renderOrder=2; scene.add(m); }); }
+function v3Realify(scene){ if(!V3.r) return; const V=S.v3; scene.environment=v3EnvTex();
+  let ctr=[0,0], ext=6, win=null; try{ const {c,g}=v3Fit(), P=g.inner.flatMap(e=>[e.a,e.b]); ctr=c; ext=Math.max(4,Math.max(...P.map(p=>Math.hypot(p[0]-c[0],p[1]-c[1])))/1000+1.5);
+    g.segs.forEach(sg=>sg.w.openings.filter(o=>o.type==="Fenêtre"||o.type==="Autre").forEach(o=>{ const A=o.w*o.h; if(!win||A>win.A){ const xm=o.x+o.w/2; win={A,x:sg.x0+sg.dx*xm,y:sg.y0+sg.dy*xm,nx:sg.nx,ny:sg.ny,z:o.y+o.h/2}; } })); }catch(e){}
+  scene.traverse(o=>{ if(o.isHemisphereLight) o.intensity=V.nuit?.08:.32;
+    if(o.isDirectionalLight){ o.intensity=V.nuit?0.02:2.1; o.color.set("#fff1dc"); if(win){ const tx=(win.x+win.nx*1800)/1000, ty=-(win.y+win.ny*1800)/1000; o.position.set(tx-win.nx*9,win.z/1000+5.5,ty+win.ny*9); o.target.position.set(tx,0,ty); ext=Math.max(ext,12); }
+      else { o.position.set(ctr[0]/1000+ext*.7,ext*1.4,-ctr[1]/1000+ext*.5); o.target.position.set(ctr[0]/1000,0,-ctr[1]/1000); } scene.add(o.target);
+      o.castShadow=true; o.shadow.mapSize.set(2048,2048); const sc=o.shadow.camera; sc.left=sc.bottom=-ext; sc.right=sc.top=ext; sc.near=.5; sc.far=ext*5; sc.updateProjectionMatrix(); o.shadow.bias=-.0004; o.shadow.normalBias=.02; }
+    if(o.isPointLight){ o.castShadow=false; o.intensity*=1.6; }
+    if(o.isMesh){ const ms=[].concat(o.material); const tr=ms.some(m=>m&&m.transparent); o.castShadow=!tr&&!o.userData.ao; o.receiveShadow=!o.userData.ao; ms.forEach(m=>{ if(m&&m.isMeshStandardMaterial&&!m.bumpMap) m.envMapIntensity=.6; }); } });
+  scene.background=new THREE.Color(V.nuit?"#10141c":"#cfd8e2"); }
 function v3Mat(color,o){ return new THREE.MeshStandardMaterial(Object.assign({color:new THREE.Color(color),roughness:.85,metalness:0,side:THREE.DoubleSide},o||{})); }
 function wallMatrix(s,o0){ const m=new THREE.Matrix4(); m.set(s.dx,0,s.nx,(s.x0+s.nx*o0)/1000, 0,1,0,0, -s.dy,0,-s.ny,-(s.y0+s.ny*o0)/1000, 0,0,0,1); return m; }
 const LAYSHORT={pierre:"Pierre",fibre:"Fibre de bois",mem:"Membrane Vario",oss:"Ossature",pla:"Plaque",end:"Enduit",peint:"Peinture"};
@@ -2706,7 +2748,7 @@ function v3MemLes(scene,pick,s,w,a,b,o0,o1,hl,holes,mat,cap,tag){ // un lé = un
 function v3Tapes(scene,s,w,o,hl,mat,xmin){ xmin=xmin||-1e9; if(!S.mem.on) return; const r=compute(w), rec=S.mem.recouv||100, dxs=r.adj.dx||0;
   r.les.slice(1).forEach(l=>{ if(l.v){ const c=l.x0+Math.min(rec,l.x1-l.x0)/2-dxs; if(c-30>=xmin) scene.add(v3Box(s,c-30,c+30,o+1,o+3,0,hl,mat)); } else { const c=l.y0+Math.min(rec,l.y1-l.y0)/2; if(c<hl&&w.L>xmin) scene.add(v3Box(s,Math.max(0,xmin),w.L,o+1,o+3,c-30,c+30,mat)); } }); }
 function v3Joints(scene,s,w,o,hl,xmin,xmax,holes){ // jonctions des plaques de placo, mêmes positions que la vue « Plaques »
-  if(S.v3.joints===false) return; const r=compute(w), dxs=r.adj.dx||0, top=r.plates.reduce((m,p)=>Math.max(m,p.layer),1), JW=14;
+  if(S.v3.joints===false||S.v3.real) return; const r=compute(w), dxs=r.adj.dx||0, top=r.plates.reduce((m,p)=>Math.max(m,p.layer),1), JW=14;
   const mat=v3Mat("#8d877b",{roughness:.8}), lo=Math.max(0,xmin), hi=Math.min(w.L,xmax);
   const cutV=(x,z0,z1)=>{ let seg=[[z0,z1]]; holes.forEach(H=>{ if(x>H.a-JW&&x<H.b+JW) seg=seg.flatMap(([a,b])=>{ const A=Math.max(a,H.c), B=Math.min(b,H.d); return B<=A?[[a,b]]:[[a,A],[B,b]].filter(([u,v])=>v-u>5); }); }); return seg; };
   const cutH=(z,x0,x1)=>{ let seg=[[x0,x1]]; holes.forEach(H=>{ if(z>H.c-JW&&z<H.d+JW) seg=seg.flatMap(([a,b])=>{ const A=Math.max(a,H.a), B=Math.min(b,H.b); return B<=A?[[a,b]]:[[a,A],[B,b]].filter(([u,v])=>v-u>5); }); }); return seg; };
@@ -2914,7 +2956,8 @@ function buildScene(){
           const r=compute(w), dxs=r.adj.dx||0; r.studs.forEach(st=>{ const xa=st.x-dxs; if(st.y1>st.y0) scene.add(v3Box(s,xa,xa+FL,oM,g.T-pl,st.y0,st.y1,M.metal)); });
           r.rails.forEach(rl=>{ scene.add(v3Box(s,Math.max(a2,rl.x0-dxs),Math.min(b2,rl.x1-dxs),oM,g.T-pl,rl.y0,rl.y1,M.metal)); }); }
         if(!(w.tile&&w.tile.on)&&!(typeof bcOnWall==="function"&&bcOnWall(w))) v3Joints(scene,s,w,g.T,h,a2,b2,holes);
-        [v3Slab(s,a1,b1,-g.STN,0,0,h,holes,[M.stone,M.cap]), v3Slab(s,a2,b2,0,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[v3Mat(pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } });
+        if(V.real&&!V.res) v3AO(scene,s,a2,b2,g.T,h);
+        [v3Slab(s,a1,b1,-g.STN,0,0,h,holes,[M.stone,M.cap]), v3Slab(s,a2,b2,0,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } });
         if(w.tile&&w.tile.on){ const t=w.tile, sp=floorSpec({n:t.n,c:t.c,pose:t.pose}), ua=useRange(w), x0=Math.max(ua[0],t.x0||0), x1=Math.min(ua[1],t.x1||w.L), z0=t.z0||0, z1=Math.min(h,t.z1||1200);
           const c=document.createElement("canvas"), kk=Math.min(1,1500/Math.max(x1-x0,z1-z0)); c.width=Math.max(8,(x1-x0)*kk|0); c.height=Math.max(8,(z1-z0)*kk|0); const cx=c.getContext("2d"); cx.fillStyle="#aaa49a"; cx.fillRect(0,0,c.width,c.height);
           tilePolys([[x0,z0],[x1,z0],[x1,z1],[x0,z1]],[x0,z0],[1,0],sp).forEach(q=>{ cx.beginPath(); q.p.forEach((p,i)=>{ const u=(p[0]-x0)*kk, v=(z1-p[1])*kk; i?cx.lineTo(u,v):cx.moveTo(u,v); }); cx.closePath(); cx.fillStyle=shade(sp.c,0.96+0.06*q.r); cx.fill(); cx.strokeStyle="#aaa49a"; cx.lineWidth=Math.max(1,(sp.joint||2)*kk); cx.stroke(); });
@@ -2928,7 +2971,7 @@ function buildScene(){
           r.studs.forEach(st=>{ const xa=st.x-dxs; const z1=Math.min(st.y1,hl); if(xa>=a-1&&z1>st.y0){ const m=v3Box(s,xa,xa+FL,l.o0,l.o1,st.y0,z1,M.metal); m.userData=tag; scene.add(m); } });
           r.rails.forEach(rl=>{ if(rl.y0<hl){ const m=v3Box(s,Math.max(a,rl.x0-dxs),Math.min(b,rl.x1-dxs),l.o0,l.o1,rl.y0,Math.min(rl.y1,hl),M.metal); m.userData=tag; scene.add(m); } });
           return; }
-        const mat = l.k==="pierre"?M.stone : l.k==="fibre"?M.fibre : l.k==="mem"?M.mem : l.k==="pla"?M.pla : l.k==="end"?M.end : v3Mat(paintColor(w));
+        const mat = l.k==="pierre"?M.stone : l.k==="fibre"?M.fibre : l.k==="mem"?M.mem : l.k==="pla"?M.pla : l.k==="end"?M.end : finMat(w,paintColor(w));
         if(l.k==="mem"){ v3Tapes(scene,s,w,Math.max(l.o1,l.o0+3),hl,M.tape,a); v3MemLes(scene,pick,s,w,a,b,l.o0,Math.max(l.o1,l.o0+3),hl,holes,M.mem,M.cap,tag); return; }
         if(l.k==="pla"&&j===n-1||(l.k==="pla"&&ec)) v3Joints(scene,s,w,l.o1,hl,a,ec?Math.min(b,a0+(b-a0)*(j+1)/n):b,holes);
         const m=v3Slab(s,a,b,l.o0,Math.max(l.o1,l.o0+(l.k==="mem"?3:1)),0,hl,holes,V.res&&!["pierre","fibre","mem"].includes(l.k)?[v3Mat(l.k==="pla"?"#e8e7e2":l.k==="end"?"#f3f1ea":paintColor(w),RS),v3Mat("#fbfbf8",RS)]:[mat,l.k==="pierre"?M.cap:mat]); if(m){ m.userData=tag; scene.add(m); pick.push(m); }
@@ -2990,6 +3033,7 @@ function buildScene(){
       });
       if(K.on) kitRuns(room).filter(rn=>rn.w===w).forEach(rn=>{ const PL=planOf(K,room), pc=PL.c; let wt=v3Mat(pc,{roughness:.45});
         if(PL.tile||PL.marb){ const t=marbleTex(PL).clone(); t.needsUpdate=true; t.repeat.set((rn.b-rn.a)/1200,1); wt=v3Mat("#ffffff",{map:t,roughness:.18}); }
+        else if(PL.bc) wt=bcMat({...bcCfg(room),col:pc},[(rn.b-rn.a)/1500,635/1500]);
         const m=v3Box(s,rn.a,rn.b,g.T,g.T+635,880,918,wt); m.userData={kind:"plan",room}; scene.add(m);
         K.items.filter(it=>it.wall===wid(w)).forEach(it=>{ const kk=kitItem(it); if(!kk||kk.t!=="bas") return; const mx=it.x+kk.w/2;
           if(kk.sink){ scene.add(v3Box(s,mx-kk.w*0.33,mx+kk.w*0.33,g.T+110,g.T+520,912,920,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50,g.T+80,918,1230,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50,g.T+230,1200,1230,M.steel)); }
@@ -3002,7 +3046,8 @@ function buildScene(){
       const P=g.poly, sh=new T3.Shape(P.map(p=>new T3.Vector2(p[0]/1000,p[1]/1000))), geo=new T3.ShapeGeometry(sh); geo.rotateX(-Math.PI/2);
       let mat=v3Mat("#b9b3a8"); if(F.on){ const sp=floorSpec(F), ft=floorTexture(room,g,sp); mat=v3Mat("#ffffff",{map:ft.t,roughness:sp.fam==="carrelage"?.35:.7});
         const uv=geo.attributes.uv; for(let i=0;i<uv.count;i++){ uv.setXY(i,(uv.getX(i)*1000-ft.X0)/ft.Wd,(uv.getY(i)*1000-ft.Y0)/ft.Hd); } uv.needsUpdate=true; }
-      { const B=(S.bc||{})[room]; if(B&&B.on&&B.sol){ const cv=document.createElement("canvas"); cv.width=cv.height=256; const cx=cv.getContext("2d"); cx.fillStyle=B.col; cx.fillRect(0,0,256,256); let sd=7; const rr=()=>{ sd=(sd*9301+49297)%233280; return sd/233280; }; for(let i=0;i<260;i++){ cx.globalAlpha=0.05+rr()*0.07; cx.fillStyle=rr()<.5?"#ffffff":"#000000"; cx.beginPath(); cx.ellipse(rr()*256,rr()*256,8+rr()*40,5+rr()*22,rr()*3,0,7); cx.fill(); } const tx=new T3.CanvasTexture(cv); tx.wrapS=tx.wrapT=T3.RepeatWrapping; tx.repeat.set(1,1); mat=v3Mat("#ffffff",{map:tx,roughness:B.fin==="brillant"?.15:B.fin==="satin"?.35:.75}); } }
+      { const B=(S.bc||{})[room]; if(B&&B.on&&B.sol) mat=bcMat(B); }
+
       const fl=new T3.Mesh(geo,mat); fl.userData={kind:"floor",room}; scene.add(fl); pick.push(fl);
       if(V.ceil){ const cg=new T3.ShapeGeometry(sh); cg.rotateX(-Math.PI/2); cg.translate(0,g.H/1000,0); const cm2=new T3.Mesh(cg,v3Mat("#fbfbf9",{transparent:V.mode!=="visite"||V.res,opacity:V.res?0.14:V.mode!=="visite"?0.25:1,depthWrite:!V.res})); scene.add(cm2); }
       // luminaires / VMC (coordonnées locales à la pièce)
@@ -3045,7 +3090,7 @@ function buildScene(){
   });
   if(V.res) v3Vmc(scene,pick,rooms);
   if(V.nuit && !lights.length){ const a=new T3.AmbientLight("#ffffff",0.25); scene.add(a); }
-  return {scene,pick,wallSets}; }
+  if(V.real) v3Realify(scene); return {scene,pick,wallSets}; }
 function v3Fit(){ // point de départ de la visite
   const cw=S.walls[S.cur], room=cw.room||"", g=S.v3.all?geomXf(roomGeom(room),room):roomGeom(room), P=g.poly||g.inner.flatMap(e=>[e.a,e.b]);
   const c=P.reduce((a,p)=>[a[0]+p[0]/P.length,a[1]+p[1]/P.length],[0,0]); return {c,g}; }
@@ -3074,7 +3119,7 @@ function renderVisite(){
   document.getElementById("extra").innerHTML=v3Extra(); }
 function v3Bar(){ const V=S.v3, b=(k,l,on)=>`<button type="button" data-v3="${k}" aria-pressed="${!!on}" style="padding:5px 10px;font-size:13px;background:${on?"var(--chalk)":"#ffffffdd"};color:${on?"#fff":"#222"};border:1px solid #0002;border-radius:5px">${l}</button>`;
   const el=document.getElementById("v3bar"); if(!el) return;
-  el.innerHTML=b("visite","🚶 Visite",V.mode==="visite")+b("maquette","Maquette",V.mode!=="visite")+b("couches","Couches",V.cut==="ecorche"||V.couches)+b("ceil","Plafond",V.ceil)+b("res","🔧 Réseaux",V.res)+b("nuit","Nuit",V.nuit)+b("joints","Joints placo",V.joints!==false)+b("all","Logement",V.all)+b("fs","⛶ Plein écran",false); }
+  el.innerHTML=b("visite","🚶 Visite",V.mode==="visite")+b("maquette","Maquette",V.mode!=="visite")+b("couches","Couches",V.cut==="ecorche"||V.couches)+b("ceil","Plafond",V.ceil)+b("res","🔧 Réseaux",V.res)+b("real","✨ Réaliste",V.real)+b("nuit","Nuit",V.nuit)+b("joints","Joints placo",V.joints!==false)+b("all","Logement",V.all)+b("fs","⛶ Plein écran",false); }
 function v3Extra(){ const V=S.v3, LAY=wallLayers(), lay=S.r3.lay||{};
   return `<section class="box"><h2>Visite 3D</h2>
     <div class="btns" style="margin-bottom:6px;align-items:center"><span class="cap" style="margin-right:4px">Voir jusqu'à :</span>${LAY.filter(l=>l.k!=="end").map(l=>`<button type="button" data-v3="upto:${l.k}" aria-pressed="${!!V.couches&&V.cut!=="ecorche"&&lay[l.k]!==false&&LAY.slice(LAY.indexOf(l)+1).every(q=>lay[q.k]===false)}">${LAYSHORT[l.k]||l.n}</button>`).join("")}</div>
@@ -3094,7 +3139,7 @@ function v3Init(){
   const {c,g}=v3Fit(), P=g.inner.flatMap(e=>[e.a,e.b]), ext=Math.max(Math.max(...P.map(p=>p[0]))-Math.min(...P.map(p=>p[0])),Math.max(...P.map(p=>p[1]))-Math.min(...P.map(p=>p[1])))/1000;
   V3.fp={x:c[0],y:c[1],yaw:0,pitch:0}; V3.orb={th:-0.6,ph:0.9,r:Math.max(5,ext*(wrap.clientWidth<600?2.4:1.7)+2),t:[c[0],c[1]]};
   v3Rebuild(); v3Events(); v3Loop(); }
-function v3Rebuild(){ if(!V3.r) return; if(V3.scene) V3.scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); });
+function v3Rebuild(){ if(!V3.r) return; { const R=V3.r, real=!!S.v3.real; R.toneMapping=real?THREE.ACESFilmicToneMapping:THREE.NoToneMapping; R.toneMappingExposure=real?.82:1; R.shadowMap.enabled=real; R.shadowMap.type=THREE.PCFSoftShadowMap; R.physicallyCorrectLights=false; } if(V3.scene) V3.scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); });
   const b=buildScene(); V3.scene=b.scene; V3.pick=b.pick; V3.walls=b.wallSets; V3.dirty=true; }
 function v3Cam(){ const V=S.v3, cam=V3.cam, wrap=V3.wrap, W=wrap.clientWidth, H=wrap.clientHeight;
   if(V3.r.domElement.width!==Math.round(W*V3.r.getPixelRatio())||V3.r.domElement.height!==Math.round(H*V3.r.getPixelRatio())){ V3.r.setSize(W,H,false); }
@@ -3149,7 +3194,7 @@ function v3Events(){
   document.getElementById("v3joy").style.display=S.v3.mode==="visite"?"block":"none"; }
 function v3Cmd(k){ const V=S.v3;
   if(k==="visite"){ V.mode="visite"; const {c}=v3Fit(); if(!insideAny(V3.fp.x,V3.fp.y)){ V3.fp.x=c[0]; V3.fp.y=c[1]; } }
-  if(k==="maquette") V.mode="maquette"; if(k==="ceil") V.ceil=!V.ceil; if(k==="res") V.res=!V.res; if(k==="nuit") V.nuit=!V.nuit; if(k==="joints") V.joints=V.joints===false;
+  if(k==="maquette") V.mode="maquette"; if(k==="ceil") V.ceil=!V.ceil; if(k==="res") V.res=!V.res; if(k==="nuit") V.nuit=!V.nuit; if(k==="joints") V.joints=V.joints===false; if(k==="real"){ V.real=!V.real; if(V.real&&V.mode!=="visite"){ V.mode="visite"; V.ceil=true; const {c}=v3Fit(); if(!insideAny(V3.fp.x,V3.fp.y)){ V3.fp.x=c[0]; V3.fp.y=c[1]; } } }
   if(k==="all"){ V.all=!V.all; const {c}=v3Fit(); V3.orb.t=c; V3.fp.x=c[0]; V3.fp.y=c[1]; }
   if(k==="couches"){ if(V.cut==="ecorche"||V.couches){ V.cut=""; V.couches=false; } else { V.cut="ecorche"; v3FaceWall(); } }
   if(k.startsWith("upto:")){ const L=wallLayers(), i=L.findIndex(l=>l.k===k.slice(5)); S.r3.lay={}; L.forEach((l,j)=>{ if(j>i) S.r3.lay[l.k]=false; }); V.cut=""; V.couches=true; v3FaceWall(); }
