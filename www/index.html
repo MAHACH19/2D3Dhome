@@ -153,6 +153,17 @@ body[data-scr]:not([data-scr="home"]):not([data-scr="tout"]) #stepbar,body[data-
 #stepbar button{white-space:nowrap;padding:8px 10px}
 .scr-off{display:none!important}
 #jump.scr-off{display:none!important}
+.cloudbox{border:1px dashed #1d63c455;background:#1d63c40d;border-radius:10px;padding:8px 10px;margin:0 0 8px;display:flex;flex-direction:column;gap:4px}
+.cloudbox .row{margin-top:4px}.cloudbox button{padding:7px 10px;border-radius:8px}
+.libbox{margin:0 0 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px 12px}
+.lib-h{display:flex;flex-direction:column;gap:1px;margin-bottom:6px}.lib-h b{font-size:16px}
+.lib-l{display:flex;flex-direction:column;gap:6px}
+.lib-i{display:flex;align-items:stretch;gap:4px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.lib-i.on{border-color:#1d63c4;box-shadow:inset 3px 0 0 #1d63c4}
+.lib-o{flex:1;text-align:left;border:0;background:none;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.lib-o b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lib-o small{color:var(--muted)}
+.lib-m{border:0;background:none;padding:0 10px;font-size:16px;color:var(--muted)}
+.lib-b{margin-top:8px;display:flex;gap:8px}.lib-b button{flex:1;padding:10px;border-radius:10px}
 .homenote{border:1px solid var(--warn);background:var(--warn-bg);color:var(--ink);border-radius:10px;padding:10px 12px;margin:0 0 12px}
 .homenote ol{margin:6px 0 0;padding-left:20px}
 body[data-scr]:not([data-scr="tout"]) header.top .sub{display:none}
@@ -3488,6 +3499,7 @@ window.__legacyResult=function(d){ clearTimeout(window.__legacyT); try{
   Object.keys(d).forEach(k=>{ if(/^calepinage/.test(k)) localStorage.setItem(k,d[k]); }); localStorage.setItem("calepinage-legacy-done","1"); location.reload(); }catch(e){ alert("Lecture impossible : "+e.message); } };
 document.addEventListener("click",e=>{ if(!e.target.closest("[data-legacy]")) return; if(!(APP&&APP.recoverLegacy)) return; APP.recoverLegacy(); window.__legacyT=setTimeout(()=>alert("L'ancienne appli n'a pas répondu. Réessayez, ou utilisez Copier / Coller le projet."),8000); });
 document.querySelectorAll("[data-legacy-static]").forEach(b=>b.hidden=!(APP&&APP.recoverLegacy));
+setTimeout(()=>{ try{ if(clOn()) clSync(); }catch(e){} },1500);
 if(APP&&APP.legacyData){ try{ const d=APP.legacyData(); if(d) window.__legacyImport(d); }catch(e){} }
 document.getElementById("io-save").addEventListener("click",()=>{
   if(APP){ try{ APP.saveFile(`calepinage-${new Date().toISOString().slice(0,10)}.json`,projectText()); ioMsg("Projet enregistré dans Téléchargements/Calepinage."); }catch(e){ ioMsg("L'enregistrement n'a pas marché : utilisez « Copier le projet »."); } return; }
@@ -3913,16 +3925,103 @@ const ICOL={murs:"#1d63c4",mat:"#b07a35",res:"#7a3fc0",amen:"#0f8a6a",fin:"#c047
 const ico=(k,sz)=>`<svg viewBox="0 0 24 24" width="${sz||22}" height="${sz||22}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]||""}</svg>`;
 const GROUPS=[["Concevoir",["murs","mat","res","amen","fin"]],["Visualiser et vérifier",["v3d","dtu"]],["Réaliser",["chan","cour","doss"]],["Projet",["proj","tout"]]];
 function lastScr(){ try{ return localStorage.getItem("calepinage-last")||""; }catch(e){ return ""; } }
+
+/* ---------- Mes projets : plusieurs projets sur l'appareil (base du cloud) ---------- */
+const LIB_KEY="calepinage-projets", LIBP=id=>"calepinage-p-"+id;
+function libGet(){ try{ const L=JSON.parse(localStorage.getItem(LIB_KEY)); if(L&&Array.isArray(L.items)) return L; }catch(e){} return null; }
+function libSet(L){ try{ localStorage.setItem(LIB_KEY,JSON.stringify(L)); }catch(e){} }
+function libDrop(id){ try{ localStorage.removeItem(LIBP(id)); }catch(e){} }
+function projRooms(st){ return [...new Set((st.walls||[]).map(w=>w.room||""))].filter(Boolean); }
+function projName(st){ return st.nom||projRooms(st).join(", ")||"Mon projet"; }
+function libMeta(it,st){ it.nom=projName(st); it.murs=(st.walls||[]).length; it.pieces=projRooms(st).length; it.t=Date.now(); }
+function libCur(){ let L=libGet(); if(!L){ const id="p"+Date.now().toString(36); L={cur:id,items:[{id}]}; libMeta(L.items[0],S); libSet(L); } if(!L.items.some(i=>i.id===L.cur)){ L.items.unshift({id:L.cur}); libMeta(L.items[0],S); libSet(L); } return L; }
+{ const s0=save; let tm=null; save=function(){ s0(); clearTimeout(tm); tm=setTimeout(()=>{ const L=libCur(), it=L.items.find(i=>i.id===L.cur); libMeta(it,S); libSet(L); if(window.cloudPush) window.cloudPush(); },400); }; }
+function libSwitch(id,fresh){ const L=libCur(); if(id===L.cur&&!fresh) return;
+  try{ localStorage.setItem(LIBP(L.cur),JSON.stringify(S)); }catch(e){ alert("Mémoire pleine : enregistrez un projet en fichier puis supprimez-en un."); return; }
+  libMeta(L.items.find(i=>i.id===L.cur),S);
+  if(fresh){ S=fresh; id="p"+Date.now().toString(36); L.items.unshift({id}); }
+  else { let d=null; try{ d=JSON.parse(localStorage.getItem(LIBP(id))); }catch(e){} if(!d||!d.walls){ alert("Ce projet est introuvable sur l'appareil."); return; } S=d; libDrop(id); }
+  L.cur=id; libMeta(L.items.find(i=>i.id===id),S); L.items.sort((a,b)=>(b.id===id)-(a.id===id)||b.t-a.t); libSet(L);
+  S.cur=Math.min(S.cur||0,S.walls.length-1); migrate(); save(); renderAll(); renderHome(); }
+function libPanel(){ const L=libCur(), d=t=>new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
+  return `<div class="libbox"><div class="lib-h"><b>Mes projets</b><span class="cap">${L.items.length} projet(s) · ${clOn()?"sur cet appareil et dans le cloud":"enregistrés sur cet appareil"}</span></div>${cloudBox()}
+    <div class="lib-l">${L.items.map(it=>{ const on=it.id===L.cur; return `<div class="lib-i${on?" on":""}"><button type="button" class="lib-o" data-lib="open" data-id="${it.id}"><b>${esc(it.nom||"Projet")}</b><small>${it.pieces||0} pièce(s) · ${it.murs||0} mur(s) · ${d(it.t||Date.now())}${on?" · ouvert":""}</small></button>
+      <button type="button" class="lib-m" data-lib="ren" data-id="${it.id}" aria-label="Renommer">✎</button><button type="button" class="lib-m" data-lib="dup" data-id="${it.id}" aria-label="Dupliquer">⧉</button>${on?"":`<button type="button" class="lib-m" data-lib="del" data-id="${it.id}" aria-label="Supprimer">🗑</button>`}</div>`; }).join("")}</div>
+    <div class="lib-b"><button type="button" class="pri" data-lib="new">＋ Nouveau projet</button></div></div>`; }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-lib]"); if(!b) return; const a=b.dataset.lib, id=b.dataset.id, L=libCur(), it=L.items.find(i=>i.id===id);
+  const data=()=>{ if(id===L.cur) return JSON.parse(JSON.stringify(S)); try{ return JSON.parse(localStorage.getItem(LIBP(id))); }catch(x){ return null; } };
+  if(a==="open"){ if(id===L.cur){ goScreen(lastScr()||"murs"); return; } libSwitch(id); return; }
+  if(a==="new"){ const nom=prompt("Nom du nouveau projet (ex. Maison, Cuisine…)","Nouveau projet"); if(nom===null) return; const n=example(); n.nom=nom.trim()||"Nouveau projet"; const r0=n.walls[0].room; n.walls=n.walls.filter(w=>w.room===r0); n.walls.forEach((w,i)=>{ w.room="Pièce 1"; w.name=`Pièce 1 — mur ${i+1}`; }); n.cur=0; libSwitch(null,n); goScreen("murs"); return; }
+  if(a==="ren"){ const nom=prompt("Nouveau nom du projet",it.nom||""); if(!nom) return; if(id===L.cur){ S.nom=nom.trim(); save(); } else { const d=data(); if(!d) return; d.nom=nom.trim(); localStorage.setItem(LIBP(id),JSON.stringify(d)); } it.nom=nom.trim(); libSet(L); renderHome(); return; }
+  if(a==="dup"){ const d=data(); if(!d) return; d.nom=(it.nom||"Projet")+" (copie)"; const nid="p"+Date.now().toString(36); try{ localStorage.setItem(LIBP(nid),JSON.stringify(d)); }catch(x){ alert("Mémoire pleine."); return; } const ni={id:nid}; libMeta(ni,d); L.items.splice(L.items.indexOf(it)+1,0,ni); libSet(L); renderHome(); return; }
+  if(a==="del"){ if(!confirm(`Supprimer définitivement « ${it.nom} »${clOn()?" (sur cet appareil et dans le cloud)":" de cet appareil"} ?`)) return; libDrop(id); clDelete(id); L.items=L.items.filter(i=>i!==it); libSet(L); renderHome(); return; } });
+
+/* ---------- Cloud Supabase : compte e-mail, projets sur tous les appareils ---------- */
+const SUPA_DEF={url:"",key:""};
+const CL_KEY="calepinage-cloud";
+function clGet(){ try{ return JSON.parse(localStorage.getItem(CL_KEY))||{}; }catch(e){ return {}; } }
+function clSet(c){ try{ localStorage.setItem(CL_KEY,JSON.stringify(c)); }catch(e){} }
+function clCfg(){ const c=clGet(); return {url:(c.url||SUPA_DEF.url||"").replace(/\/+$/,""), key:c.key||SUPA_DEF.key||""}; }
+let CL_MSG="", CL_BUSY=false;
+async function clAuth(path,body){ const {url,key}=clCfg(); const r=await fetch(`${url}/auth/v1/${path}`,{method:"POST",headers:{apikey:key,"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.msg||j.error_description||j.message||("Erreur "+r.status)); return j; }
+function clSaveSess(j){ const c=clGet(); c.sess={at:j.access_token,rt:j.refresh_token,exp:Date.now()+((j.expires_in||3600)-60)*1000,email:(j.user&&j.user.email)||c.sess&&c.sess.email}; clSet(c); }
+async function clToken(){ const c=clGet(); if(!c.sess) return null; if(Date.now()<c.sess.exp) return c.sess.at;
+  try{ const j=await clAuth("token?grant_type=refresh_token",{refresh_token:c.sess.rt}); clSaveSess(j); return j.access_token; }catch(e){ return null; } }
+async function clRest(path,opt={}){ const {url,key}=clCfg(), t=await clToken(); if(!t) throw new Error("Session expirée : reconnectez-vous.");
+  const r=await fetch(`${url}/rest/v1/${path}`,{...opt,headers:{apikey:key,Authorization:"Bearer "+t,"Content-Type":"application/json",...(opt.headers||{})}});
+  if(!r.ok){ const j=await r.json().catch(()=>({})); throw new Error(j.message||("Erreur "+r.status)); } return r.status===204?null:r.json().catch(()=>null); }
+function clOn(){ const c=clCfg(); return !!(c.url&&c.key&&clGet().sess); }
+async function clUpsert(rows){ if(!rows.length) return; await clRest("projets?on_conflict=user_id,id",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(rows)}); }
+let CL_T=null;
+window.cloudPush=function(){ if(!clOn()||(isExample()&&!S.nom)) return; clearTimeout(CL_T); CL_T=setTimeout(async()=>{ try{ const L=libCur(); await clUpsert([{id:L.cur,nom:projName(S),data:S,updated_at:new Date().toISOString()}]); CL_MSG="Enregistré dans le cloud à "+new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}); }catch(e){ CL_MSG="Cloud : "+e.message; } clRefreshBox(); },2500); };
+async function clSync(){ if(!clOn()||CL_BUSY) return; CL_BUSY=true; CL_MSG="Synchronisation…"; clRefreshBox();
+  try{ const L=libCur(), it0=L.items.find(i=>i.id===L.cur); libMeta(it0,S);
+    const remote=await clRest("projets?select=id,nom,updated_at")||[], rm=new Map(remote.map(r=>[r.id,r]));
+    const up=[], down=[];
+    L.items.forEach(it=>{ const r=rm.get(it.id), rt=r?Date.parse(r.updated_at):0; if(!r||(it.t||0)>rt+2000){ const d=it.id===L.cur?S:(()=>{ try{ return JSON.parse(localStorage.getItem(LIBP(it.id))); }catch(e){ return null; } })(); if(d&&!(!d.nom&&d.walls.map(w=>w.name).join("|")===example().walls.map(w=>w.name).join("|"))) up.push({id:it.id,nom:it.nom||projName(d),data:d,updated_at:new Date(it.t||Date.now()).toISOString()}); } else if(rt>(it.t||0)+2000) down.push(it.id); });
+    remote.forEach(r=>{ if(!L.items.some(i=>i.id===r.id)) down.push(r.id); });
+    await clUpsert(up);
+    for(const id of down){ const res=await clRest(`projets?select=id,nom,data,updated_at&id=eq.${encodeURIComponent(id)}`); const r=res&&res[0]; if(!r||!r.data||!r.data.walls) continue;
+      let it=L.items.find(i=>i.id===id); if(!it){ it={id}; L.items.push(it); }
+      if(id===L.cur){ S=r.data; migrate(); try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} renderAll(); } else localStorage.setItem(LIBP(id),JSON.stringify(r.data));
+      libMeta(it,r.data); it.t=Date.parse(r.updated_at)||Date.now(); }
+    libSet(L); const c=clGet(); c.last=Date.now(); clSet(c);
+    CL_MSG=`À jour : ${up.length} envoyé(s), ${down.length} récupéré(s).`; }
+  catch(e){ CL_MSG="Cloud : "+e.message; }
+  CL_BUSY=false; renderHome(); }
+async function clDelete(id){ if(!clOn()) return; try{ await clRest(`projets?id=eq.${encodeURIComponent(id)}`,{method:"DELETE"}); }catch(e){ CL_MSG="Cloud : "+e.message; } }
+function clRefreshBox(){ const el=document.getElementById("cloudbox"); if(el) el.outerHTML=cloudBox(); }
+function cloudBox(){ const c=clGet(), cfg=clCfg(), s=c.sess;
+  if(!cfg.url||!cfg.key) return `<div id="cloudbox" class="cloudbox"><b>☁ Cloud</b><span class="cap">Bientôt : vos projets sur tous vos appareils.</span>
+    <details><summary class="cap">Réglages du cloud (Supabase)</summary><div class="row"><label class="f">Project URL<input data-clc="url" placeholder="https://xxxx.supabase.co" value="${esc(c.url||"")}"></label><label class="f">Clé anon / publishable<input data-clc="key" value="${esc(c.key||"")}"></label></div></details></div>`;
+  if(!s) return `<div id="cloudbox" class="cloudbox"><b>☁ Cloud : connectez-vous pour retrouver vos projets partout</b>
+    <div class="row"><label class="f">E-mail<input type="email" id="cl-mail" autocomplete="email" value="${esc(c.mail||"")}"></label><label class="f">Mot de passe<input type="password" id="cl-pw" autocomplete="current-password"></label></div>
+    <div class="lib-b"><button type="button" class="pri" data-cl="login">Se connecter</button><button type="button" data-cl="signup">Créer un compte</button></div>${CL_MSG?`<p class="cap">${esc(CL_MSG)}</p>`:""}</div>`;
+  return `<div id="cloudbox" class="cloudbox"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">☁ ${esc(s.email||"Connecté")}</b><button type="button" data-cl="sync" ${CL_BUSY?"disabled":""}>⟳ Synchroniser</button><button type="button" class="ghost" data-cl="out">Déconnexion</button></div>
+    <p class="cap" style="margin:4px 0 0">${esc(CL_MSG||(c.last?"Dernière synchro : "+new Date(c.last).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"Touchez Synchroniser pour envoyer vos projets."))}</p></div>`; }
+document.addEventListener("change",e=>{ const k=e.target.dataset&&e.target.dataset.clc; if(!k) return; const c=clGet(); c[k]=e.target.value.trim(); clSet(c); renderHome(); });
+document.addEventListener("click",async e=>{ const b=e.target.closest("[data-cl]"); if(!b) return; const a=b.dataset.cl;
+  if(a==="login"||a==="signup"){ const mail=(document.getElementById("cl-mail").value||"").trim(), pw=document.getElementById("cl-pw").value||""; const c=clGet(); c.mail=mail; clSet(c);
+    if(!mail||pw.length<6){ CL_MSG="E-mail et mot de passe (6 caractères mini) obligatoires."; clRefreshBox(); return; }
+    CL_MSG=a==="login"?"Connexion…":"Création du compte…"; clRefreshBox();
+    try{ const j=a==="login"?await clAuth("token?grant_type=password",{email:mail,password:pw}):await clAuth("signup",{email:mail,password:pw});
+      if(!j.access_token){ CL_MSG="Compte créé : ouvrez le lien reçu par e-mail, puis revenez vous connecter."; clRefreshBox(); return; }
+      clSaveSess(j); CL_MSG=""; await clSync(); }
+    catch(x){ CL_MSG=/Invalid login/i.test(x.message)?"E-mail ou mot de passe incorrect.":/Failed to fetch|NetworkError/i.test(x.message)?"Pas de connexion Internet.":x.message; clRefreshBox(); } return; }
+  if(a==="sync"){ clSync(); return; }
+  if(a==="out"){ if(!confirm("Se déconnecter ? Vos projets restent sur cet appareil et dans le cloud.")) return; const c=clGet(); delete c.sess; clSet(c); CL_MSG=""; renderHome(); } });
 function renderHome(){
   const h=document.getElementById("home"); if(!h) return;
-  const note=isExample()?`<div class="homenote"><b>Vos murs ne sont pas encore dans cette appli.</b> ${APP?"L'appli Android garde ses projets à part : vos murs de cuisine sont restés dans l'ancienne version (le fichier ouvert dans Chrome).":"Chaque copie de l'appli (fichier hors ligne, appli Android, page en ligne) garde ses propres murs : ceux de votre cuisine sont dans la copie où vous les avez saisis."}<ol><li>Ouvrez l'ancien fichier dans Chrome et touchez « Copier le projet » (ou « Enregistrer le projet »).</li><li>Revenez ici : <b>Mon projet</b> → « Coller un projet » (ou « Ouvrir un projet » et choisissez le fichier .json).</li></ol><div class="btns" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${APP&&APP.recoverLegacy?`<button type="button" class="pri" data-legacy="1">Reprendre les projets de l'ancienne appli</button>`:""}<button type="button" class="${APP&&APP.recoverLegacy?"":"pri"}" data-go="proj">Récupérer mon projet</button><button type="button" data-go="murs">Commencer un nouveau projet</button></div></div>`:"";
+  const note=isExample()&&(libGet()||{items:[1]}).items.length<2&&!S.nom?`<div class="homenote"><b>Vos murs ne sont pas encore dans cette appli.</b> ${APP?"L'appli Android garde ses projets à part : vos murs de cuisine sont restés dans l'ancienne version (le fichier ouvert dans Chrome).":"Chaque copie de l'appli (fichier hors ligne, appli Android, page en ligne) garde ses propres murs : ceux de votre cuisine sont dans la copie où vous les avez saisis."}<ol><li>Ouvrez l'ancien fichier dans Chrome et touchez « Copier le projet » (ou « Enregistrer le projet »).</li><li>Revenez ici : <b>Mon projet</b> → « Coller un projet » (ou « Ouvrir un projet » et choisissez le fichier .json).</li></ol><div class="btns" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${APP&&APP.recoverLegacy?`<button type="button" class="pri" data-legacy="1">Reprendre les projets de l'ancienne appli</button>`:""}<button type="button" class="${APP&&APP.recoverLegacy?"":"pri"}" data-go="proj">Récupérer mon projet</button><button type="button" data-go="murs">Commencer un nouveau projet</button></div></div>`:"";
   const w=S.walls[S.cur], rooms=roomNames(), pct=withCC(()=>Math.round(S.walls.reduce((a,x)=>a+chantierPct(x),0)/Math.max(1,S.walls.length)))();
   const area=withCC(()=>S.walls.reduce((a,x)=>a+compute(x).netArea,0))(), ls=lastScr(), lsc=SCREENS.find(x=>x.k===ls);
   const tile=k=>{ if(k==="doss") return `<button type="button" class="tile" data-dossier="all" style="--ac:#1d63c4"><span class="ic">${ico("chan")}</span><b>Dossier de pose</b><small>Imprimer tous les murs : ordre de pose, coupes, cotes, vis (PDF)</small></button>`; const x=SCREENS.find(y=>y.k===k)||{k:"tout",t:"Tout afficher",d:"L'ancienne page complète, tous les réglages à la suite"}, n=SCREENS.findIndex(y=>y.k===k), st=n>=0?withCC(()=>scrStatus(k))():"";
     return `<button type="button" class="tile" data-go="${k}" style="--ac:${ICOL[k]}"><span class="ic">${ico(k)}</span>${n>=0?`<span class="num">${String(n+1).padStart(2,"0")}</span>`:""}<b>${esc(x.t)}</b><small>${esc(x.d)}</small>${st?`<span class="st">${esc(st)}</span>`:""}</button>`; };
   h.innerHTML=`<div class="appbar">${LOGO_SVG}<div><b>Calepinage</b><span>Doublage · isolation · finitions</span></div></div>
     <div class="homein">${note}
-    <div class="projcard"><div class="pc-top"><div><span class="cap">Projet en cours</span><b>${esc(w.room||"Sans nom")}</b><span class="cap">${rooms.length} pièce(s) · ${S.walls.length} mur(s) · ${fr(area,1)} m² de doublage</span></div><div class="ring" style="--p:${pct}"><span>${pct}%</span></div></div>
+    ${libPanel()}
+    <div class="projcard"><div class="pc-top"><div><span class="cap">Projet en cours</span><b>${esc(projName(S))}</b><span class="cap">${rooms.length} pièce(s) · ${S.walls.length} mur(s) · ${fr(area,1)} m² de doublage</span></div><div class="ring" style="--p:${pct}"><span>${pct}%</span></div></div>
       <div class="pc-btns"><button type="button" class="pri" data-go="${lsc?lsc.k:"murs"}">${ico("play",16)} ${lsc?"Reprendre : "+esc(lsc.t):"Commencer pas à pas"}</button><button type="button" class="lidar" data-scan="1">${ico("scan",18)} Scanner une pièce (LiDAR)</button></div></div>
     ${GROUPS.map(([g,ks])=>`<h3 class="grp">${g}</h3><div class="tiles">${ks.map(tile).join("")}</div>`).join("")}
     <p class="cap foot">Calepinage — règles DTU 25.41, NF C 15-100 et préconisations fabricants vérifiées automatiquement. Vérifiez toujours les cotes sur place avant de couper.</p></div>`;
