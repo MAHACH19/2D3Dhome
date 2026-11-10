@@ -17,12 +17,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
       - name: Compiler
-        run: gradle --no-daemon assembleDebug
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          gradle --no-daemon assembleDebug
       - name: Renommer
         run: cp app/build/outputs/apk/debug/app-debug.apk Calepinage.apk
       - uses: actions/upload-artifact@v4
