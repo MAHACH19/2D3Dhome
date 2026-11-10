@@ -3897,7 +3897,8 @@ function kitDossier(room){ const K=kitCfg(room); if(!K.on||!K.items.length) retu
   return h+`</section>`; }
 function buildDossier(rooms){
   const O=dossOpts(), keep={cur:S.cur,view:S.view,scope:S.scope}, plan=document.getElementById("plan"), keepPlan=plan.innerHTML, ex=document.getElementById("extra"), keepEx=ex.innerHTML, lg=document.getElementById("legend"), keepLg=lg.innerHTML;
-  const snap=(i,v)=>{ S.cur=i; S.view=v; const r=compute(S.walls[i]); renderPlan(r); return plan.innerHTML.replace(/ id="/g,' data-id="').replace(/data-pc="\d+"/g,""); };
+  let SNO=0; const uniq=h=>{ const p="d"+(++SNO)+"-"; return h.replace(/ id="([^"]+)"/g,(m,x)=>` id="${p}${x}"`).replace(/url\(#([^)]+)\)/g,(m,x)=>`url(#${p}${x})`).replace(/href="#([^"]+)"/g,(m,x)=>`href="#${p}${x}"`); };
+  const snap=(i,v)=>{ S.cur=i; S.view=v; const r=compute(S.walls[i]); renderPlan(r); return uniq(plan.innerHTML).replace(/data-pc="\d+"/g,""); };
   const RW=S.walls.filter(w=>rooms.includes(w.room||"")), surf=withCC(()=>RW.reduce((a,w)=>a+compute(w).netArea,0))(), today=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
   const compo=[S.iso.on?`Isolant fibre de bois ${S.iso.n?esc(S.iso.n)+" ":""}${S.iso.ep} mm chevillé sur la pierre`:"",S.mem.on?`Membrane ${esc(S.mem.n)} (frein-vapeur côté chaud)`:"",`Ossature métallique ${S.oss.g} mm, entraxe ${S.oss.e/10} cm`,`Parement ${esc(S.pla.n)}`,S.fin.rat.on?"Bandes et ratissage, primaire et peinture":""].filter(Boolean);
   let html=`<div class="pd-cover"><div class="pd-brand"><span>${LOGO_SVG}</span><div><b>${esc(O.auteur||"Calepinage")}</b>${O.contact?`<small>${esc(O.contact)}</small>`:""}</div></div>
@@ -3912,7 +3913,7 @@ function buildDossier(rooms){
     rooms.forEach(room=>{
       const idx=S.walls.map((w,i)=>[w,i]).filter(([w])=>(w.room||"")===room);
       S.cur=idx[0][1]; S.view="piece"; renderPlan(compute(S.walls[S.cur]));
-      html+=`<section class="pd-page"><h2>Pièce : ${esc(room)}</h2><p class="pd-cap">Plan vu de dessus, murs numérotés dans le sens des aiguilles d'une montre.</p><div class="pd-svg">${plan.innerHTML.replace(/ id="/g,' data-id="')}</div></section>`;
+      html+=`<section class="pd-page"><h2>Pièce : ${esc(room)}</h2><p class="pd-cap">Plan vu de dessus, murs numérotés dans le sens des aiguilles d'une montre.</p><div class="pd-svg">${uniq(plan.innerHTML)}</div></section>`;
       idx.forEach(([w,i],n)=>{ const r=compute(w); S.cur=i;
         let steps=chantierSteps(w,r); if(O.ordre==="oss"){ const ord=["prep","rails","studs","iso","mem","res","pla","fin","peint","bc"]; steps=[...steps].sort((a,b)=>(ord.indexOf(a.k)+99*(ord.indexOf(a.k)<0))-(ord.indexOf(b.k)+99*(ord.indexOf(b.k)<0))); const si=steps.find(x=>x.k==="iso"); if(si) si.d=["Ossature déjà en place : glisser chaque panneau derrière les montants et le cheviller dans la pierre (rosaces), sans écraser la lame d'air.",...si.d]; }
         const sCoupe=layerStrip(w,r);
