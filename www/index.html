@@ -232,6 +232,13 @@ section.box{border-radius:12px}
   html,body.pdoc,body.pshop{background:#fff!important}
   body.pdoc #printdoc{display:block!important;color:#1c2428;font:10.5pt/1.4 "IBM Plex Sans",Arial,sans-serif;
     --bg:#fff;--panel:#fff;--card:#fff;--ink:#1c2428;--muted:#5a666b;--line:#c9cfcd;--chalk:#2a2f33;--chalk-soft:#eef0ef;--steel:#8794a0;--steel-d:#4c5a66;--fibre:#d2ad73;--fibre-d:#9c7640;--plaque:#ebe5da;--plaque-d:#9d9585;--wall:#f5f5f3;--opening:#fff;--warn:#a3480f;--warn-bg:#fbefe4;--elec:#7a3fc0;--water:#0e7f9c;--mem:#3f8a33;color-scheme:light}
+  #printdoc,#printdoc *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  #printdoc ol.pd-col{list-style:none;padding:0;margin:4pt 0}
+  #printdoc .pd-pose{display:flex;gap:8pt;align-items:flex-start;border-left:5pt solid var(--pc);background:color-mix(in srgb,var(--pc) 10%,#fff);padding:5pt 8pt;margin:0 0 4pt;border-radius:0 4pt 4pt 0;break-inside:avoid}
+  #printdoc .pd-num{flex:none;width:16pt;height:16pt;border-radius:50%;background:var(--pc);color:#fff;font-weight:700;font-size:9pt;display:flex;align-items:center;justify-content:center}
+  #printdoc .pd-sec{border-left:5pt solid var(--pc);padding-left:6pt}
+  #printdoc .pd-layers{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:3pt 12pt;font-size:9pt;margin:4pt 0 8pt}
+  #printdoc .pd-layers i{display:inline-block;width:9pt;height:9pt;border:.5pt solid #555;margin-right:3pt;vertical-align:-1pt}
   #printdoc .pd-brand{display:flex;align-items:center;gap:10pt;border-bottom:1.5pt solid #1c2428;padding-bottom:8pt}
   #printdoc .pd-brand svg{width:34pt;height:34pt}#printdoc .pd-brand b{font-size:13pt;display:block}#printdoc .pd-brand small{color:#5a666b}
   #printdoc .pd-title{margin:60pt 0 24pt}#printdoc .pd-title small{text-transform:uppercase;letter-spacing:.12em;color:#5a666b;font-size:9pt}
@@ -3853,6 +3860,20 @@ document.getElementById("side").addEventListener("change",e=>{ const el=e.target
   return st; }; }
 /* ---------- Dossier de pose à imprimer (tous les murs, ordre, coupes, cotes) ---------- */
 
+
+/* Couleur de chaque étape de pose dans le dossier (couleur du matériau) */
+const POSE_COL={prep:"#8c8577",iso:"#c9a061",mem:"#3f8a33",rails:"#6f7d89",studs:"#6f7d89",res:"#7a3fc0",pla:"#b3a993",fin:"#b9b2a4",peint:"#d08a3a",bc:"#8a8a86",cuis:"#2f6f8f",crea:"#a8916a"};
+function poseKey(t){ t=t.toLowerCase(); return /prépar/.test(t)?"prep":/isolant|fibre/.test(t)?"iso":/membrane|vario/.test(t)?"mem":/rail|montant|ossature/.test(t)?"studs":/réseau|électri|plomb/.test(t)?"res":/plaque/.test(t)?"pla":/béton ciré/.test(t)?"bc":/bande|enduit|ratiss/.test(t)?"fin":/peint|primaire/.test(t)?"peint":/cuisine/.test(t)?"cuis":/création/.test(t)?"crea":""; }
+function poseLi(k,inner,n){ const c=POSE_COL[k]||"#555"; return `<li class="pd-pose" style="--pc:${c}"><span class="pd-num">${n}</span><div>${inner}</div></li>`; }
+
+function layerStrip(w,r){ const L=[["Mur en pierre",300,"#9b9283",1]]; const T=doublageT();
+  if(r.isoOn) L.push([`Fibre de bois ${S.iso.ep} mm`,S.iso.ep,POSE_COL.iso]);
+  if(r.memOn) L.push([`Membrane ${S.mem.n}`,6,POSE_COL.mem]);
+  const air=Math.max(0,T-(r.isoOn?S.iso.ep:0)-S.oss.g-12.5*(S.pla.couches||1)); if(air>5) L.push([`Vide technique ${Math.round(air)} mm`,air,"#f4f1ea"]);
+  L.push([`Ossature ${S.oss.g} mm`,S.oss.g,POSE_COL.studs],[`Plaque ${S.pla.n}`,12.5*(S.pla.couches||1),"#e6dfcf"],[bcOnWall(w)?"Béton ciré":"Enduit + peinture",4,bcOnWall(w)?bcCfg(w.room||"").col:paintColor(w)]);
+  const k=Math.min(1.1,520/L.reduce((a,l)=>a+Math.max(l[1],14),0)); let x=0;
+  const bars=L.map((l,q)=>{ const ww=Math.max(l[1],14)*k, g=`<rect x="${x}" y="0" width="${ww}" height="70" fill="${l[2]}" stroke="#555" stroke-width=".6"/>${l[3]?`<path d="M${x} 10 l${ww} 0 M${x} 30 l${ww} 0 M${x} 50 l${ww} 0" stroke="#00000033"/>`:""}<text x="${x+ww/2}" y="86" text-anchor="middle" font-size="10" font-weight="700" fill="#333">${q+1}</text>`; x+=ww; return g; }).join("");
+  return `<h3>Composition du mur (de la pierre vers la pièce)</h3><svg viewBox="-2 -2 ${x+4} 94" style="width:100%;max-height:3.2cm">${bars}</svg><ol class="pd-layers">${L.map((l,q)=>`<li><i style="background:${l[2]}"></i>${q+1}. ${esc(l[0])}</li>`).join("")}</ol>`; }
 function dossOpts(){ if(!S.doss) S.doss={ordre:"iso",crea:true,cuis:true}; return S.doss; }
 function renderDossOpts(){ const el=document.getElementById("dossopts"); if(!el) return; const O=dossOpts();
   el.innerHTML=`<label class="f">Commencer par<select data-dso="ordre"><option value="iso"${O.ordre==="iso"?" selected":""}>L'isolant (chevillé sur la pierre), puis l'ossature</option><option value="oss"${O.ordre==="oss"?" selected":""}>L'ossature, puis l'isolant glissé derrière</option></select></label>
@@ -3885,7 +3906,7 @@ function buildDossier(rooms){
     <h2>Composition du doublage</h2><ol class="pd-compo">${compo.map(t=>`<li>${t}</li>`).join("")}</ol>
     <h2>Synthèse</h2><table class="pd-t"><thead><tr><th>Pièce</th><th>Murs</th><th>Surface doublée</th></tr></thead><tbody>${rooms.map(r=>{ const ws=RW.filter(w=>(w.room||"")===r); return `<tr><td>${esc(r)}</td><td>${ws.length}</td><td>${fr(withCC(()=>ws.reduce((a,w)=>a+compute(w).netArea,0))(),1)} m²</td></tr>`; }).join("")}<tr><th>Total</th><th>${RW.length}</th><th>${fr(surf,1)} m²</th></tr></tbody></table>
     <p class="pd-cap">Travaux conformes aux règles de l'art (DTU 25.41 plaques de plâtre, NF C 15-100 électricité) et aux préconisations des fabricants. Cotes à vérifier sur place avant toute découpe.</p></div>
-    <section class="pd-page"><h2>Ordre de pose</h2><ol>${[..."Préparer les murs (pierre brossée, humidité traitée)|".split("|").filter(Boolean),...(O.ordre==="oss"?["Rails haut et bas, puis montants aux cotes indiquées (M1, M2…)","Isolant fibre de bois glissé derrière les montants et chevillé, panneau par panneau (liste I1, I2…)","Membrane Vario Xtra, lé par lé sur les montants, recouvrements au KB1"]:["Isolant fibre de bois chevillé, panneau par panneau (liste I1, I2…)","Membrane Vario Xtra, lé par lé, recouvrements au KB1","Rails haut et bas, puis montants aux cotes indiquées (M1, M2…)"]),"Réseaux électriques et eau dans le vide technique","Plaques dans l'ordre P1, P2… (bord aminci coupé dans les angles), vis aux positions indiquées",...(O.crea&&rooms.some(r=>creas(r).length)?["Créations en placo (coffrages, niches…)"]:[]),"Bandes, ratissage MIL'12, primaire et peinture",...(O.cuis&&rooms.some(r=>kitCfg(r).on&&kitCfg(r).items.length)?["Pose de la cuisine (après les finitions des murs)"]:[])].map(t=>`<li>${t}</li>`).join("")}</ol>
+    <section class="pd-page"><h2>Ordre de pose</h2><ol class="pd-steps pd-col">${[..."Préparer les murs (pierre brossée, humidité traitée)|".split("|").filter(Boolean),...(O.ordre==="oss"?["Rails haut et bas, puis montants aux cotes indiquées (M1, M2…)","Isolant fibre de bois glissé derrière les montants et chevillé, panneau par panneau (liste I1, I2…)","Membrane Vario Xtra, lé par lé sur les montants, recouvrements au KB1"]:["Isolant fibre de bois chevillé, panneau par panneau (liste I1, I2…)","Membrane Vario Xtra, lé par lé, recouvrements au KB1","Rails haut et bas, puis montants aux cotes indiquées (M1, M2…)"]),"Réseaux électriques et eau dans le vide technique","Plaques dans l'ordre P1, P2… (bord aminci coupé dans les angles), vis aux positions indiquées",...(O.crea&&rooms.some(r=>creas(r).length)?["Créations en placo (coffrages, niches…)"]:[]),"Bandes, ratissage MIL'12, primaire et peinture",...(O.cuis&&rooms.some(r=>kitCfg(r).on&&kitCfg(r).items.length)?["Pose de la cuisine (après les finitions des murs)"]:[])].map((t,q)=>poseLi(poseKey(t),t,q+1)).join("")}</ol>
     <h2>Liste des murs</h2><table class="pd-t"><thead><tr><th>N°</th><th>Mur</th><th>Longueur × hauteur</th></tr></thead><tbody>${RW.map((w,n)=>`<tr><td>${n+1}</td><td>${esc(w.name)}</td><td>${cm(w.L)} × ${cm(w.H)} cm</td></tr>`).join("")}</tbody></table></section>`;
   try{ withCC(()=>{
     rooms.forEach(room=>{
@@ -3894,14 +3915,15 @@ function buildDossier(rooms){
       html+=`<section class="pd-page"><h2>Pièce : ${esc(room)}</h2><p class="pd-cap">Plan vu de dessus, murs numérotés dans le sens des aiguilles d'une montre.</p><div class="pd-svg">${plan.innerHTML.replace(/ id="/g,' data-id="')}</div></section>`;
       idx.forEach(([w,i],n)=>{ const r=compute(w); S.cur=i;
         let steps=chantierSteps(w,r); if(O.ordre==="oss"){ const ord=["prep","rails","studs","iso","mem","res","pla","fin","peint","bc"]; steps=[...steps].sort((a,b)=>(ord.indexOf(a.k)+99*(ord.indexOf(a.k)<0))-(ord.indexOf(b.k)+99*(ord.indexOf(b.k)<0))); const si=steps.find(x=>x.k==="iso"); if(si) si.d=["Ossature déjà en place : glisser chaque panneau derrière les montants et le cheviller dans la pierre (rosaces), sans écraser la lame d'air.",...si.d]; }
-        html+=`<section class="pd-page"><h2>Mur ${n+1} : ${esc(w.name)}</h2><p class="pd-cap">${cm(r.L)} × ${cm(r.H)} cm${w.noIso?" · sans isolant":""}${w.noMem?" · sans membrane":""}. Cotes en cm, depuis le coin bas gauche, vues depuis la pièce.</p>
-          <h3>Étapes</h3><ol class="pd-steps">${steps.map(st=>`<li><b>${esc(st.t)}</b><br>${st.d.map(esc).join("<br>")}</li>`).join("")}</ol></section>`;
-        const sIso=r.isoOn?`<section class="pd-page"><h3>Mur ${n+1} · Isolant</h3><div class="pd-svg">${snap(i,"iso")}</div>${cutListHtml(r,"iso")}</section>`:"";
-        const sMem=r.memOn?`<section class="pd-page"><h3>Mur ${n+1} · Membrane</h3><div class="pd-svg">${snap(i,"mem")}</div>${cutListHtml(r,"mem")}</section>`:"";
-        const sOss=`<section class="pd-page"><h3>Mur ${n+1} · Ossature</h3><div class="pd-svg">${snap(i,"oss")}</div>${cutListHtml(r,"oss")}</section>`;
+        const sCoupe=layerStrip(w,r);
+        html+=`<section class="pd-page"><h2>Mur ${n+1} : ${esc(w.name)}</h2>`+sCoupe+`<p class="pd-cap">${cm(r.L)} × ${cm(r.H)} cm${w.noIso?" · sans isolant":""}${w.noMem?" · sans membrane":""}. Cotes en cm, depuis le coin bas gauche, vues depuis la pièce.</p>
+          <h3>Étapes</h3><ol class="pd-steps pd-col">${steps.map((st,q)=>poseLi(st.k||poseKey(st.t),`<b>${esc(st.t)}</b><br>${st.d.map(esc).join("<br>")}`,q+1)).join("")}</ol></section>`;
+        const sIso=r.isoOn?`<section class="pd-page"><h3 class="pd-sec" style="--pc:${POSE_COL.iso}">Mur ${n+1} · Isolant</h3><div class="pd-svg">${snap(i,"iso")}</div>${cutListHtml(r,"iso")}</section>`:"";
+        const sMem=r.memOn?`<section class="pd-page"><h3 class="pd-sec" style="--pc:${POSE_COL.mem}">Mur ${n+1} · Membrane</h3><div class="pd-svg">${snap(i,"mem")}</div>${cutListHtml(r,"mem")}</section>`:"";
+        const sOss=`<section class="pd-page"><h3 class="pd-sec" style="--pc:${POSE_COL.studs}">Mur ${n+1} · Ossature</h3><div class="pd-svg">${snap(i,"oss")}</div>${cutListHtml(r,"oss")}</section>`;
         html+=O.ordre==="oss"?sOss+sIso+sMem:sIso+sMem+sOss;
         const cl=cutList(r), scr=screwPts(r);
-        html+=`<section class="pd-page"><h3>Mur ${n+1} · Plaques et vis</h3><div class="pd-svg">${snap(i,"pla")}</div><table class="pd-t"><thead><tr><th>Plaque</th><th>Position</th><th>Dimensions</th><th>Coupes</th><th>Vis</th></tr></thead><tbody>${cl.map(c=>{ const p=r.plates.find(q=>q.layer===c.layer&&q.x===c.x&&q.w===c.w&&q.h===c.h)||{x:c.x,y:10,w:c.w,h:c.h}; const sc=scr.filter(([x,y])=>x>=p.x-1&&x<=p.x+p.w+1&&y>=p.y&&y<=p.y+p.h), xs=[...new Set(sc.map(v=>Math.round(clamp(v[0]-p.x,10,p.w-10))))].sort((a,b)=>a-b);
+        html+=`<section class="pd-page"><h3 class="pd-sec" style="--pc:${POSE_COL.pla}">Mur ${n+1} · Plaques et vis</h3><div class="pd-svg">${snap(i,"pla")}</div><table class="pd-t"><thead><tr><th>Plaque</th><th>Position</th><th>Dimensions</th><th>Coupes</th><th>Vis</th></tr></thead><tbody>${cl.map(c=>{ const p=r.plates.find(q=>q.layer===c.layer&&q.x===c.x&&q.w===c.w&&q.h===c.h)||{x:c.x,y:10,w:c.w,h:c.h}; const sc=scr.filter(([x,y])=>x>=p.x-1&&x<=p.x+p.w+1&&y>=p.y&&y<=p.y+p.h), xs=[...new Set(sc.map(v=>Math.round(clamp(v[0]-p.x,10,p.w-10))))].sort((a,b)=>a-b);
           return `<tr><td><b>${c.nm}</b></td><td>${cm(c.x)} cm</td><td><b>${cm(c.w)} × ${cm(c.h)}</b></td><td>${c.notes.map(esc).join("<br>")||"entière"}</td><td>${sc.length} vis, montants à ${xs.map(x=>cm(x)).join(" · ")} cm du bord gauche, tous les 30 cm en hauteur</td></tr>`; }).join("")}</tbody></table></section>`;
       });
       const C=O.crea?creas(room):[]; if(C.length) html+=`<section class="pd-page"><h2>Créations en placo : ${esc(room)}</h2>${C.map((c,k)=>`<h3>${k+1}. ${esc(CREA[c.t].n)}</h3>${creaSvg(c,room)}${creaTable(c,room)}`).join("")}</section>`;
