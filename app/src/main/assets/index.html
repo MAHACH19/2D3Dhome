@@ -197,6 +197,15 @@ h3.grp{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.08e
 #scanpanel{scroll-margin-top:96px}
 section.box{border-radius:12px}
 .plan{border-radius:12px}
+
+#cutpop{position:fixed;left:8px;right:8px;bottom:8px;z-index:120;max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px #0006;padding:10px 12px;max-height:70vh;overflow:auto}
+#cutpop .cp-h{display:flex;align-items:center;gap:8px}
+#cutpop .cp-h b{font-size:17px}
+#cutpop .cp-h .cap{flex:1}
+#cutpop .cp-b{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-top:6px}
+#cutpop ul{margin:0;padding-left:18px;flex:1;min-width:180px;display:flex;flex-direction:column;gap:3px;font-size:14px}
+#cutpop .cp-n{display:flex;gap:8px;margin-top:8px}
+#cutpop .cp-n button{flex:1;padding:9px;border-radius:10px}
 @media print{
   body.pshop .wrap{display:none!important}
   body.pshop #shopprint{display:block!important;color:#000;font:13px/1.4 sans-serif}
@@ -228,6 +237,7 @@ section.box{border-radius:12px}
 <div class="wrap">
   <div id="splash" role="presentation"><svg viewBox="0 0 108 108" width="96" height="96" aria-hidden="true"><rect width="108" height="108" rx="24" fill="#1D63C4"/><rect x="24" y="28" width="14" height="52" fill="#9B9283"/><rect x="38" y="28" width="14" height="52" fill="#C4914F"/><rect x="52" y="28" width="4" height="52" fill="#F2F2EE"/><rect x="53" y="28" width="1" height="52" fill="#3F9A3A"/><rect x="58" y="28" width="8" height="52" fill="#A9B1B8"/><rect x="68" y="28" width="16" height="52" fill="#FBFBF8"/><circle cx="76" cy="44" r="5" fill="#F2C200"/></svg><b>Calepinage</b><span>Murs, isolation, plaques et chantier</span></div>
   <div id="home"></div>
+  <div id="cutpop" hidden role="dialog" aria-label="Fiche de coupe"></div>
   <div id="stepbar"><button type="button" id="st-menu">☰ Menu</button><div class="t" id="st-title"></div><button type="button" id="st-next" class="pri">Suivant →</button><div id="st-prog"></div></div>
   <div id="scanhint" class="box scr-off"><span class="sti"></span><div><b>Mesurer la pièce avec le LiDAR</b><small>iPhone 12 Pro : scan RoomPlan, ou saisie rapide de tous les murs d'un coup</small></div><button type="button" data-scan="1" class="lidar">Scanner</button></div>
   <header class="top">
@@ -1532,7 +1542,7 @@ function renderPlan(r){
   if(S.view==="logement"){ renderLogement(); return; }
   if(S.view==="plafond"){ renderCeil(); return; }
   const {L,H}=r, v=S.view, big=Math.max(L,H), fs=Math.max(38,big/48);
-  const padL=fs*4, padR=fs*1.5, padT=fs*1.6, padB=fs*6.5;
+  const padL=fs*5.4, padR=fs*1.5, padT=fs*1.6, padB=fs*6.5;
   const Y=y=>H-y;
   const parts=[];
   const R=(x,y,w,h,cls,extra="")=>`<rect x="${x}" y="${Y(y+h)}" width="${w}" height="${h}" ${cls} ${extra}/>`;
@@ -1661,9 +1671,26 @@ function renderPlan(r){
   parts.push(line(0,totY,L,totY,.06,"var(--ink)"));
   parts.push(line(0,totY-fs*.5,0,totY+fs*.5,.07,"var(--ink)")+line(L,totY-fs*.5,L,totY+fs*.5,.07,"var(--ink)"));
   parts.push(T(L/2,totY-fs*.4,`${cm(L)} cm`,"middle",`font-weight="600"`));
-  const hx=-fs*1.8;
+  // Cotes de hauteur sur le côté (1re colonne de panneaux / plaques, ouvertures, points)
+  const pcs=cutPieces(r,v), first=pcs.filter(q=>q.x<=1);
+  let vt=[0,H];
+  if(first.length&&(v==="iso"||v==="pla"||v==="fin")) vt=vt.concat(first.flatMap(q=>[q.y,q.y+q.h]));
+  else if(v==="res") vt=vt.concat(r.pts.map(q=>q.y));
+  else vt=vt.concat(r.ops.flatMap(o=>[Math.max(0,o.y),Math.min(H,o.y1)]));
+  vt=[...new Set(vt.map(t=>Math.round(clamp(t,0,H))))].sort((a,b)=>a-b).filter((t,i,a)=>i===0||t===H||t-a[i-1]>=40);
+  const vx=-fs*1.1;
+  parts.push(line(vx,0,vx,H,.05,"var(--chalk)"));
+  vt.forEach(t=>parts.push(line(vx-fs*.4,Y(t),vx+fs*.4,Y(t),.07,"var(--chalk)")));
+  for(let i=0;i<vt.length-1;i++){ const a=vt[i],b=vt[i+1]; if(b-a>fs*2.2){ const ym=Y((a+b)/2); parts.push(T(vx-fs*.35,ym,cm(b-a),"middle",`font-size="${fs*.8}" style="fill:var(--chalk)" transform="rotate(-90 ${vx-fs*.35} ${ym})"`)); } }
+  const hx=-fs*3.4;
   parts.push(line(hx,0,hx,H,.06,"var(--ink)")+line(hx-fs*.5,0,hx+fs*.5,0,.07,"var(--ink)")+line(hx-fs*.5,H,hx+fs*.5,H,.07,"var(--ink)"));
   parts.push(T(hx-fs*.5,H/2,`${cm(H)} cm`,"middle",`font-weight="600" transform="rotate(-90 ${hx-fs*.5} ${H/2})"`));
+  // Hauteur écrite sur le côté de chaque panneau / plaque, et zones à toucher pour la fiche de coupe
+  pcs.forEach((q,i)=>{
+    if((v==="iso"||v==="pla")&&q.h>fs*3.2&&q.w>fs*1.4){ const tx=q.x+fs*.75, ty=Y(q.y+q.h/2); parts.push(`<text x="${tx}" y="${ty}" text-anchor="middle" font-size="${fs*.85}" font-weight="700" fill="${q.cut?"#b4541a":"#3d3a33"}" transform="rotate(-90 ${tx} ${ty})" style="pointer-events:none">↕ ${cm(q.h)}</text>`); }
+    const sel=CUTSEL&&CUTSEL.v===v&&CUTSEL.i===i;
+    parts.push(`<rect data-pc="${i}" x="${q.x+4}" y="${Y(q.y+q.h)}" width="${Math.max(1,q.w-8)}" height="${q.h}" fill="${sel?"#1d63c433":"transparent"}" ${sel?`stroke="#1d63c4" stroke-width="${fs*.14}"`:""} style="cursor:pointer" pointer-events="all"/>`);
+  });
 
   const vb=[-padL,-padT,L+padL+padR,H+padT+padB].join(" ");
   document.getElementById("plan").innerHTML=`<svg viewBox="${vb}" role="img" aria-label="Calepinage du mur ${esc(S.walls[S.cur].name)}">${parts.join("")}</svg>`;
@@ -3452,6 +3479,40 @@ document.getElementById("scan-file").addEventListener("change",e=>{ const f=e.ta
     if(d){ const l=parseRoomPlan(d); if(l) importWalls(l,"Scan RoomPlan"); else document.getElementById("scan-msg").textContent="Ce JSON n'est pas un scan RoomPlan (pas de « walls ») : exportez au format JSON RoomPlan / CapturedRoom."; }
     else importWalls(parseWallText(t),"Fichier texte"); };
   rd.readAsText(f); e.target.value=""; });
+
+/* ---------- Fiche de coupe au toucher (vue 2D isolant / plaques) ---------- */
+let CUTSEL=null;
+function cutPieces(r,v){
+  if(v==="iso"||(v==="all"&&S.iso.on)) return (r.ins||[]).map((q,i)=>({...q,kind:"iso",n:i+1}));
+  if(v==="pla"||v==="fin") return r.plates.filter(q=>q.layer===1).map((q,i)=>({...q,kind:"pla",n:q.n||i+1}));
+  return [];
+}
+function cutSheet(){
+  const el=document.getElementById("cutpop"); if(!CUTSEL){ el.hidden=true; return; }
+  const w=S.walls[S.cur], r=compute(w), pcs=cutPieces(r,CUTSEL.v), q=pcs[CUTSEL.i]; if(!q){ el.hidden=true; return; }
+  const iso=q.kind==="iso", full=iso?{w:S.iso.W,h:S.iso.Lg}:{w:S.pla.W||1200,h:([...S.pla.lens].filter(Boolean).sort((a,b)=>a-b).find(l=>l>=q.h-1)||Math.max(...S.pla.lens))};
+  const ops=r.ops.filter(o=>q.x<o.x1&&q.x+q.w>o.x&&q.y<o.y1&&q.y+q.h>o.y).map(o=>({o,x0:Math.max(o.x,q.x)-q.x,x1:Math.min(o.x1,q.x+q.w)-q.x,y0:Math.max(o.y,q.y)-q.y,y1:Math.min(o.y1,q.y+q.h)-q.y}));
+  // dessin coté de la pièce
+  const k=Math.min(220/q.w,170/q.h), W=q.w*k, Hh=q.h*k, ox=46, oy=12, fsz=12;
+  const Yp=y=>oy+Hh-y*k;
+  let g=`<rect x="${ox}" y="${oy}" width="${W}" height="${Hh}" fill="${iso?"#d9b27a":"#ece8df"}" stroke="#5a4a32" stroke-width="1.5"/>`;
+  ops.forEach(c=>{ g+=`<rect x="${ox+c.x0*k}" y="${Yp(c.y1)}" width="${(c.x1-c.x0)*k}" height="${(c.y1-c.y0)*k}" fill="var(--card)" stroke="#b4541a" stroke-dasharray="4 3" stroke-width="1.5"/>`; });
+  g+=`<line x1="${ox}" y1="${oy+Hh+14}" x2="${ox+W}" y2="${oy+Hh+14}" stroke="#1d63c4"/><text x="${ox+W/2}" y="${oy+Hh+30}" text-anchor="middle" font-size="${fsz+1}" font-weight="700" fill="#1d63c4">${cm(q.w)} cm</text>`;
+  g+=`<line x1="${ox-14}" y1="${oy}" x2="${ox-14}" y2="${oy+Hh}" stroke="#1d63c4"/><text x="${ox-20}" y="${oy+Hh/2}" text-anchor="middle" font-size="${fsz+1}" font-weight="700" fill="#1d63c4" transform="rotate(-90 ${ox-20} ${oy+Hh/2})">${cm(q.h)} cm</text>`;
+  const lines=[`Largeur à couper : <b>${cm(q.w)} cm</b>`,`Hauteur à couper : <b>${cm(q.h)} cm</b>`,
+    `Position : à ${cm(q.x)} cm du début du mur, ${cm(q.y)} cm du sol`,
+    q.w>=full.w-1&&q.h>=full.h-1&&!ops.length?`${iso?"Panneau entier":"Plaque entière"} : pas de coupe`:`Dans ${iso?"un panneau":"une plaque"} de ${cm(full.w)} × ${cm(full.h)} cm : `+([q.w<full.w-1?`couper à ${cm(q.w)} cm de large (chute ${cm(full.w-q.w)} cm)`:"",q.h<full.h-1?`couper à ${cm(q.h)} cm de haut (chute ${cm(full.h-q.h)} cm)`:""].filter(Boolean).join(" et ")||"garder entier(ère), seulement la découpe ci-dessous"),
+    ...ops.map(c=>`Découpe ${opName(c.o,c.o.i)} : ${cm(c.x1-c.x0)} × ${cm(c.y1-c.y0)} cm, à ${cm(c.x0)} cm du bord gauche et ${cm(c.y0)} cm du bas de la pièce`)];
+  el.innerHTML=`<div class="cp-h"><b>${iso?"Isolant":"Plaque"} n° ${q.n}</b><span class="cap">${esc(w.name)} · ${CUTSEL.i+1}/${pcs.length}</span><button type="button" data-cp="x" aria-label="Fermer">✕</button></div>
+    <div class="cp-b"><svg viewBox="0 0 ${ox+W+12} ${oy+Hh+38}" width="${ox+W+12}" height="${oy+Hh+38}" style="max-width:100%;flex:none">${g}</svg><ul>${lines.map(t=>`<li>${t}</li>`).join("")}</ul></div>
+    <div class="cp-n"><button type="button" data-cp="-1">← Précédent</button><button type="button" data-cp="1">Suivant →</button></div>`;
+  el.hidden=false;
+}
+document.getElementById("plan").addEventListener("click",e=>{ const t=e.target.closest("[data-pc]"); if(!t) return; CUTSEL={v:S.view,i:+t.dataset.pc,w:S.cur}; renderOut(); cutSheet(); });
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-cp]"); if(!b) return; const d=b.dataset.cp;
+  if(d==="x"){ CUTSEL=null; renderOut(); cutSheet(); return; }
+  const n=cutPieces(compute(S.walls[S.cur]),CUTSEL.v).length; CUTSEL.i=(CUTSEL.i+(+d)+n)%n; renderOut(); cutSheet(); });
+{ const _ro2=renderOut; renderOut=function(...a){ if(CUTSEL&&(CUTSEL.v!==S.view||CUTSEL.w!==S.cur)){ CUTSEL=null; document.getElementById("cutpop").hidden=true; } return _ro2.apply(this,a); }; }
 /* Performance : un même mur n'est calculé qu'une fois par affichage */
 let CC=null; const _compute=compute;
 compute=function(w){ if(!CC) return _compute(w); let r=CC.get(w); if(!r){ r=_compute(w); CC.set(w,r); } return r; };
