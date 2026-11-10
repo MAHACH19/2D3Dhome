@@ -2043,7 +2043,7 @@ function renderRoom3D(){
   G.forEach(({room,g})=>{
     const K=kitCfg(room), ceilR=computeCeil(room), X=g.xf;
     g.segs.forEach((s,k)=>{
-      const w=s.w, I=g.inner[k], M=g.mid[k], O=g.outer[k], T=g.T;
+      const w=s.w, I=g.inner[k], M=g.mid[k], O=g.outer[k], T=g.Ts?g.Ts[k]:g.T;
       const front=(s.nx*sn-s.ny*cs)<-0.05;
       const h = front && V.front==="cut" ? Math.min(w.H,1000) : w.H, op = front && V.front==="ghost" ? 0.2 : 1;
       const at=(x,off,z)=>[s.x0+s.dx*x+s.nx*off, s.y0+s.dy*x+s.ny*off, z];
@@ -2149,6 +2149,30 @@ function renderRoom3D(){
         if(vis(s.dx,s.dy,0)) face([P(x1,d0,zb),P(x1,d1,zb),P(x1,d1,z1),P(x1,d0,z1)],{op,fill:shade(fc,lit(s.dx,s.dy,0)*0.92),stroke:"#00000044"});
         if(k.t!=="bas" && vis(0,0,1)) face([P(x0,d0,z1),P(x1,d0,z1),P(x1,d1,z1),P(x0,d1,z1)],{op,fill:shade(fc,1.02),stroke:"#00000044"});
         if(k.t==="haut" && vis(0,0,-1)) face([P(x0,d0,z0),P(x1,d0,z0),P(x1,d1,z0),P(x0,d1,z0)],{op,fill:shade(fc,0.75),stroke:"#00000044"});
+      });
+      // créations en placo (coffrages, banquettes, étagères, rubans LED…)
+      creas(room).filter(c=>c.wall===wid(w)).forEach(c=>{ const sp=creaSpan(w), hh=w.H, P={...c}, x=sp.a+Math.max(0,Math.min(P.x||0,sp.len-20)); { const kk=c.t==="coffv"?"l":c.t==="niche"?"w":"L"; if(c.t==="led"&&+c.pos===1){ P.y=Math.max(0,Math.min(P.y||0,hh-20)); P.L=Math.max(20,Math.min(P.L,hh-P.y)); } else P[kk]=Math.max(20,Math.min(P[kk],sp.a+sp.len-x)); }
+        if(front && V.front==="cut") return;
+        const wd=[[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]].reduce((a,p)=>a+pr(...p)[2],0)/4, n0=faces.length;
+        const box=(x0,x1,d0,d1,z0,z1,fc,stk)=>{ const Q=(a,d,z)=>at(a,d,z), st=stk||"#00000033";
+          if(vis(s.nx,s.ny,0)) face([Q(x0,d1,z0),Q(x1,d1,z0),Q(x1,d1,z1),Q(x0,d1,z1)],{op,fill:shade(fc,lit(s.nx,s.ny,0)),stroke:st});
+          if(vis(-s.dx,-s.dy,0)) face([Q(x0,d0,z0),Q(x0,d1,z0),Q(x0,d1,z1),Q(x0,d0,z1)],{op,fill:shade(fc,lit(-s.dx,-s.dy,0)*0.92),stroke:st});
+          if(vis(s.dx,s.dy,0)) face([Q(x1,d0,z0),Q(x1,d1,z0),Q(x1,d1,z1),Q(x1,d0,z1)],{op,fill:shade(fc,lit(s.dx,s.dy,0)*0.92),stroke:st});
+          if(vis(0,0,1)) face([Q(x0,d0,z1),Q(x1,d0,z1),Q(x1,d1,z1),Q(x0,d1,z1)],{op,fill:shade(fc,1.02),stroke:st});
+          if(vis(0,0,-1)) face([Q(x0,d0,z0),Q(x1,d0,z0),Q(x1,d1,z0),Q(x0,d1,z0)],{op,fill:shade(fc,0.8),stroke:st}); };
+        const pc="#efebe3";
+        if(c.t==="coffh") box(x,x+P.L,T,T+P.l,hh-P.h,hh,pc);
+        if(c.t==="coffv") box(x,x+P.l,T,T+P.pf,0,hh,pc);
+        if(c.t==="banq") box(x,x+P.L,T,T+P.pf,0,P.h,pc);
+        if(c.t==="muret") box(x,x+P.L,T,T+P.ep+25,0,P.h,pc);
+        if(c.t==="niche") box(x,x+P.w,T,T+3,P.y,P.y+P.h,"#b9b2a4");
+        if(c.t==="rideau"){ box(x,x+P.L,T+P.pf,T+P.pf+60,hh-P.h,hh,pc); box(x+10,x+10+P.L*.3,T+P.pf*.3,T+P.pf*.7,15,hh-40,P.col||"#e9e2d4"); box(x+P.L*.7-10,x+P.L-10,T+P.pf*.3,T+P.pf*.7,15,hh-40,P.col||"#e9e2d4"); }
+        if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; box(x,x+40,T,T+P.pf,y0,y0+P.h,pc); box(x+P.L-40,x+P.L,T,T+P.pf,y0,y0+P.h,pc); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; box(x,x+P.L,T,T+P.pf,Math.max(0,yy-20),Math.max(20,yy+20),pc); } }
+        if(c.t==="led"){ const lc=P.k<=2700?"#ff9a2e":P.k>=4000?"#3d9bff":"#ffb800", gl=lc;
+          if(+P.pos===1) box(x,x+50,T,T+15,P.y,Math.min(hh,P.y+P.L),gl,"#6b7178");
+          else if(+P.pos===2) box(x,x+P.L,T+P.y,T+P.y+40,hh-12,hh,gl,"#6b7178");
+          else box(x,x+P.L,T,T+12,P.y,P.y+40,gl,"#6b7178"); }
+        for(let i=n0;i<faces.length;i++) faces[i].d=Math.max(faces[i].d,wd+1); // toujours devant son mur
       });
       if(K.on && V.kit) kitRuns(room).filter(rn=>rn.w===w).forEach(rn=>{
         const pc=planOf(K,room).c, D=T+635, z0=880, z1=918, P=(x,d,z)=>at(x,d,z);
