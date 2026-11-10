@@ -72,7 +72,7 @@ public class MainActivity extends BridgeActivity {
             @JavascriptInterface
             public void done(String json) {
                 runOnUiThread(() -> {
-                    p.edit().putBoolean("legacyRead", true).apply();
+                    if (json != null) p.edit().putBoolean("legacyRead", true).apply();
                     if (json != null && json.contains("calepinage-murs-v2")) {
                         try (FileOutputStream o = new FileOutputStream(new File(getFilesDir(), LEGACY_FILE))) {
                             o.write(json.getBytes(StandardCharsets.UTF_8));

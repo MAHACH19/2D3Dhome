@@ -1,16 +1,9 @@
-# Calepinage Murs — appli Android
+# Calepinage
 
-Appli de calepinage (ossature métallique, fibre de bois chevillée, membrane Vario Xtra, plaques, finitions Mildecor) avec métré, visite 3D, réseaux et mode chantier. Elle fonctionne entièrement hors ligne.
+Appli de calepinage (doublage pierre + fibre de bois + Vario Xtra + ossature + BA13), mur par mur.
 
-## Installer sur le téléphone
+- `www/index.html` : l'appli web complète, hors ligne.
+- `android/` : projet Android Capacitor (appli native qui affiche `www/`).
+- GitHub Actions construit l'APK à chaque envoi sur `main` et la publie dans les Releases.
 
-1. Ouvrir **Releases** (à droite sur la page du dépôt) puis la dernière version.
-2. Télécharger `Calepinage.apk` et l'ouvrir.
-3. Autoriser « Installer des applis inconnues » pour le navigateur, une seule fois.
-
-Chaque modification envoyée sur `main` reconstruit l'APK automatiquement (onglet **Actions**).
-
-## Contenu
-
-- `app/src/main/assets/index.html` : l'appli complète (three.js inclus).
-- `app/src/main/java/.../MainActivity.java` : la WebView plein écran, l'ouverture et l'enregistrement de fichiers, l'impression.
+L'APK est signée avec la même clé que les versions 1.x : elle s'installe par-dessus, et les projets de l'ancienne appli sont repris au premier lancement.
