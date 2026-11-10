@@ -64,6 +64,14 @@ public class MainActivity extends BridgeActivity {
     private void readLegacyOnce() {
         SharedPreferences p = getSharedPreferences("calepinage", Context.MODE_PRIVATE);
         if (p.getBoolean("legacyRead", false)) return;
+        readLegacy(false);
+    }
+
+    /** Relit l'ancien stockage ; manual = demandé depuis le bouton « Reprendre », la page affiche le résultat. */
+    @SuppressLint("SetJavaScriptEnabled")
+    void readLegacy(boolean manual) {
+        SharedPreferences p = getSharedPreferences("calepinage", Context.MODE_PRIVATE);
+        if (legacyView != null) { legacyView.destroy(); legacyView = null; }
         legacyView = new WebView(this);
         legacyView.getSettings().setJavaScriptEnabled(true);
         legacyView.getSettings().setDomStorageEnabled(true);
@@ -77,9 +85,9 @@ public class MainActivity extends BridgeActivity {
                         try (FileOutputStream o = new FileOutputStream(new File(getFilesDir(), LEGACY_FILE))) {
                             o.write(json.getBytes(StandardCharsets.UTF_8));
                         } catch (Exception ignored) { }
-                        WebView w = getBridge().getWebView();
-                        w.evaluateJavascript("window.__legacyImport&&window.__legacyImport(" + json + ")", null);
+                        if (!manual) getBridge().getWebView().evaluateJavascript("window.__legacyImport&&window.__legacyImport(" + json + ")", null);
                     }
+                    if (manual) getBridge().getWebView().evaluateJavascript("window.__legacyResult&&window.__legacyResult(" + (json == null || json.isEmpty() ? "null" : json) + ")", null);
                     if (legacyView != null) { legacyView.destroy(); legacyView = null; }
                 });
             }
@@ -132,6 +140,8 @@ public class MainActivity extends BridgeActivity {
         }
         @JavascriptInterface
         public boolean isApp() { return true; }
+        @JavascriptInterface
+        public void recoverLegacy() { runOnUiThread(() -> readLegacy(true)); }
         @JavascriptInterface
         public String platform() { return "capacitor-android"; }
         /** Projets de l'ancienne appli (vide s'il n'y en a pas). */

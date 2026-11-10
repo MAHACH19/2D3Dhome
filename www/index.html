@@ -271,6 +271,7 @@ section.box{border-radius:12px}
       <button id="io-save" type="button">Enregistrer le projet</button>
       <label class="ghost" for="io-file" style="border:1px solid var(--line);border-radius:4px;padding:6px 10px;cursor:pointer;background:var(--card)">Ouvrir un projet<input id="io-file" type="file" accept=".json,application/json,text/plain" hidden></label>
       <button id="io-copy" type="button">Copier le projet</button>
+      <button type="button" data-legacy="1" data-legacy-static hidden>Reprendre l'ancienne appli (v1)</button>
       <button id="io-paste" type="button">Coller un projet</button>
       <button id="io-print" type="button">Imprimer / PDF</button>
       <button id="scan-open" type="button">📐 Importer un scan</button>
@@ -3479,6 +3480,14 @@ const APP=window.AndroidApp&&window.AndroidApp.isApp?window.AndroidApp:null;
 /* Appli Capacitor (v2) : reprend une seule fois les projets de l'ancienne appli 1.x */
 window.__legacyImport=function(d){ try{ if(localStorage.getItem("calepinage-legacy-done")) return; if(typeof d==="string") d=d?JSON.parse(d):null; if(!d||!d["calepinage-murs-v2"]) return;
   localStorage.setItem("calepinage-legacy-done","1"); Object.keys(d).forEach(k=>{ if(/^calepinage/.test(k)) localStorage.setItem(k,d[k]); }); location.reload(); }catch(e){} };
+window.__legacyResult=function(d){ clearTimeout(window.__legacyT); try{
+  const st=d&&d[KEY]?JSON.parse(d[KEY]):null, n=st&&st.walls?st.walls.length:0;
+  if(!n){ alert("Aucun projet trouvé dans l'ancienne appli Calepinage (version 1).\n\nSi vos murs étaient dans le fichier ouvert dans Chrome : ouvrez-le, touchez « Copier le projet », puis ici Mon projet → « Coller un projet »."); return; }
+  const rooms=[...new Set(st.walls.map(w=>w.room||""))].filter(Boolean);
+  if(!confirm(`Trouvé dans l'ancienne appli : ${n} mur(s)${rooms.length?" ("+rooms.join(", ")+")":""}.\n\nRemplacer le projet affiché par celui-ci ?`)) return;
+  Object.keys(d).forEach(k=>{ if(/^calepinage/.test(k)) localStorage.setItem(k,d[k]); }); localStorage.setItem("calepinage-legacy-done","1"); location.reload(); }catch(e){ alert("Lecture impossible : "+e.message); } };
+document.addEventListener("click",e=>{ if(!e.target.closest("[data-legacy]")) return; if(!(APP&&APP.recoverLegacy)) return; APP.recoverLegacy(); window.__legacyT=setTimeout(()=>alert("L'ancienne appli n'a pas répondu. Réessayez, ou utilisez Copier / Coller le projet."),8000); });
+document.querySelectorAll("[data-legacy-static]").forEach(b=>b.hidden=!(APP&&APP.recoverLegacy));
 if(APP&&APP.legacyData){ try{ const d=APP.legacyData(); if(d) window.__legacyImport(d); }catch(e){} }
 document.getElementById("io-save").addEventListener("click",()=>{
   if(APP){ try{ APP.saveFile(`calepinage-${new Date().toISOString().slice(0,10)}.json`,projectText()); ioMsg("Projet enregistré dans Téléchargements/Calepinage."); }catch(e){ ioMsg("L'enregistrement n'a pas marché : utilisez « Copier le projet »."); } return; }
@@ -3906,7 +3915,7 @@ const GROUPS=[["Concevoir",["murs","mat","res","amen","fin"]],["Visualiser et v�
 function lastScr(){ try{ return localStorage.getItem("calepinage-last")||""; }catch(e){ return ""; } }
 function renderHome(){
   const h=document.getElementById("home"); if(!h) return;
-  const note=isExample()?`<div class="homenote"><b>Vos murs ne sont pas encore dans cette appli.</b> ${APP?"L'appli Android garde ses projets à part : vos murs de cuisine sont restés dans l'ancienne version (le fichier ouvert dans Chrome).":"Chaque copie de l'appli (fichier hors ligne, appli Android, page en ligne) garde ses propres murs : ceux de votre cuisine sont dans la copie où vous les avez saisis."}<ol><li>Ouvrez l'ancien fichier dans Chrome et touchez « Copier le projet » (ou « Enregistrer le projet »).</li><li>Revenez ici : <b>Mon projet</b> → « Coller un projet » (ou « Ouvrir un projet » et choisissez le fichier .json).</li></ol><div class="btns" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="pri" data-go="proj">Récupérer mon projet</button><button type="button" data-go="murs">Commencer un nouveau projet</button></div></div>`:"";
+  const note=isExample()?`<div class="homenote"><b>Vos murs ne sont pas encore dans cette appli.</b> ${APP?"L'appli Android garde ses projets à part : vos murs de cuisine sont restés dans l'ancienne version (le fichier ouvert dans Chrome).":"Chaque copie de l'appli (fichier hors ligne, appli Android, page en ligne) garde ses propres murs : ceux de votre cuisine sont dans la copie où vous les avez saisis."}<ol><li>Ouvrez l'ancien fichier dans Chrome et touchez « Copier le projet » (ou « Enregistrer le projet »).</li><li>Revenez ici : <b>Mon projet</b> → « Coller un projet » (ou « Ouvrir un projet » et choisissez le fichier .json).</li></ol><div class="btns" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${APP&&APP.recoverLegacy?`<button type="button" class="pri" data-legacy="1">Reprendre les projets de l'ancienne appli</button>`:""}<button type="button" class="${APP&&APP.recoverLegacy?"":"pri"}" data-go="proj">Récupérer mon projet</button><button type="button" data-go="murs">Commencer un nouveau projet</button></div></div>`:"";
   const w=S.walls[S.cur], rooms=roomNames(), pct=withCC(()=>Math.round(S.walls.reduce((a,x)=>a+chantierPct(x),0)/Math.max(1,S.walls.length)))();
   const area=withCC(()=>S.walls.reduce((a,x)=>a+compute(x).netArea,0))(), ls=lastScr(), lsc=SCREENS.find(x=>x.k===ls);
   const tile=k=>{ if(k==="doss") return `<button type="button" class="tile" data-dossier="all" style="--ac:#1d63c4"><span class="ic">${ico("chan")}</span><b>Dossier de pose</b><small>Imprimer tous les murs : ordre de pose, coupes, cotes, vis (PDF)</small></button>`; const x=SCREENS.find(y=>y.k===k)||{k:"tout",t:"Tout afficher",d:"L'ancienne page complète, tous les réglages à la suite"}, n=SCREENS.findIndex(y=>y.k===k), st=n>=0?withCC(()=>scrStatus(k))():"";
