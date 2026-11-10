@@ -1962,9 +1962,9 @@ function renderRoom3D(){
   const cx=all.reduce((a,p)=>a+p[0],0)/all.length, cy=all.reduce((a,p)=>a+p[1],0)/all.length;
   const size=Math.max(...all.map(p=>Math.hypot(p[0]-cx,p[1]-cy)))*2+3000, Dc=size*1.6;
   const BX=[], BY=[];
-  const pr=(x,y,z)=>{ x-=cx; y-=cy; const xr=x*cs-y*sn, yr=x*sn+y*cs, dep=yr*cp+z*sp; let sx=xr, sy=yr*sp-z*cp;
+  const pr=(x,y,z)=>{ x-=cx; y=cy-y; const xr=x*cs-y*sn, yr=x*sn+y*cs, dep=yr*cp+z*sp; let sx=xr, sy=yr*sp-z*cp;
     if(V.persp){ const f=Dc/(Dc-dep); sx*=f; sy*=f; } BX.push(sx); BY.push(sy); return [sx,sy,dep]; };
-  const vis=(nx,ny,nz)=>(nx*sn+ny*cs)*cp+nz*sp>0.02;
+  const vis=(nx,ny,nz)=>(nx*sn-ny*cs)*cp+nz*sp>0.02;
   const faces=[], labels=[], F=S.fin, tint=F.peint.on?(F.peint.teinte||"#efe9df"):"#e6e4dd";
   const pathOf=(pts)=>pts.map((p,i)=>{ const q=pr(...p); return (i?"L":"M")+q[0].toFixed(0)+" "+q[1].toFixed(0); }).join("")+"Z";
   const line=(A,B,st)=>{ const a=pr(...A), b=pr(...B); return `<line x1="${a[0].toFixed(0)}" y1="${a[1].toFixed(0)}" x2="${b[0].toFixed(0)}" y2="${b[1].toFixed(0)}"${st||""}/>`; };
@@ -1975,7 +1975,7 @@ function renderRoom3D(){
     const K=kitCfg(room), ceilR=computeCeil(room), X=g.xf;
     g.segs.forEach((s,k)=>{
       const w=s.w, I=g.inner[k], M=g.mid[k], O=g.outer[k], T=g.T;
-      const front=(s.nx*sn+s.ny*cs)<-0.05;
+      const front=(s.nx*sn-s.ny*cs)<-0.05;
       const h = front && V.front==="cut" ? Math.min(w.H,1000) : w.H, op = front && V.front==="ghost" ? 0.2 : 1;
       const at=(x,off,z)=>[s.x0+s.dx*x+s.nx*off, s.y0+s.dy*x+s.ny*off, z];
       const holes=w.openings.map(o=>({o,a:Math.max(0,o.x),b:Math.min(w.L,o.x+o.w),z0:o.y,z1:Math.min(h,o.y+o.h)})).filter(o=>o.b>o.a&&o.z1>o.z0);
