@@ -1685,7 +1685,9 @@ function elecPlan(room){
     pts.push({src:"mur",type:p.type,k:d.k,dbl:!!d.dbl,n:`${p.type} · ${sh(s.w)}, à ${cm(p.x)} cm du début, h ${cm(p.y)} cm`,len:(H-p.y+dist+600)/1000,wall:s.w,p}); }));
   lumList(room).forEach((x,li)=>{ const t=LUM.find(q=>q.id===x.t)||{}; if(t.c!=="lum") return; const m=lusOf(x), dist=jb?Math.hypot(x.x-jb[0],x.y-jb[1]):2000;
     pts.push({src:"lum",type:m?m.n:t.n,k:x.t==="regl"?"LEDR":"LUM",n:`${m?m.n:t.n} · plafond`,len:(dist+400)/1000,li}); });
-  creas(room).forEach((c,ci)=>{ if(c.t!=="led") return; const w=creaWall(c,room); pts.push({src:"led",type:"Ruban LED "+(c.k||3000)+" K",k:"LED",n:`Ruban LED ${cm(c.L)} cm · ${w?sh(w):""} (${+c.pos===2?"plafond":+c.pos===1?"vertical":"horizontal"})`,len:3,w:Math.round(c.L/1000*10),ci}); });
+  { const LG={}; creas(room).forEach((c,ci)=>{ if(c.t!=="led") return; const w=creaWall(c,room), P=creaFit(c,room), key=c.sep?"s"+ci:"k"+(c.k||3000); (LG[key]=LG[key]||{k:c.k||3000,parts:[]}).parts.push({L:P.L,w:w?sh(w):"",pos:+c.pos}); });
+    Object.values(LG).forEach(G=>{ const Lt=G.parts.reduce((a,q)=>a+q.L,0), m=Lt/1000, where=[...new Set(G.parts.map(q=>(q.pos===2?"plafond ":"")+q.w))];
+      pts.push({src:"led",type:"Ruban LED "+G.k+" K",k:"LED",n:G.parts.length>1?`Ruban LED continu ${fr(m,2)} m · ${G.parts.length} tronçons (${where.join(", ")})`:`Ruban LED ${fr(m,2)} m · ${where[0]}`,len:3,w:Math.round(m*10),m,parts:G.parts}); }); }
   if(K.on) K.items.forEach(it=>{ const k=kitItem(it); if(!k) return;
     if(k.hob) pts.push({src:"kit",type:"Plaque de cuisson",k:"CUIS",n:"Plaque de cuisson · sortie de câble 32 A",len:4});
     if(/four/.test(k.f)) pts.push({src:"kit",type:"Four",k:"FOUR",n:"Four encastrable · prise spécialisée 20 A",len:4});
@@ -1753,19 +1755,102 @@ function elecSteps(p,pl){ const c=p.c, k=p.k, L=[], sec=c?c.sec:1.5, fil=`fil H0
   else if(k==="LUM"||k==="LEDR"||k==="AP"){ L.push(`Fils dans la gaine ICTA Ø16 : ${fil}, environ ${fr(p.len,1)} m depuis la boîte : orange (retour lampe), bleu (neutre), vert/jaune (terre).`);
     L.push(`Boîte de dérivation : le retour lampe venant de l'interrupteur va dans un Wago avec les retours de toutes les lampes qu'il commande ; neutres ensemble, terres ensemble.`);
     L.push(k==="AP"?"Applique : orange sur L, bleu sur N, vert/jaune sur ⏚.":"Point DCL : orange sur L, bleu sur N, vert/jaune sur ⏚, puis clipser la fiche DCL du luminaire."); }
-  else if(k==="LED"){ L.push("Le ruban LED est commandé comme une lampe : retour lampe (orange) + neutre + terre jusqu'à l'alimentation 230 V → 24 V."); L.push(`Alimentation ${Math.max(30,Math.ceil((p.w||10)*1.2/10)*10)} W environ (ruban ${p.w||"?"} W + 20 %), placée accessible (dans un meuble, une niche ou derrière une trappe), jamais noyée dans le placo.`); L.push("Côté 24 V : fil rouge sur +, noir sur −, du même côté du ruban ; au-delà de 5 m, réalimenter l'autre bout."); }
+  else if(k==="LED"){ L.push(`${p.parts&&p.parts.length>1?`Un seul branchement pour les ${p.parts.length} tronçons (${fr(p.m,2)} m au total) : ils forment un ruban continu, une seule alimentation, un seul interrupteur. `:""}Le ruban est commandé comme une lampe : retour lampe (orange) + neutre + terre jusqu'à l'alimentation 230 V → 24 V.`);
+    if(p.parts&&p.parts.length>1) L.push("Aux angles (mur → mur ou mur → plafond) : couper le ruban sur le repère ciseaux et relier les tronçons avec un connecteur d'angle (clip) ou deux fils soudés + et −, gaine thermo par-dessus. Dans un profilé, laisser 2 mm de jeu à l'angle.");
+    if(p.m>5) L.push(`Ruban de ${fr(p.m,1)} m : au-delà de 5 m la tension chute (fin du ruban plus sombre). Réinjecter le 24 V tous les 5 m environ : ${Math.ceil(p.m/5)} point(s) d'alimentation, avec 2 fils 1,5 mm² (rouge +, noir −) en parallèle depuis l'alimentation, cachés dans la gorge ou le profilé.`); L.push(`Alimentation ${Math.max(30,Math.ceil((p.w||10)*1.2/10)*10)} W environ (ruban ${p.w||"?"} W + 20 %), placée accessible (dans un meuble, une niche ou derrière une trappe), jamais noyée dans le placo.`); L.push("Côté 24 V : fil rouge sur +, noir sur −, du même côté du ruban ; au-delà de 5 m, réalimenter l'autre bout."); }
   else if(k==="I"){ L.push(`Interrupteur : la phase (rouge) arrive de la boîte sur la borne L ; le retour lampe (orange) part de la borne 1 vers la boîte. Fils ${fil}, gaine ICTA Ø16, environ ${fr(p.len,1)} m.`); L.push("Le neutre ne passe jamais par l'interrupteur."); }
   else if(k==="VV"){ L.push(`Va-et-vient : la phase arrive sur le commun (C) du premier, deux navettes (violet et gris) relient les bornes 1-1 et 2-2 des deux interrupteurs, le commun du second renvoie le retour lampe (orange) vers la boîte.`); L.push(`Fils ${fil}, gaine ICTA Ø16 (3 fils entre les deux va-et-vient).`); }
   else if(k==="RJ") L.push("Câble catégorie 6 (grade 3) sans coupure ni boîte de dérivation, du coffret de communication à la prise ; câblage T568A de chaque côté ; à 5 cm minimum des câbles électriques en parallèle.");
   return L; }
+/* tableau électrique dessiné : rangées, différentiels, disjoncteurs, peignes, bornier de terre */
+function tableauSvg(Hs){ const MW=24, X0=34, RH=196, rows=Hs.ids, W=380, top=118, Ht=top+rows.length*RH+110;
+  let s="", wires="", bg="";
+  const scr=(x,y)=>`<circle cx="${x}" cy="${y}" r="4.2" fill="#cfd3d6" stroke="#6b7378"/><path d="M${x-3},${y} H${x+3}" stroke="#6b7378" stroke-width="1.2"/>`;
+  // disjoncteur de branchement (AGCP) au-dessus
+  s+=`<rect x="${W/2-40}" y="6" width="80" height="58" rx="6" fill="#f4f4f2" stroke="#7a8288" stroke-width="1.5"/><text x="${W/2}" y="22" text-anchor="middle" font-size="10" font-weight="700" fill="#1c2428">Disjoncteur de</text><text x="${W/2}" y="34" text-anchor="middle" font-size="10" font-weight="700" fill="#1c2428">branchement</text><text x="${W/2}" y="47" text-anchor="middle" font-size="9" fill="#4a5358">500 mA (Enedis)</text>${scr(W/2-14,60)}${scr(W/2+14,60)}`;
+  s+=`<text x="${W/2}" y="2" text-anchor="middle" font-size="9" fill="#4a5358" dy="-1"></text>`;
+  // coffret
+  bg+=`<rect x="10" y="${top-26}" width="${W-20}" height="${Ht-top-4}" rx="10" fill="#eef0f1" stroke="#9aa3a8" stroke-width="2"/>`; s+=`<text x="20" y="${top-10}" font-size="11" font-weight="700" fill="#1c2428">Tableau (coffret ${rows.length} rangées × 13 modules)</text>`;
+  // câbles de liaison 10 mm² : descente à gauche vers le haut de chaque différentiel
+  const fx=[W/2-14,W/2+14]; wires+=`<path d="M${fx[0]},60 V${top-34} H22 V${top+(rows.length-1)*RH+26}" fill="none" stroke="${WC.L}" stroke-width="4"/><path d="M${fx[1]},60 V${top-30} H28 V${top+(rows.length-1)*RH+32}" fill="none" stroke="${WC.N}" stroke-width="4"/>`;
+  const GT=[]; rows.forEach((r,ri)=>{ const y=top+ri*RH, ry=y+40, mh=96;
+    s+=`<rect x="18" y="${ry+mh/2-6}" width="${W-36}" height="12" fill="#b9bfc3"/>`; // rail DIN
+    // différentiel (2 modules)
+    const ix=X0+4, iw=MW*2;
+    s+=`<rect x="${ix}" y="${ry}" width="${iw}" height="${mh}" rx="4" fill="#ffffff" stroke="#5b6469" stroke-width="1.4"/><rect x="${ix+iw/2-7}" y="${ry+30}" width="14" height="26" rx="3" fill="#2b6fd6"/><text x="${ix+iw/2}" y="${ry+70}" text-anchor="middle" font-size="7.5" font-weight="700" fill="#1c2428">40 A</text><text x="${ix+iw/2}" y="${ry+79}" text-anchor="middle" font-size="7.5" fill="#1c2428">30 mA ${r.t}</text><rect x="${ix+iw-13}" y="${ry+60}" width="9" height="9" rx="2" fill="#f2c94c" stroke="#8a6d00"/><text x="${ix+iw-8.5}" y="${ry+67}" text-anchor="middle" font-size="6.5" font-weight="700">T</text>`;
+    s+=scr(ix+12,ry+8)+scr(ix+iw-12,ry+8)+scr(ix+12,ry+mh-8)+scr(ix+iw-12,ry+mh-8);
+    s+=`<text x="${ix+12}" y="${ry-3}" text-anchor="middle" font-size="8" font-weight="700" fill="${WC.L}">L</text><text x="${ix+iw-12}" y="${ry-3}" text-anchor="middle" font-size="8" font-weight="700" fill="${WC.N}">N</text>`;
+    // arrivée sur le haut du différentiel
+    wires+=`<path d="M22,${ry-14} H${ix+12} V${ry+8}" fill="none" stroke="${WC.L}" stroke-width="4"/><path d="M28,${ry-8} H${ix+iw-12} V${ry+8}" fill="none" stroke="${WC.N}" stroke-width="4"/>`;
+    // disjoncteurs
+    const dx0=ix+iw+6; r.cs.forEach((c,ci)=>{ const x=dx0+ci*MW;
+      s+=`<rect x="${x}" y="${ry}" width="${MW-2}" height="${mh}" rx="3" fill="#ffffff" stroke="#5b6469" stroke-width="1.3"/><rect x="${x+MW/2-5}" y="${ry+30}" width="8" height="24" rx="2" fill="#3a3f44"/><text x="${x+MW/2-1}" y="${ry+68}" text-anchor="middle" font-size="7.5" font-weight="700" fill="#1c2428">${c.cal}A</text>`;
+      s+=scr(x+MW/2-1,ry+8)+scr(x+MW/2-1,ry+mh-8);
+      s+=`<text x="${x+MW/2-1}" y="${ry+mh+44}" text-anchor="middle" font-size="9" font-weight="700" fill="#1c2428">C${c.no}</text>`;
+      // sorties du circuit : phase et neutre en bas, terre vers le bornier
+      wires+=`<path d="M${x+MW/2-4},${ry+mh-8} V${ry+mh+30}" stroke="${WC.L}" stroke-width="3" fill="none"/><path d="M${x+MW/2+3},${ry+mh-8} V${ry+mh+30}" stroke="${WC.N}" stroke-width="3" fill="none"/>`;
+      s+=`<text x="${x+MW/2-1}" y="${ry+mh+56}" text-anchor="middle" font-size="7" fill="#4a5358">${c.sec}²</text>`; GT.push([x+MW/2-1,ry+mh+60]); });
+    for(let k=r.cs.length;k<8&&dx0+k*MW+MW<W-20;k++){ const x=dx0+k*MW; s+=`<rect x="${x}" y="${ry}" width="${MW-2}" height="${mh}" rx="3" fill="none" stroke="#b3babf" stroke-dasharray="3 3"/>`; }
+    s+=`<text x="${dx0+r.cs.length*MW+6}" y="${ry+mh/2+3}" font-size="8" fill="#4a5358">${r.cs.length<8?"réserve":""}</text>`;
+    // peigne : sortie du différentiel (bas) remontée sur le peigne des disjoncteurs (haut)
+    if(r.cs.length){ const xe=dx0+(r.cs.length-1)*MW+MW/2-1;
+      wires+=`<path d="M${ix+12},${ry+mh-8} V${ry+mh+12} H${dx0-3} V${ry-16} H${xe+4}" fill="none" stroke="${WC.L}" stroke-width="3"/><path d="M${ix+iw-12},${ry+mh-8} V${ry+mh+6} H${dx0-8} V${ry-22} H${xe+4}" fill="none" stroke="${WC.N}" stroke-width="3"/>`;
+      s+=`<rect x="${dx0}" y="${ry-20}" width="${xe-dx0+6}" height="10" rx="2" fill="#fafafa" stroke="#7a8288"/><text x="${(dx0+xe)/2}" y="${ry-12}" text-anchor="middle" font-size="7" fill="#4a5358">peigne phase + neutre</text>`;
+      r.cs.forEach((c,ci)=>{ const x=dx0+ci*MW+MW/2-1; wires+=`<path d="M${x},${ry-10} V${ry+8}" stroke="#7a8288" stroke-width="2"/>`; }); }
+  });
+  // bornier de terre
+  const by=top+rows.length*RH+8; GT.forEach(([x,y],i)=>{ const tx=W/2-108+Math.min(11,i)*20, gx=W-22-i*4, d=`M${x},${y} V${y+6+i*2} H${gx} V${by-8-i*2} H${tx} V${by+9}`; wires+=`<path d="${d}" fill="none" stroke="${WC.PE}" stroke-width="2.5"/><path d="${d}" fill="none" stroke="#f1d500" stroke-width="2.5" stroke-dasharray="4 4"/>`; });
+  s+=`<rect x="${W/2-120}" y="${by}" width="240" height="18" rx="3" fill="#3aa335"/><rect x="${W/2-120}" y="${by+6}" width="240" height="6" fill="#f1d500"/>`;
+  for(let i=0;i<12;i++) s+=scr(W/2-108+i*20,by+9);
+  s+=`<text x="${W/2}" y="${by+34}" text-anchor="middle" font-size="9" font-weight="700" fill="#1c2428">Bornier de terre : 1 vert/jaune par circuit</text>`;
+  wires+=`<path d="M${W/2+112},${by+9} H${W-16} V${Ht-20}" fill="none" stroke="${WC.PE}" stroke-width="5"/><path d="M${W/2+112},${by+9} H${W-16} V${Ht-20}" fill="none" stroke="#f1d500" stroke-width="5" stroke-dasharray="7 7"/>`;
+  s+=`<text x="${W-20}" y="${Ht-8}" text-anchor="end" font-size="9" fill="#1c2428">16 mm² vers la barrette de terre puis le piquet</text>`;
+  return `<svg viewBox="0 0 ${W} ${Ht}" style="width:100%;max-width:560px;height:auto;min-width:0;max-height:none;display:block;background:#fff;border-radius:8px;font-family:system-ui,sans-serif" role="img" aria-label="Tableau électrique">${bg}${wires}${s}</svg>`; }
+const TAB_STEPS=["Tout se fait hors tension : le disjoncteur de branchement Enedis sur 0, vérifié au VAT. Ne jamais ouvrir le capot plombé du disjoncteur de branchement.",
+ "Coffret dans la gaine technique logement (GTL, 60 cm de large), organes de commande entre 1 m et 1,80 m du sol fini, à côté de l'entrée. Prévoir 20 % de modules libres.",
+ "Clipser sur chaque rail : d'abord l'interrupteur différentiel 30 mA à gauche (2 modules), puis ses disjoncteurs (1 module chacun), au plus 8 par différentiel. Rangée du bas : le différentiel type A avec la plaque de cuisson et le lave-linge.",
+ "Poser le peigne horizontal phase + neutre sur les bornes du haut des disjoncteurs de la rangée, sans le couper au milieu d'un appareil, et serrer chaque vis (2,5 N·m environ).",
+ "Câbles de liaison 10 mm² (rouge et bleu) du disjoncteur de branchement jusqu'aux bornes du HAUT de chaque différentiel (L à gauche, N à droite, repère N sur l'appareil).",
+ "Bornes du BAS du différentiel vers l'entrée du peigne de sa rangée, en 10 mm² : c'est le différentiel qui protège tous les disjoncteurs de la rangée.",
+ "Chaque circuit sort par le bas de son disjoncteur : phase (rouge) sur la borne repérée 1 ou L, neutre (bleu) sur la borne N. Dénuder 12 mm, fil bien au fond, serrer, tirer pour vérifier.",
+ "Toutes les terres (vert/jaune) des circuits vont sur le bornier de terre, une par vis. Le bornier part en 16 mm² cuivre vers la barrette de mesure puis le piquet de terre (moins de 100 Ω).",
+ "Coller l'étiquette de chaque disjoncteur (C1 Prises cuisine…), fermer les obturateurs des modules vides, remonter le capot.",
+ "Remise sous tension : disjoncteur de branchement, puis chaque différentiel, puis les disjoncteurs un par un. Appuyer sur le bouton T de chaque différentiel : il doit déclencher. Tester chaque prise avec un testeur."];
+/* boîte de dérivation ouverte : gaines, Wago à leviers, fils */
+function bdSvg(pl,c){ const W=380, items=[]; const name=p=>p.k==="I"?"Interrupteur":p.k==="VV"?"Va-et-vient":p.k==="LED"||p.k==="LEDR"?"Alim. LED":p.k==="AP"?"Applique":p.k==="LUM"?"Lampe":p.dbl?"Prise double":"Prise";
+  const ec=c.t==="EC", devs=c.pts.filter(p=>!["I","VV"].includes(p.k)), sws=ec?[...(c.sw||[]),...(c.vv||[])]:[];
+  const G=[{id:"tb",lab:"Tableau C"+(c.no||""),side:"t",w:["L","N","PE"]}];
+  devs.forEach((p,i)=>G.push({id:"d"+i,lab:name(p)+" "+(i+1),side:"b",w:ec?["R","N","PE"]:["L","N","PE"]}));
+  sws.forEach((p,i)=>G.push({id:"s"+i,lab:name(p)+" "+(i+1),side:"t",w:p.k==="VV"?(i===0?["L","N1","N2"]:["R","N1","N2"]):["L","R"]}));
+  const tops=G.filter(g=>g.side==="t"), bots=G.filter(g=>g.side==="b"), bx=20, bw=W-40, by=70, Hb=230, H=by+Hb+70;
+  tops.forEach((g,i)=>{ g.x=bx+bw*(i+1)/(tops.length+1); g.y=by; }); bots.forEach((g,i)=>{ g.x=bx+bw*(i+1)/(bots.length+1); g.y=by+Hb; });
+  // Wago : un par conducteur
+  const kinds=(ec?["L","N","PE","R"]:["L","N","PE"]).concat(sws.some(p=>p.k==="VV")?["N1","N2"]:[]), WG={};
+  kinds.forEach((k,i)=>{ const slots=G.filter(g=>g.w.includes(k)).length; WG[k]={x:bx+20+(bw-40)*(i+0.5)/kinds.length,y:by+Hb/2-12,n:slots}; });
+  const bg=`<rect x="${bx}" y="${by}" width="${bw}" height="${Hb}" rx="14" fill="#f3f4f2" stroke="#6b7378" stroke-width="2.5"/><rect x="${bx+8}" y="${by+8}" width="${bw-16}" height="${Hb-16}" rx="10" fill="none" stroke="#c4c9cc" stroke-dasharray="4 4"/>`; let s="";
+  s+=`<text x="${W/2}" y="${by+Hb-14}" text-anchor="middle" font-size="10" fill="#4a5358">Boîte de dérivation ${pl.jb?"au plafond":"murale"} · ${esc(c.name)}</text>`;
+  let wr="";
+  G.forEach(g=>{ const yy=g.side==="t"?g.y-34:g.y+34; s+=`<rect x="${g.x-13}" y="${Math.min(yy,g.y)-(g.side==="t"?0:0)}" width="26" height="34" fill="#9aa1a7" opacity=".55"/><text x="${g.x}" y="${g.side==="t"?yy-6:yy+14}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1c2428">${esc(g.lab)}</text>`;
+    s+=`<rect x="${g.x-15}" y="${g.y-5}" width="30" height="10" rx="3" fill="#5f676d"/>`;
+    g.w.forEach((k,j)=>{ const wg=WG[k]; if(!wg) return; wg.u=(wg.u||0); const sx=wg.x-((wg.n-1)*9)/2+wg.u*9; wg.u++; const sy=wg.y+(g.side==="t"?0:28), ex=g.x-6+j*6, ey=g.y;
+      const d=`M${ex},${g.side==="t"?ey-34:ey+34} L${ex},${ey} C${ex},${(ey+sy)/2} ${sx},${(ey+sy)/2} ${sx},${sy}`; wr+=`<path d="${d}" fill="none" stroke="${WC[k]}" stroke-width="3"/>`+(k==="PE"?`<path d="${d}" fill="none" stroke="#f1d500" stroke-width="3" stroke-dasharray="5 5"/>`:""); }); });
+  kinds.forEach(k=>{ const wg=WG[k], w=Math.max(26,wg.n*9+8); s+=`<rect x="${wg.x-w/2}" y="${wg.y}" width="${w}" height="28" rx="4" fill="#e9edf0" stroke="#7a8288" opacity=".95"/>`;
+    for(let i=0;i<wg.n;i++){ const x=wg.x-((wg.n-1)*9)/2+i*9; s+=`<rect x="${x-3.5}" y="${wg.y+3}" width="7" height="10" rx="1.5" fill="#f39c12" stroke="#a35f00"/>`; }
+    s+=`<text x="${wg.x}" y="${wg.y+24}" text-anchor="middle" font-size="8.5" font-weight="700" fill="${k==="PE"?"#2d7a27":WC[k]}">${k==="PE"?"Terre":k==="R"?"Retour":k==="N1"?"Nav. 1":k==="N2"?"Nav. 2":k==="L"?"Phase":"Neutre"} · ${wg.n}</text>`; });
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:560px;height:auto;min-width:0;max-height:none;display:block;background:#fff;border-radius:8px;font-family:system-ui,sans-serif" role="img" aria-label="Boîte de dérivation">${bg}${wr}${s}</svg>`; }
+
 function renderElec(){ const room=S.walls[S.cur].room||roomNames()[0], H=elecHouse(), pl=H.R.find(r=>r.room===room)||elecPlan(room);
   const cBadge=c=>c?`<span style="display:inline-block;padding:1px 8px;border-radius:10px;background:${c.t==="EC"?"#fff1d6":c.t==="PC"?"#e3eefc":c.t==="RJ"?"#efe7fb":"#fde4e1"};font-size:12px">${c.no?"C"+c.no+" · ":""}${esc(c.name)}${c.cal?` · ${c.cal} A · ${String(c.sec).replace(".",",")} mm²`:""}</span>`:"";
   const tab=`<div class="box" style="padding:10px 12px"><b>Du compteur au tableau</b>
     <ol style="margin:6px 0 0 18px;padding:0;font-size:14px;display:flex;flex-direction:column;gap:3px"><li>Compteur Linky (Enedis) → disjoncteur de branchement 500 mA (AGCP, réglé selon l'abonnement) : ne pas y toucher, c'est la limite Enedis.</li><li>Disjoncteur de branchement → tableau : câble 2 × 10 mm² (ou 16 mm²) + parafoudre si zone orageuse ; barrette de terre reliée au piquet de terre (fil 16 mm² vert/jaune, résistance &lt; 100 Ω).</li><li>Dans le tableau : un interrupteur différentiel 30 mA pour 8 circuits au plus (au moins 1 type A pour lave-linge et plaque de cuisson), puis un disjoncteur par circuit. Peignes en haut, pas de fil volant.</li></ol>
+    <div style="margin-top:8px">${tableauSvg(H)}</div>
+    <details style="margin-top:6px" open><summary style="cursor:pointer"><b>Câbler le tableau, étape par étape</b></summary><ol style="margin:6px 0 0 18px;padding:0;font-size:14px;display:flex;flex-direction:column;gap:4px">${TAB_STEPS.map(x=>`<li>${esc(x)}</li>`).join("")}</ol></details>
     <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${H.ids.map((x,i)=>`<div style="border:1px solid var(--line,#ccd);border-radius:8px;padding:6px 8px"><b>Interrupteur différentiel ${i+1} : 40 A, 30 mA type ${x.t}</b> <span class="cap">${x.cs.length} circuit(s)</span><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${x.cs.map(cBadge).join("")||'<span class="cap">réserve (lave-linge, plaque)</span>'}</div></div>`).join("")}</div></div>`;
   const bdBox=pl.jb?`<div class="box" style="padding:10px 12px"><b>Boîte de dérivation de la pièce</b> <span class="cap">au plafond, dans le plénum, sous une trappe 30 × 30 cm</span>
     <ul style="margin:6px 0 0 18px;padding:0;font-size:14px">${pl.C.filter(c=>c.t==="PC"||c.t==="EC").map(c=>{ const n=c.pts.filter(p=>p.k!=="I"&&p.k!=="VV").length+1;
       return `<li>${cBadge(c)} : ${c.t==="EC"?`phase : ${wagoFor(1+Math.max(1,(c.sw||[]).length+((c.vv||[]).length?1:0)))} · neutre : ${wagoFor(n)} · terre : ${wagoFor(n)} · retour lampe : ${wagoFor(n)}`:`phase, neutre et terre : ${wagoFor(n)} chacun`}</li>`; }).join("")}</ul>
+    ${pl.C.filter(c=>(c.t==="PC"||c.t==="EC")&&c.pts.length).map(c=>`<div style="margin-top:8px"><b style="font-size:13px">${cBadge(c)} boîte ouverte</b>${bdSvg(pl,c)}</div>`).join("")}
+    <ol style="margin:6px 0 0 18px;padding:0;font-size:14px;display:flex;flex-direction:column;gap:3px"><li>Boîte à couvercle vissé, fixée au plafond (ou au mur) et toujours accessible : trappe de visite dessous, jamais cachée sous le placo.</li><li>Chaque gaine ICTA entre par un embout (opercule percé à la taille de la gaine) et dépasse de 1 à 2 cm dans la boîte. Garder 15 cm de fil dans la boîte.</li><li>Un Wago par conducteur et par circuit : toutes les phases ensemble, tous les neutres ensemble, toutes les terres ensemble, tous les retours lampe ensemble. Ne jamais mélanger deux circuits dans un même Wago.</li><li>Dénuder 11 mm (gabarit sur le Wago), lever le levier, enfoncer le fil à fond, rabattre le levier, tirer pour vérifier.</li><li>Repérer chaque gaine au feutre ou avec une bague (C1 prise salon…), ranger les Wago à plat, refermer.</li></ol>
     <p class="cap" style="margin:4px 0 0">Une boîte par circuit, ou une grande boîte avec les Wago de chaque circuit bien séparés et repérés (étiquette C1, C2…). Les fils de chaque circuit restent dans leur gaine.</p></div>`:"";
   const legend=`<div class="cap" style="display:flex;flex-wrap:wrap;gap:10px">${Object.entries(WN).filter(([k])=>!["P","M"].includes(k)).map(([k,n])=>`<span><i style="display:inline-block;width:22px;height:4px;vertical-align:middle;background:${k==="PE"?"repeating-linear-gradient(90deg,#3aa335 0 6px,#f1d500 6px 12px)":WC[k]}"></i> ${n}</span>`).join("")}</div>`;
   const cards=pl.pts.map((p,i)=>`<details class="box" style="padding:8px 12px"${i<2?" open":""}><summary style="cursor:pointer"><b>${esc(p.n)}</b> ${cBadge(p.c)}</summary>
@@ -4427,6 +4512,8 @@ function creaPanel(w){ const room=w.room||"", C=creas(room), rw=S.walls.filter(x
   return `<section class="box"><h2><span class="sw" style="background:#ece8df"></span>Créations en placo : ${esc(room)}</h2>
     ${C.map((c,i)=>{ const d=CREA[c.t]; return `<div style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px">
       <div class="op-head" style="display:flex;gap:6px;align-items:center"><b style="flex:1">${i+1}. ${esc(d.n)}</b><button type="button" class="ghost" data-crdel="${i}">Supprimer</button></div>
+      ${c.t==="led"&&+c.pos!==1?`<div class="btns" style="margin:4px 0"><button type="button" data-crloop="${i}">↻ Continuer sur tous les murs de la pièce</button></div>`:""}
+      ${c.t==="led"?`<label class="chk" style="margin:2px 0"><input type="checkbox" data-crsep="${i}" ${c.sep?"checked":""}> Brancher ce ruban à part (sinon tous les rubans de la pièce forment un seul ruban continu, un seul branchement)</label>`:""}
       <div class="row"><label class="f">Mur<select data-cr="${i}" data-ck="wall">${rw.map(x=>`<option value="${wid(x)}"${wid(x)===c.wall?" selected":""}>${esc((x.name||"").split(" — ").pop())}</option>`).join("")}</select></label>
       ${d.p.map(([k,l,dv,opts])=>opts?`<label class="f">${l}<select data-cr="${i}" data-ck="${k}">${opts.map(([v,t])=>`<option value="${v}"${+(c[k]??dv)===+v?" selected":""}>${t}</option>`).join("")}</select></label>`
         :k==="col"?`<label class="f">${l}<input type="color" data-cr="${i}" data-ck="col" value="${esc(c.col||dv)}"></label>`
@@ -4437,6 +4524,11 @@ function creaPanel(w){ const room=w.room||"", C=creas(room), rw=S.walls.filter(x
       ${creaSvg(c,room)}${creaTable(c,room)}</div>`; }).join("")}
     <div class="btns" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${Object.entries(CREA).map(([k,d])=>`<button type="button" data-cradd="${k}">＋ ${esc(d.n.split(" (")[0])}</button>`).join("")}</div>
     <p class="hint">Cotes en cm, mesurées sur le mur fini : depuis l'angle intérieur gauche, devant les plaques (la longueur finie est plus courte que la longueur brute du mur, à cause du doublage dans les angles). Ossature en ${S.oss.g} mm, plaques ${esc(S.pla.n)}. Les quantités s'ajoutent au métré de la pièce (lot « Créations placo »).</p></section>`; }
+document.getElementById("side").addEventListener("click",e=>{ const lp=e.target.closest("[data-crloop]"); if(!lp) return; const w=S.walls[S.cur], room=w.room||"", C=creas(room), c=C[+lp.dataset.crloop]; if(!c) return;
+  const pos=+c.pos, y=+c.y||0, rw=S.walls.filter(x=>(x.room||"")===room), keep=C.filter(q=>!(q.t==="led"&&+q.pos===pos&&q!==c));
+  const add=rw.map(ww=>{ const sp=creaSpan(ww), off=pos===2?Math.min(y,sp.len/2-100):0, L=Math.round(sp.len-2*off); return L>=200?{t:"led",wall:wid(ww),pos,x:Math.round(off),y,L,k:c.k||3000}:null; }).filter(Boolean);
+  C.length=0; C.push(...keep.filter(q=>q!==c),...add); save(); renderAll(); });
+document.getElementById("side").addEventListener("change",e=>{ const el=e.target.closest("[data-crsep]"); if(!el) return; const C=creas(S.walls[S.cur].room||""), c=C[+el.dataset.crsep]; if(c){ if(el.checked) c.sep=true; else delete c.sep; save(); renderAll(); } });
 document.getElementById("side").addEventListener("click",e=>{ const a=e.target.closest("[data-cradd]"), d=e.target.closest("[data-crdel]"); if(!a&&!d) return; const w=S.walls[S.cur], C=creas(w.room||"");
   if(a){ const t=a.dataset.cradd, c={t,wall:wid(w)}; CREA[t].p.forEach(([k,,v])=>c[k]=v); C.push(c); } else C.splice(+d.dataset.crdel,1); save(); renderAll(); });
 document.getElementById("side").addEventListener("change",e=>{ const el=e.target; if(el.dataset.cr===undefined) return; const C=creas(S.walls[S.cur].room||""), c=C[+el.dataset.cr], k=el.dataset.ck; if(!c) return;
