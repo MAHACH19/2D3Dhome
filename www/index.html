@@ -1710,14 +1710,14 @@ function elecHouse(){ const R=roomNames().map(elecPlan), C=R.flatMap(r=>r.C.filt
   const ids=[]; ["AC","A"].forEach(t=>{ const cs=C.filter(c=>c.id===t); for(let i=0;i<cs.length;i+=8) ids.push({t,cs:cs.slice(i,i+8)}); });
   if(!ids.some(x=>x.t==="A")) ids.push({t:"A",cs:[]}); ids.forEach(x=>x.cs.forEach(c=>{ c.no=++n; c.idT=x.t; })); return {R,ids}; }
 /* dessin vertical (lisible sur téléphone) : boîtes avec bornes en haut (t) ou en bas (b), fils colorés entre bornes */
-let WSTAGE=0; function wireSvg(boxes,wires){ const W=360, Hh=Math.max(...boxes.map(b=>b.y+b.h))+12, T={};
+let WSTAGE=0, WHOOK=null; function wireSvg(boxes,wires){ if(WHOOK){ const h=WHOOK; WHOOK=null; return h(boxes,wires); } const W=360, Hh=Math.max(...boxes.map(b=>b.y+b.h))+12, T={};
   let g=""; boxes.forEach(b=>{ g+=`<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="8" fill="${b.fill||"#ffffff"}" stroke="${b.st||"#7a8288"}" stroke-width="1.5"/>`;
     const tl=b.terms&&b.terms.some(t=>t[3]==="t")?28:16; g+=`<text x="${b.x+b.w/2}" y="${b.y+tl}" text-anchor="middle" font-size="13" font-weight="700" fill="#1c2428">${esc(b.t)}</text>`;
     (b.s||[]).forEach((x,i)=>{ g+=`<text x="${b.x+b.w/2}" y="${b.y+tl+15+i*13}" text-anchor="middle" font-size="11" fill="#4a5358">${esc(x)}</text>`; });
     (b.terms||[]).forEach(([k,lab,x,side])=>{ const y=side==="t"?b.y:b.y+b.h; T[b.id+"."+k]=[b.x+x,y]; g+=`<circle cx="${b.x+x}" cy="${y}" r="4.5" fill="#fff" stroke="#333"/><text x="${b.x+x}" y="${side==="t"?y+15:y-8}" text-anchor="middle" font-size="10" font-weight="700" fill="#1c2428">${esc(lab)}</text>`; });
     (b.wagos||[]).forEach(([x,y,n,c])=>{ const w=12+n*7; g+=`<rect x="${b.x+x-w/2}" y="${b.y+y}" width="${w}" height="15" rx="3" fill="#f6a623" stroke="#9a6200"/><rect x="${b.x+x-w/2+3}" y="${b.y+y+4}" width="${w-6}" height="7" fill="${c}"/>`; }); });
   let lay="", tl2="", i=0; wires.forEach(([a,b,c,lab])=>{ const A=T[a], B=T[b]; if(!A||!B) return; if(WSTAGE===1&&!/^(tb|cc)\./.test(a)) return; const my=(A[1]+B[1])/2+((i++%5)-2)*5, pe=c===WC.PE;
-    const d=`M${A[0]},${A[1]} L${A[0]},${my} L${B[0]},${my} L${B[0]},${B[1]}`; lay+=`<path d="${d}" fill="none" stroke="${c}" stroke-width="3.5" stroke-linejoin="round"/>`+(pe?`<path d="${d}" fill="none" stroke="#f1d500" stroke-width="3.5" stroke-dasharray="6 6"/>`:"");
+    const d=`M${A[0]},${A[1]} L${A[0]},${my} L${B[0]},${my} L${B[0]},${B[1]}`; lay+=`<path d="${d}" fill="none" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${c}" stroke-width="3.5" stroke-linejoin="round"/>`+(pe?`<path d="${d}" fill="none" stroke="#f1d500" stroke-width="3.5" stroke-dasharray="6 6"/>`:"");
     if(lab) tl2+=`<text x="${Math.abs(A[0]-B[0])<40?Math.max(A[0],B[0])+8:(A[0]+B[0])/2}" y="${Math.abs(A[0]-B[0])<40?(A[1]+B[1])/2+20:my-4-(i%2)*10}" text-anchor="${Math.abs(A[0]-B[0])<40?"start":"middle"}" font-size="10" font-weight="700" fill="${c}" paint-order="stroke" stroke="#fff" stroke-width="3">${esc(lab)}</text>`; });
   return `<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;max-width:520px;height:auto;min-width:0;max-height:none;display:block;background:#fff;border-radius:8px;font-family:system-ui,sans-serif" role="img">${lay}${g}${tl2}</svg>`; }
 const TX={L:150,N:180,PE:210};
@@ -1727,7 +1727,7 @@ function elecPointSvg(p,pl){ const c=p.c, k=p.k, B=[], Wr=[], tb={id:"tb",x:10,y
   if(k==="PC"||k==="PS"||k==="FOUR"||k==="LV"||k==="LL"||k==="CUIS"){
     const direct=!(k==="PC"&&pl.jb), y=direct?160:290, dev={id:"d",x:90,y,w:180,h:62,t:k==="CUIS"?"Sortie de câble 32 A":k==="PC"?(p.dbl?"Prise double 16 A":"Prise 16 A"):"Prise spécialisée 20 A",s:["2P+T"],terms:[["L","L",60,"t"],["N","N",90,"t"],["PE","T",120,"t"]]};
     B.push(tb,dev);
-    if(!direct){ const n=c.pts.length+1; B.push(bd(bdT(["L","N","PE"].map(a=>[a+"o","",TX[a],"b"])),[[60,58,Math.min(5,n),WC.L],[170,58,Math.min(5,n),WC.N],[280,58,Math.min(5,n),WC.PE]],`1 Wago par couleur : 1 arrivée + ${n-1} prise(s)`));
+    if(!direct){ const n=c.pts.length+1; B.push(bd(bdT(["L","N","PE"].map(a=>[a+"o","",TX[a],"b"])),[[150,58,2,WC.L],[180,58,2,WC.N],[210,58,2,WC.PE]],`1 Wago par couleur : 1 arrivée + ${n-1} prise(s)`));
       ["L","N","PE"].forEach(a=>Wr.push(["tb."+a,"bd."+a+"i",WC[a],a==="N"?`3 fils ${String(c.sec).replace(".",",")} mm²`:""],["bd."+a+"o","d."+a,WC[a],a==="N"?`3 fils ${String(c.sec).replace(".",",")} mm²`:""])); }
     else ["L","N","PE"].forEach(a=>Wr.push(["tb."+a,"d."+a,WC[a],a==="N"?`direct ${String(c.sec).replace(".",",")} mm², sans dérivation`:""]));
     return wireSvg(B,Wr); }
@@ -1735,15 +1735,31 @@ function elecPointSvg(p,pl){ const c=p.c, k=p.k, B=[], Wr=[], tb={id:"tb",x:10,y
     const vv=k==="I"?false:(k==="VV"||!!(c&&c.vv&&c.vv.length>=2)), led=k==="LED"||k==="LEDR", n=c?c.pts.length+1:2;
     const lamp={id:"l",x:10,y:290,w:150,h:72,t:led?"Alimentation LED":k==="AP"?"Applique":"Lampe (DCL)",s:[led?"230 V → 24 V, puis ruban":"douille DCL"],terms:[["R","L",40,"t"],["N","N",80,"t"],["PE","T",120,"t"]]};
     const s1=vv?{id:"s1",x:190,y:290,w:160,h:72,t:"Va-et-vient 1",terms:[["C","L",50,"t"],["1","1",60,"b"],["2","2",110,"b"]]}:{id:"s1",x:190,y:290,w:160,h:62,t:"Interrupteur",s:["simple allumage"],terms:[["L","L",50,"t"],["R","1",110,"t"]]};
-    B.push(tb,bd(bdT([["Ro","R",40,"b"],["No","N",80,"b"],["PEo","T",120,"b"],["Lo","L",240,"b"],...(vv?[["R2","R",165,"b"]]:[])]),[[60,52,Math.min(5,n),WC.N],[150,52,Math.min(5,n),WC.PE],[240,52,Math.min(5,n),WC.R],[300,52,3,WC.L]]),lamp,s1);
+    B.push(tb,bd(bdT([["Ro","R",40,"b"],["No","N",80,"b"],["PEo","T",120,"b"],["Lo","L",240,"b"],...(vv?[["R2","R",165,"b"]]:[])]),[[40,52,Math.min(3,n),WC.R],[80,52,Math.min(3,n),WC.N],[120,52,Math.min(3,n),WC.PE],[240,52,3,WC.L]]),lamp,s1);
     ["L","N","PE"].forEach(a=>Wr.push(["tb."+a,"bd."+a+"i",WC[a],a==="N"?"3 fils 1,5 mm²":""])); Wr.push(["bd.No","l.N",WC.N,"1,5 mm²"],["bd.PEo","l.PE",WC.PE],["bd.Ro","l.R",WC.R]);
     if(vv){ B.push({id:"s2",x:10,y:420,w:170,h:62,t:"Va-et-vient 2",terms:[["1","1",50,"t"],["2","2",100,"t"],["C","L",165,"t"]]});
-      Wr.push(["bd.Lo","s1.C",WC.L],["s1.1","s2.1",WC.N1,"navette 1"],["s1.2","s2.2",WC.N2,"navette 2"],["s2.C","bd.R2",WC.R,"retour"]); }
+      Wr.push(["bd.Lo","s1.C",WC.L],["s1.1","s2.1",WC.N1,"navette 1"],["s1.2","s2.2",WC.N2,"navette 2"],["s2.C","bd.R2",WC.R,""]); }
     else Wr.push(["bd.Lo","s1.L",WC.L],["s1.R","bd.Ro",WC.R,"retour"]);
     return wireSvg(B,Wr); }
   if(k==="RJ"){ B.push({id:"cc",x:10,y:8,w:340,h:62,t:"Coffret de communication",s:["rangée du haut du tableau"],terms:[["1","",180,"b"]]},{id:"d",x:90,y:170,w:180,h:62,t:"Prise RJ45",s:["catégorie 6, grade 3"],terms:[["1","",90,"t"]]}); Wr.push(["cc.1","d.1","#7d5fb2","câble cat. 6 sans coupure"]); return wireSvg(B,Wr); }
   if(k==="BD") return `<p class="cap">Boîte murale : relais pour les fils des points voisins (mêmes Wago que la boîte du plafond). Couvercle toujours accessible, jamais caché sous le placo.</p>`;
   return ""; }
+/* schéma final : du compteur Linky jusqu'à l'appareil, en une seule vue */
+function fullSvg(p,pl){ const c=p.c; if(!c||!c.cal||p.k==="RJ"||p.k==="BD") return "";
+  WHOOK=(B,Wr)=>{ const D=294, sec=String(c.sec).replace(".",","), bx=(id,y,t,s,top,bot)=>({id,x:10,y,w:230,h:64,t,s,terms:[...(top?[["Li","L",140,"t"],["Ni","N",170,"t"]]:[]),...(bot?[["L","",140,"b"],["N","",170,"b"]]:[])]});
+    const B2=B.filter(b=>b.id!=="tb").map(b=>({...b,y:b.y+D}));
+    const top=[{...bx("m",8,"Compteur Linky",["Enedis : ne pas ouvrir"],0,1),fill:"#eef6e8"},
+      {...bx("ag",100,"Disjoncteur de branchement",["500 mA réglé par Enedis","sortie 10 mm² (16 si ≥ 12 kVA)"],1,1),fill:"#eef6e8"},
+      {...bx("id",200,`Différentiel 30 mA ${c.idT==="A"||c.id==="A"?"type A":"type AC"}`,["interrupteur 40 A, haut du tableau"],1,1),fill:"#eef3fc"},
+      {...bx("tb",300,`Disjoncteur ${c.cal} A${c.no?" · circuit "+c.no:""}`,[`${c.name} · phase + neutre`],1,1),fill:"#eef3fc"},
+      {id:"pq",x:250,y:8,w:100,h:64,t:"Piquet",s:["de terre","< 100 Ω"],terms:[["o","",50,"b"]],fill:"#eef6e8"},
+      {id:"bt",x:250,y:150,w:100,h:64,t:"Barrette",s:["de mesure","(dans la GTL)"],terms:[["i","",50,"t"],["o","",50,"b"]],fill:"#eef6e8"},
+      {id:"bp",x:250,y:300,w:100,h:64,t:"Bornier",s:["de terre","du tableau"],terms:[["i","",50,"t"],["PE","",50,"b"]],fill:"#eef3fc"}];
+    const W2=[["m.L","ag.Li",WC.L,""],["m.N","ag.Ni",WC.N,""],["ag.L","id.Li",WC.L,""],["ag.N","id.Ni",WC.N,"10 mm²"],["id.L","tb.Li",WC.L,""],["id.N","tb.Ni",WC.N,"peigne"],["pq.o","bt.i",WC.PE,"16 mm²"],["bt.o","bp.i",WC.PE,""],
+      ...Wr.map(w=>w[0]==="tb.PE"?["bp.PE",...w.slice(1)]:w[0]==="tb.N"&&!w[3]?[w[0],w[1],w[2],`${sec} mm²`]:w)];
+    const svg=wireSvg([...top,...B2],W2);
+    return `<div style="position:relative">${svg}<div class="cap" style="margin-top:4px">De haut en bas : compteur → disjoncteur de branchement → différentiel 30 mA → disjoncteur du circuit → ${B.some(b=>b.id==="bd")?"boîte de dérivation → ":""}appareil. La terre part du piquet (16 mm²), passe par la barrette de mesure, rejoint le bornier de terre du tableau, puis suit les fils du circuit (même section que le circuit).</div></div>`; };
+  const r=elecPointSvg(p,pl); WHOOK=null; return r; }
 function elecSteps(p,pl){ const c=p.c, k=p.k, L=[], sec=c?c.sec:1.5, fil=`fil H07V-U ${String(sec).replace(".",",")} mm²`;
   L.push("Couper le disjoncteur général (disjoncteur de branchement sous le compteur) et vérifier l'absence de tension avec un VAT.");
   if(c&&c.cal) L.push(`Au tableau : disjoncteur ${c.cal} A (circuit n° ${c.no||"?"} « ${c.name} ») sur l'interrupteur différentiel 30 mA type ${c.idT||c.id}. Un circuit = un disjoncteur.`);
@@ -1799,7 +1815,7 @@ function tableauSvg(Hs,st){ const MW=24, X0=34, RH=196, rows=Hs.ids, W=380, top=
   const out=[0,1,2].map(z=>LY.filter(l=>l[0]===z&&(full||l[1]<=st)).map(([,k,h])=>full||k===st?h:`<g opacity=".4">${h}</g>`).join("")).join("");
   return `<svg viewBox="0 0 ${W} ${Ht}" style="width:100%;max-width:560px;height:auto;min-width:0;max-height:none;display:block;background:#fff;border-radius:8px;font-family:system-ui,sans-serif" role="img" aria-label="Tableau électrique">${out}</svg>`; }
 /* sélecteur d'étapes : un dessin par étape, boutons précédent / suivant */
-function stepper(id,steps){ return `<div class="stp" data-stp="${id}" data-n="${steps.length}">${steps.map((x,i)=>`<div data-sti="${i}" style="${i?"display:none":""}"><div style="display:flex;align-items:center;gap:6px;margin:6px 0"><button type="button" data-stgo="-1" ${i?"":"disabled"} style="padding:6px 12px">◀</button><b style="flex:1;text-align:center">Étape ${i+1} / ${steps.length}</b><button type="button" data-stgo="1" ${i<steps.length-1?"":"disabled"} style="padding:6px 12px">▶</button></div><p style="margin:4px 0 8px;font-size:15px"><b>${esc(x.t)}</b>${x.d?`<br><span style="font-size:14px">${esc(x.d)}</span>`:""}</p>${x.svg||""}</div>`).join("")}</div>`; }
+function stepper(id,steps){ return `<div class="stp" data-stp="${id}" data-n="${steps.length}">${steps.map((x,i)=>`<div data-sti="${i}" style="${i?"display:none":""}"><div style="display:flex;align-items:center;gap:6px;margin:6px 0"><button type="button" data-stgo="-1" ${i?"":"disabled"} style="padding:6px 12px">◀</button><b style="flex:1;text-align:center">Étape ${i+1} / ${steps.length}</b><button type="button" data-stgo="1" ${i<steps.length-1?"":"disabled"} style="padding:6px 12px">▶</button>${/^Schéma final/.test(steps[steps.length-1].t)&&i<steps.length-1?`<button type="button" data-stgo="99" style="padding:6px 10px">Schéma final ⏭</button>`:""}</div><p style="margin:4px 0 8px;font-size:15px"><b>${esc(x.t)}</b>${x.d?`<br><span style="font-size:14px">${esc(x.d)}</span>`:""}</p>${x.svg||""}</div>`).join("")}</div>`; }
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-stgo]"); if(!b) return; const box=b.closest("[data-stp]"), cur=b.closest("[data-sti]"), n=+box.dataset.n, i=Math.max(0,Math.min(n-1,+cur.dataset.sti+ +b.dataset.stgo)); box.querySelectorAll(":scope>[data-sti]").forEach(d=>d.style.display=+d.dataset.sti===i?"":"none"); box.scrollIntoView({block:"nearest"}); });
 /* dénuder et mettre un fil dans un Wago */
 function wagoHowSvg(){ const W=360; let s=`<text x="${W/2}" y="14" text-anchor="middle" font-size="11" font-weight="700">Mettre un fil dans un Wago 221</text>`;
@@ -1999,7 +2015,7 @@ function pointSteps(p,pl){ const L=elecSteps(p,pl), full=elecPointSvg(p,pl), bac
   for(let i=R.length-1;i>0;i--) if(R[i].t===R[i-1].t){ R[i-1].d+=" "+R[i].d; R[i-1].svg=R[i-1].svg||R[i].svg; R.splice(i,1); }
   if(back&&!R.some(r=>r.t==="Brancher l'appareil")) R.push({t:"Brancher l'appareil",d:"Chaque fil sur sa borne, comme sur le dessin.",svg:back});
   if(gt){ const b=R.find(r=>r.t==="Brancher l'appareil"); if(b) b.d+=` Avec ${appCfg().g} : ${gt} Dénudage : ${G.strip}. ${G.rel}`; }
-  R.push({t:"Vue d'ensemble",d:"Le circuit complet, du tableau à l'appareil.",svg:full}); return R; }
+  const fin=fullSvg(p,pl); R.push(fin?{t:"Schéma final : du compteur à l'appareil",d:"Tout le chemin du courant, du compteur Linky jusqu'à l'appareil câblé : chaque fil, chaque borne.",svg:fin}:{t:"Vue d'ensemble",d:"Le circuit complet, du tableau à l'appareil.",svg:full}); return R; }
 function renderElec(){ const room=S.walls[S.cur].room||roomNames()[0], H=elecHouse(), pl=H.R.find(r=>r.room===room)||elecPlan(room);
   const cBadge=c=>c?`<span style="display:inline-block;padding:1px 8px;border-radius:10px;background:${c.t==="EC"?"#fff1d6":c.t==="PC"?"#e3eefc":c.t==="RJ"?"#efe7fb":"#fde4e1"};font-size:12px">${c.no?"C"+c.no+" · ":""}${esc(c.name)}${c.cal?` · ${c.cal} A · ${String(c.sec).replace(".",",")} mm²`:""}</span>`:"";
   const tab=`<div class="box" style="padding:10px 12px"><b>Du compteur au tableau</b>
