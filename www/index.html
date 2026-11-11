@@ -1760,6 +1760,90 @@ function fullSvg(p,pl){ const c=p.c; if(!c||!c.cal||p.k==="RJ"||p.k==="BD") retu
     const svg=wireSvg([...top,...B2],W2);
     return `<div style="position:relative">${svg}<div class="cap" style="margin-top:4px">De haut en bas : compteur → disjoncteur de branchement → différentiel 30 mA → disjoncteur du circuit → ${B.some(b=>b.id==="bd")?"boîte de dérivation → ":""}appareil. La terre part du piquet (16 mm²), passe par la barrette de mesure, rejoint le bornier de terre du tableau, puis suit les fils du circuit (même section que le circuit).</div></div>`; };
   const r=elecPointSvg(p,pl); WHOOK=null; return r; }
+/* vue réaliste : coupe de la pièce, GTL (Linky, disjoncteur de branchement, tableau), gaines ICTA, boîte de dérivation, appareils */
+function realSvg(p,pl){ const c=p.c, k=p.k; if(!c||!c.cal||k==="RJ"||k==="BD") return "";
+  const W=360, H=640, FL=566, cm=460/250, yH=h=>FL-h*cm; let bg="", gn="", wr="", fg="", tp="", lb="";
+  const T=(x,y,t,o={})=>{ lb+=`<text x="${x}" y="${y}" text-anchor="${o.a||"middle"}" font-size="${o.s||8.5}" font-weight="${o.b===0?400:700}" fill="${o.c||"#1c2428"}" paint-order="stroke" stroke="${o.h||"#fff"}" stroke-width="3" stroke-linejoin="round">${t}</text>`; };
+  const col={L:WC.L,N:WC.N,PE:WC.PE,R:WC.R,N1:WC.N1,N2:WC.N2,P:"#c0392b",M:"#222"};
+  const line=(pts,cc,sw)=>{ const d="M"+pts.map(q=>q.join(",")).join(" L"); return `<path d="${d}" fill="none" stroke="${col[cc]||cc}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"/>`+(cc==="PE"?`<path d="${d}" fill="none" stroke="#f1d500" stroke-width="${sw}" stroke-dasharray="4 4" stroke-linejoin="round"/>`:""); };
+  /* gaine ICTA annelée avec les fils visibles dedans */
+  const CN=[], gaine=(pts,ws,lab,bd)=>{ const n=ws.length, gw=6+n*3.2, d="M"+pts.map(q=>q.join(",")).join(" L");
+    gn+=`<path d="${d}" fill="none" stroke="#7d858b" stroke-width="${gw+2}" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#d3d7da" stroke-width="${gw}" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#aab0b5" stroke-width="${gw}" stroke-dasharray="1.4 3" stroke-linejoin="round"/>`;
+    ws.forEach((w,i)=>{ const o=(i-(n-1)/2)*3.2; wr+=line(pts.map(([x,y])=>[x+o,y+o]),w,2); if(bd){ const q=bd==="e"?pts[pts.length-1]:pts[0]; CN.push([q[0]+o,q[1]+o,w]); } });
+    if(lab) lab.forEach(([t,x,y,an])=>T(x,y,t,{a:an||"start",s:8,b:0,c:"#4a5358"})); };
+  const dim=(x,y0,y1,t)=>{ lb+=`<path d="M${x},${y0} V${y1} M${x-3},${y0} H${x+3} M${x-3},${y1} H${x+3}" stroke="#6b7378" stroke-width="1" stroke-dasharray="2 2"/>`; T(x+3,(y0+y1)/2,t,{a:"start",s:8,c:"#6b7378"}); };
+  /* décor : dalle, plénum, faux plafond, mur, sol, terre */
+  bg+=`<rect x="0" y="0" width="${W}" height="22" fill="#bfbab1"/><path d="${Array.from({length:24},(_,i)=>`M${i*16},22 L${i*16+12},0`).join(" ")}" stroke="#a7a197" stroke-width="1"/>
+    <rect x="0" y="22" width="${W}" height="74" fill="#f3f1ec"/>${[60,180,300].map(x=>`<rect x="${x}" y="22" width="3" height="66" fill="#b8bcc0"/><rect x="${x-14}" y="86" width="31" height="4" fill="#9ea4a9"/>`).join("")}
+    <rect x="0" y="96" width="${W}" height="10" fill="#e4e1da" stroke="#c9c4ba"/>
+    <rect x="0" y="106" width="${W}" height="${FL-106}" fill="#faf8f3"/>
+    <rect x="0" y="${FL}" width="${W}" height="14" fill="#b99b70"/><path d="${Array.from({length:12},(_,i)=>`M${i*32+10},${FL} V${FL+14}`).join(" ")}" stroke="#9c8058" stroke-width="1"/>
+    <rect x="0" y="${FL+14}" width="${W}" height="${H-FL-14}" fill="#8b6d49"/>${Array.from({length:40},(_,i)=>`<circle cx="${(i*53)%W}" cy="${FL+20+(i*17)%(H-FL-24)}" r="1.4" fill="#6f5638"/>`).join("")}`;
+  T(W-6,14,"dalle",{a:"end",c:"#fff",h:"#8f897e",b:0}); T(8,90,"plénum",{a:"start",b:0,c:"#6b7378"}); T(140,FL-6,"mur fini (placo)",{a:"start",b:0,c:"#9aa0a6"}); T(140,104,"faux plafond",{a:"start",b:0,s:7,c:"#7d858b"}); T(W-6,H-6,"terre",{a:"end",c:"#fff",h:"#6f5638",b:0});
+  /* GTL */
+  bg+=`<rect x="8" y="116" width="122" height="430" rx="4" fill="#ffffff" stroke="#c9cdd1"/>`; T(76,541,"GTL",{a:"start",b:0,c:"#6b7378"});
+  /* Linky */
+  bg+=`<rect x="30" y="126" width="78" height="66" rx="6" fill="#e3efdc" stroke="#7aa36a"/><rect x="36" y="132" width="66" height="44" rx="4" fill="#8fc46f"/><rect x="44" y="138" width="50" height="18" rx="2" fill="#d6ead0" stroke="#4d7a3a"/><text x="69" y="151" text-anchor="middle" font-size="9" font-family="monospace" fill="#1f3d14">012345 kWh</text><circle cx="58" cy="166" r="4" fill="#fff" stroke="#4d7a3a"/><circle cx="80" cy="166" r="4" fill="#fff" stroke="#4d7a3a"/><rect x="40" y="178" width="58" height="10" rx="3" fill="#cfdccb"/>`;
+  T(69,203,"Compteur Linky");
+  /* disjoncteur de branchement (AGCP) */
+  bg+=`<rect x="34" y="210" width="70" height="44" rx="4" fill="#e9e9e6" stroke="#8a8f93"/><rect x="62" y="216" width="14" height="22" rx="2" fill="#3f4448"/><rect x="64" y="218" width="10" height="9" rx="1" fill="#e04b3a"/><circle cx="46" cy="230" r="6" fill="#fff" stroke="#8a8f93"/><path d="M46,230 L50,226" stroke="#333"/><text x="92" y="234" text-anchor="middle" font-size="6" fill="#333">500mA</text>`;
+  wr+=line([[64,192],[64,210]],"L",3)+line([[74,192],[74,210]],"N",3);
+  T(69,263,"Disjoncteur de branchement");
+  /* tableau */
+  const TX0=14, TY=278, row=(c.idT||c.id)==="A"?1:0, pos=((c.no||1)-1)%6, RY=[TY+20,TY+82], MW=9;
+  bg+=`<rect x="${TX0}" y="${TY}" width="110" height="170" rx="5" fill="#f7f7f5" stroke="#8a9095" stroke-width="1.5"/>`;
+  RY.forEach((ry,r)=>{ bg+=`<rect x="${TX0+4}" y="${ry+15}" width="102" height="6" fill="#b7bcc0"/>`;
+    fg+=`<rect x="${TX0+6}" y="${ry}" width="${MW*4}" height="38" rx="2" fill="#fff" stroke="#6b7378"/><rect x="${TX0+8}" y="${ry+3}" width="${MW*4-4}" height="7" fill="#2d6bd6"/><text x="${TX0+6+MW*2}" y="${ry+9}" text-anchor="middle" font-size="5" fill="#fff">30mA ${r?"A":"AC"}</text><rect x="${TX0+6+MW*2-4}" y="${ry+14}" width="8" height="12" rx="1" fill="#3f4448"/><circle cx="${TX0+12}" cy="${ry+30}" r="2.5" fill="#f1c40f" stroke="#555"/>`;
+    for(let i=0;i<6;i++){ const x=TX0+44+i*(MW+1), me=r===row&&i===pos; fg+=`<rect x="${x}" y="${ry}" width="${MW}" height="38" rx="1.5" fill="${me?"#fff7d6":"#fff"}" stroke="${me?"#e67e22":"#6b7378"}" stroke-width="${me?1.6:0.8}"/><rect x="${x+2}" y="${ry+14}" width="${MW-4}" height="11" rx="1" fill="#3f4448"/>`; }
+    wr+=`<path d="M${TX0+16},${ry} V${ry-3} H${TX0+104}" fill="none" stroke="${WC.L}" stroke-width="2"/><path d="M${TX0+24},${ry} V${ry-6} H${TX0+104}" fill="none" stroke="${WC.N}" stroke-width="2"/>`; });
+  /* arrivée du disjoncteur de branchement vers les différentiels */
+  wr+=line([[64,254],[64,258],[TX0+3,258],[TX0+3,RY[1]+44],[TX0+16,RY[1]+44],[TX0+16,RY[1]+38]],"L",2.4)+line([[74,254],[74,261],[TX0+6,261],[TX0+6,RY[1]+47],[TX0+24,RY[1]+47],[TX0+24,RY[1]+38]],"N",2.4)+line([[TX0+3,RY[0]+44],[TX0+16,RY[0]+44],[TX0+16,RY[0]+38]],"L",1.6)+line([[TX0+6,RY[0]+47],[TX0+24,RY[0]+47],[TX0+24,RY[0]+38]],"N",1.6);
+  T(TX0+55,TY-3,"Tableau électrique",{});
+  /* bornier de terre */
+  const BTy=TY+150; fg+=`<rect x="${TX0+20}" y="${BTy}" width="76" height="8" rx="2" fill="#3aa335"/><path d="M${TX0+20},${BTy+4} H${TX0+96}" stroke="#f1d500" stroke-width="2" stroke-dasharray="5 5"/>${Array.from({length:7},(_,i)=>`<circle cx="${TX0+26+i*11}" cy="${BTy+4}" r="2" fill="#c9a24d" stroke="#555" stroke-width=".5"/>`).join("")}`;
+  T(TX0+62,BTy+18,"bornier de terre",{a:"start",b:0,s:7.5});
+  /* barrette de terre + piquet */
+  bg+=`<rect x="52" y="505" width="36" height="14" rx="2" fill="#e9e9e6" stroke="#6b7378"/><rect x="56" y="509" width="28" height="6" fill="#c9a24d"/>`; T(92,515,"barrette de mesure",{a:"start",b:0,s:7.5});
+  wr+=line([[70,505],[70,BTy+8]],"PE",3)+line([[70,519],[70,H-48]],"PE",3.5);
+  fg+=`<rect x="67" y="${H-50}" width="6" height="48" fill="#b87333" stroke="#7a4a1f"/><path d="M67,${H-2} L70,${H+2} L73,${H-2}" fill="#b87333"/>`; T(80,H-30,"piquet de terre (cuivre)",{a:"start",c:"#fff",h:"#6f5638",b:0}); T(80,H-18,"16 mm² vert/jaune, < 100 Ω",{a:"start",c:"#fff",h:"#6f5638",b:0});
+  /* sortie du disjoncteur du circuit */
+  const bx=TX0+44+pos*(MW+1)+MW/2, by=RY[row]+38, EX=121, phase=["I","VV","LUM","AP","LED","LEDR"].includes(k);
+  const outW=["L","N","PE"];
+  wr+=line([[bx-2,by],[bx-2,by+5],[EX-3,by+5],[EX-3,TY]],"L",1.8)+line([[bx+2,by],[bx+2,by+9],[EX,by+9],[EX,TY]],"N",1.8)+line([[TX0+92,BTy],[EX+3,BTy],[EX+3,TY]],"PE",1.8);
+  T(134,RY[row]+14,`disjoncteur ${c.cal} A`,{a:"start",c:"#b35a00"}); T(134,RY[row]+25,`circuit n° ${c.no||1}`,{a:"start",b:0,s:7.5,c:"#b35a00"});
+  wr+=`<path d="M${bx+5},${RY[row]+19} L132,${RY[row]+11}" stroke="#e67e22" stroke-width="1"/>`;
+  /* appareils */
+  const box=(x,y,r)=>`<circle cx="${x}" cy="${y}" r="${r||15}" fill="#cfd3d6" stroke="#8a9095"/>`;
+  const prise=(x,y,lab)=>{ fg+=box(x,y)+`<rect x="${x-17}" y="${y-17}" width="34" height="34" rx="6" fill="#fff" stroke="#9aa0a6"/><circle cx="${x}" cy="${y}" r="11" fill="#f2f2f0" stroke="#c4c8cc"/><circle cx="${x-5}" cy="${y+1}" r="2" fill="#333"/><circle cx="${x+5}" cy="${y+1}" r="2" fill="#333"/><rect x="${x-1.5}" y="${y-9}" width="3" height="5" rx="1" fill="#b0b4b8"/>`; T(x,y+30,lab); };
+  const inter=(x,y,lab)=>{ fg+=box(x,y)+`<rect x="${x-17}" y="${y-17}" width="34" height="34" rx="6" fill="#fff" stroke="#9aa0a6"/><rect x="${x-9}" y="${y-11}" width="18" height="22" rx="3" fill="#f7f7f5" stroke="#b0b4b8"/><path d="M${x-9},${y+5} H${x+9}" stroke="#d0d3d6"/>`; T(x,y+30,lab); };
+  const lampe=(x,lab)=>{ fg+=`<circle cx="${x}" cy="106" r="11" fill="#fff" stroke="#9aa0a6"/><path d="M${x},106 V150" stroke="#333" stroke-width="1.5"/><rect x="${x-5}" y="148" width="10" height="9" fill="#b9a27f"/><circle cx="${x}" cy="168" r="22" fill="#fff6c8" opacity=".55"/><circle cx="${x}" cy="166" r="10" fill="#fff3b0" stroke="#d6b84a"/>`; T(x,204,lab,{}); };
+  /* boîte de dérivation */
+  const BX=232, BY=58, viaBd=!(k==="PS"||k==="FOUR"||k==="LV"||k==="LL"||k==="CUIS")&&(phase||pl.jb);
+  const g1=[[EX,TY],[EX,BY+8],[viaBd?BX-24:300,BY+8]];
+  let ccn=()=>{}; if(viaBd){ gaine(g1,outW,null,"e"); }
+  if(viaBd){ const kinds=phase?["L","N","PE","R",...(k==="VV"?["N1","N2"]:[])]:["L","N","PE"];
+    fg+=`<circle cx="${BX}" cy="${BY}" r="25" fill="#8d9296" stroke="#5f6569"/><circle cx="${BX}" cy="${BY}" r="21" fill="#e6e8ea"/>`;
+    kinds.forEach((q,i)=>{ const x=BX-15+(i%3)*15, y=BY-10+Math.floor(i/3)*13; fg+=`<rect x="${x-6}" y="${y}" width="12" height="9" rx="1.5" fill="#eef3f6" stroke="#8a9095"/><rect x="${x-5}" y="${y-2}" width="10" height="3" rx="1" fill="#f39c12"/>`; tp+=`<path d="M${x-3},${y+5} H${x+3}" stroke="${col[q]}" stroke-width="2.4"/>`; });
+    T(BX,BY+36,"boîte de dérivation (couvercle ouvert)",{s:8}); T(BX+22,30,"Wago : 1 par couleur",{a:"start",b:0,s:7.5});
+    const WP={}; kinds.forEach((q,i)=>WP[q]=[BX-15+(i%3)*15,BY-10+Math.floor(i/3)*13+4]); ccn=()=>CN.forEach(([x,y,w])=>{ const t=WP[w]; if(t) tp=`<path d="M${x},${y} L${t[0]},${t[1]}" fill="none" stroke="${col[w]}" stroke-width="1.6"/>`+(w==="PE"?`<path d="M${x},${y} L${t[0]},${t[1]}" fill="none" stroke="#f1d500" stroke-width="1.6" stroke-dasharray="3 3"/>`:"")+tp; }); }
+  else gaine([[EX,TY],[EX,BY+8],[300,BY+8],[300,k==="CUIS"?yH(10)-30:yH(30)-17]],outW,k==="PC"?[["gaine ICTA Ø20 :",290,380,"end"],["rouge, bleu, v/j 2,5 mm²",290,390,"end"]]:null);
+  /* départs selon le point */
+  if(k==="PC"){ if(viaBd) gaine([[BX+18,BY+16],[BX+18,BY+28],[300,BY+28],[300,yH(30)-16]],outW,[["gaine ICTA Ø20 :",290,380,"end"],["rouge, bleu, v/j 2,5 mm²",290,390,"end"]],"s"); prise(300,yH(30),"prise 16 A"); dim(330,FL,yH(30),"30 cm"); }
+  else if(k==="PS"||k==="FOUR"||k==="LV"||k==="LL"){ T(290,370,"circuit direct, sans boîte,",{a:"end",b:0,s:8,c:"#4a5358"}); T(290,380,"gaine ICTA Ø20 :",{a:"end",b:0,s:8,c:"#4a5358"}); T(290,390,"rouge, bleu, v/j 2,5 mm²",{a:"end",b:0,s:8,c:"#4a5358"}); prise(300,yH(30),"prise 16 A dédiée"); dim(262,FL,yH(30),""); T(258,(FL+yH(30))/2,"30 cm",{a:"end",s:8,c:"#6b7378"}); }
+  else if(k==="CUIS"){ T(290,380,"circuit direct 6 mm²,",{a:"end",b:0,s:8,c:"#4a5358"}); T(290,390,"gaine ICTA Ø25",{a:"end",b:0,s:8,c:"#4a5358"}); fg+=`<rect x="283" y="${yH(10)-30}" width="34" height="34" rx="6" fill="#fff" stroke="#9aa0a6"/><circle cx="300" cy="${yH(10)-13}" r="6" fill="#e8ebed" stroke="#6b7378"/>`; T(300,yH(10)+16,"sortie de câble 32 A"); }
+  else if(phase){ const led=k==="LED"||k==="LEDR", LX=k==="VV"?262:300;
+    if(led){ gaine([[BX+20,BY-6],[300,BY-6],[300,BY+6]],["R","N","PE"],null,"s"); fg+=`<rect x="282" y="${BY+6}" width="40" height="18" rx="2" fill="#dfe2e4" stroke="#6b7378"/>`; T(302,BY+18,"230V→24V",{s:7}); wr+=line([[300,BY+24],[300,107]],"P",1.6)+line([[304,BY+24],[304,107]],"M",1.6); fg+=`<rect x="150" y="106" width="200" height="5" fill="#fff6c8" stroke="#e8c84a"/><rect x="150" y="108" width="200" height="12" fill="#fff6c8" opacity=".5"/>`; T(250,132,"ruban LED 24 V (rouge +, noir −)",{s:8}); }
+    else if(k==="AP"){ const ya=yH(190); gaine([[BX+22,BY-8],[330,BY-8],[330,ya-12]],["R","N","PE"],null,"s"); fg+=box(330,ya,10)+`<rect x="320" y="${ya-8}" width="20" height="16" rx="3" fill="#d6d9dc" stroke="#8a9095"/><circle cx="330" cy="${ya+22}" r="18" fill="#fff6c8" opacity=".55"/><path d="M318,${ya+8} h24 l-5,20 h-14 z" fill="#fff3b0" stroke="#d6b84a"/>`; T(316,ya-2,"applique (DCL mural)",{a:"end"}); dim(352,FL,ya,""); T(348,(FL+ya)/2,"1,90 m",{a:"end",s:8,c:"#6b7378"}); }
+    else { gaine([[BX+22,BY-8],[LX,BY-8],[LX,95]],["R","N","PE"],null,"s"); lampe(LX,"point DCL + lampe"); }
+    const s1=k==="VV"?172:226, yi=yH(110);
+    if(k==="VV"){ gaine([[BX-20,BY+14],[BX-20,BY+34],[s1,BY+34],[s1,yi-16]],["L","N1","N2"],[["3 fils : phase",s1+14,yi-70],["+ 2 navettes",s1+14,yi-60]],"s"); inter(s1,yi,"va-et-vient 1"); dim(s1+26,FL,yi,"1,10 m");
+      gaine([[BX+8,BY+22],[BX+8,BY+26],[332,BY+26],[332,yi-16]],["R","N1","N2"],[["3 fils : retour",318,yi-130,"end"],["+ 2 navettes",318,yi-120,"end"]],"s"); inter(332,yi,""); T(W-4,yi+30,"va-et-vient 2",{a:"end"}); }
+    else { gaine([[BX-12,BY+20],[BX-12,BY+34],[s1,BY+34],[s1,yi-16]],["L","R"],[["2 fils : phase (rouge)",s1+14,yi-70],["+ retour lampe (orange)",s1+14,yi-60]],"s"); inter(s1,yi,"interrupteur"); dim(s1+26,FL,yi,"1,10 m"); }
+    T(BX-28,38,"gaine ICTA Ø16 :",{a:"end",b:0,s:7.5,c:"#4a5358"}); T(BX-28,48,"rouge, bleu, v/j 1,5 mm²",{a:"end",b:0,s:7.5,c:"#4a5358"}); }
+  if(k==="PC"&&viaBd){ T(BX-28,38,"gaine ICTA Ø20 :",{a:"end",b:0,s:7.5,c:"#4a5358"}); T(BX-28,48,"rouge, bleu, v/j 2,5 mm²",{a:"end",b:0,s:7.5,c:"#4a5358"}); }
+  ccn();
+  const leg=`<div class="cap" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">${[["L","phase"],["N","neutre"],["PE","terre"],...(phase?[["R","retour lampe"]]:[]),...(k==="VV"?[["N1","navette 1"],["N2","navette 2"]]:[]),...(k==="LED"||k==="LEDR"?[["P","+24 V"],["M","−24 V"]]:[])].map(([q,n])=>`<span><i style="display:inline-block;width:18px;height:4px;vertical-align:middle;background:${q==="PE"?"repeating-linear-gradient(90deg,#3aa335 0 5px,#f1d500 5px 10px)":col[q]}"></i> ${n}</span>`).join("")}<span><i style="display:inline-block;width:18px;height:8px;vertical-align:middle;background:#d3d7da;border:1px solid #7d858b"></i> gaine ICTA</span></div>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:520px;height:auto;min-width:0;max-height:none;display:block;border-radius:8px;font-family:system-ui,sans-serif" role="img" aria-label="Vue réaliste du compteur à l'appareil">${bg}${gn}${wr}${fg}${tp}${lb}</svg>${leg}`; }
 function elecSteps(p,pl){ const c=p.c, k=p.k, L=[], sec=c?c.sec:1.5, fil=`fil H07V-U ${String(sec).replace(".",",")} mm²`;
   L.push("Couper le disjoncteur général (disjoncteur de branchement sous le compteur) et vérifier l'absence de tension avec un VAT.");
   if(c&&c.cal) L.push(`Au tableau : disjoncteur ${c.cal} A (circuit n° ${c.no||"?"} « ${c.name} ») sur l'interrupteur différentiel 30 mA type ${c.idT||c.id}. Un circuit = un disjoncteur.`);
@@ -2015,7 +2099,7 @@ function pointSteps(p,pl){ const L=elecSteps(p,pl), full=elecPointSvg(p,pl), bac
   for(let i=R.length-1;i>0;i--) if(R[i].t===R[i-1].t){ R[i-1].d+=" "+R[i].d; R[i-1].svg=R[i-1].svg||R[i].svg; R.splice(i,1); }
   if(back&&!R.some(r=>r.t==="Brancher l'appareil")) R.push({t:"Brancher l'appareil",d:"Chaque fil sur sa borne, comme sur le dessin.",svg:back});
   if(gt){ const b=R.find(r=>r.t==="Brancher l'appareil"); if(b) b.d+=` Avec ${appCfg().g} : ${gt} Dénudage : ${G.strip}. ${G.rel}`; }
-  const fin=fullSvg(p,pl); R.push(fin?{t:"Schéma final : du compteur à l'appareil",d:"Tout le chemin du courant, du compteur Linky jusqu'à l'appareil câblé : chaque fil, chaque borne.",svg:fin}:{t:"Vue d'ensemble",d:"Le circuit complet, du tableau à l'appareil.",svg:full}); return R; }
+  const fin=fullSvg(p,pl), rl=realSvg(p,pl); R.push(fin?{t:"Schéma final : du compteur à l'appareil",d:"Vue réelle de la pièce en coupe : le compteur et le tableau dans la GTL, les gaines qui montent au plafond, la boîte de dérivation avec ses Wago, puis les gaines qui descendent jusqu'à l'appareil. Chaque fil est dessiné dans sa gaine, avec sa couleur.",svg:rl+`<details style="margin-top:6px"><summary style="cursor:pointer"><b>Schéma de principe (borne par borne)</b></summary>${fin}</details>`}:{t:"Vue d'ensemble",d:"Le circuit complet, du tableau à l'appareil.",svg:full}); return R; }
 function renderElec(){ const room=S.walls[S.cur].room||roomNames()[0], H=elecHouse(), pl=H.R.find(r=>r.room===room)||elecPlan(room);
   const cBadge=c=>c?`<span style="display:inline-block;padding:1px 8px;border-radius:10px;background:${c.t==="EC"?"#fff1d6":c.t==="PC"?"#e3eefc":c.t==="RJ"?"#efe7fb":"#fde4e1"};font-size:12px">${c.no?"C"+c.no+" · ":""}${esc(c.name)}${c.cal?` · ${c.cal} A · ${String(c.sec).replace(".",",")} mm²`:""}</span>`:"";
   const tab=`<div class="box" style="padding:10px 12px"><b>Du compteur au tableau</b>
