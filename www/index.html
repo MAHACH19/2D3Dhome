@@ -1734,10 +1734,10 @@ function elecPointSvg(p,pl){ const c=p.c, k=p.k, B=[], Wr=[], tb={id:"tb",x:10,y
   if(["LUM","AP","LED","LEDR","I","VV"].includes(k)){
     const vv=k==="I"?false:(k==="VV"||!!(c&&c.vv&&c.vv.length>=2)), led=k==="LED"||k==="LEDR", n=c?c.pts.length+1:2;
     const lamp={id:"l",x:10,y:290,w:150,h:72,t:led?"Alimentation LED":k==="AP"?"Applique":"Lampe (DCL)",s:[led?"230 V → 24 V, puis ruban":"douille DCL"],terms:[["R","L",40,"t"],["N","N",80,"t"],["PE","T",120,"t"]]};
-    const s1=vv?{id:"s1",x:190,y:290,w:160,h:72,t:"Va-et-vient 1",terms:[["C","C",50,"t"],["1","1",60,"b"],["2","2",110,"b"]]}:{id:"s1",x:190,y:290,w:160,h:62,t:"Interrupteur",s:["simple allumage"],terms:[["L","L",50,"t"],["R","1",110,"t"]]};
+    const s1=vv?{id:"s1",x:190,y:290,w:160,h:72,t:"Va-et-vient 1",terms:[["C","L",50,"t"],["1","1",60,"b"],["2","2",110,"b"]]}:{id:"s1",x:190,y:290,w:160,h:62,t:"Interrupteur",s:["simple allumage"],terms:[["L","L",50,"t"],["R","1",110,"t"]]};
     B.push(tb,bd(bdT([["Ro","R",40,"b"],["No","N",80,"b"],["PEo","T",120,"b"],["Lo","L",240,"b"],...(vv?[["R2","R",165,"b"]]:[])]),[[60,52,Math.min(5,n),WC.N],[150,52,Math.min(5,n),WC.PE],[240,52,Math.min(5,n),WC.R],[300,52,3,WC.L]]),lamp,s1);
     ["L","N","PE"].forEach(a=>Wr.push(["tb."+a,"bd."+a+"i",WC[a],a==="N"?"3 fils 1,5 mm²":""])); Wr.push(["bd.No","l.N",WC.N,"1,5 mm²"],["bd.PEo","l.PE",WC.PE],["bd.Ro","l.R",WC.R]);
-    if(vv){ B.push({id:"s2",x:10,y:420,w:170,h:62,t:"Va-et-vient 2",terms:[["1","1",50,"t"],["2","2",100,"t"],["C","C",165,"t"]]});
+    if(vv){ B.push({id:"s2",x:10,y:420,w:170,h:62,t:"Va-et-vient 2",terms:[["1","1",50,"t"],["2","2",100,"t"],["C","L",165,"t"]]});
       Wr.push(["bd.Lo","s1.C",WC.L],["s1.1","s2.1",WC.N1,"navette 1"],["s1.2","s2.2",WC.N2,"navette 2"],["s2.C","bd.R2",WC.R,"retour"]); }
     else Wr.push(["bd.Lo","s1.L",WC.L],["s1.R","bd.Ro",WC.R,"retour"]);
     return wireSvg(B,Wr); }
@@ -1749,7 +1749,7 @@ function elecSteps(p,pl){ const c=p.c, k=p.k, L=[], sec=c?c.sec:1.5, fil=`fil H0
   if(c&&c.cal) L.push(`Au tableau : disjoncteur ${c.cal} A (circuit n° ${c.no||"?"} « ${c.name} ») sur l'interrupteur différentiel 30 mA type ${c.idT||c.id}. Un circuit = un disjoncteur.`);
   if(k==="PC"){ L.push(`Fils dans la gaine ICTA Ø20 : ${fil} rouge (phase), bleu (neutre), vert/jaune (terre). Environ ${fr(p.len,1)} m de chaque depuis la boîte.`);
     L.push(pl.jb?`Boîte de dérivation du plafond : un Wago par couleur. Phase : ${wagoFor(c.pts.length+1)}, idem pour le neutre et la terre (1 arrivée du tableau + ${c.pts.length} prise(s) de ce circuit).`:"Sans boîte de dérivation : repiquer de prise en prise (bornes doubles), en restant sous 12 socles par circuit.");
-    L.push("Prise : rouge sur L, bleu sur N, vert/jaune sur la borne ⏚ (borne du milieu ou griffe de terre). Dénuder 11 mm, enfoncer à fond, tirer pour vérifier."); }
+    L.push(`Prise : rouge sur L, bleu sur N, vert/jaune sur la borne ⏚ (celle reliée à la broche ou à la griffe de terre). Dénuder ${gamBr().smm} mm, enfoncer à fond, tirer pour vérifier.`); }
   else if(k==="PS"||k==="FOUR"||k==="LV"||k==="LL"){ L.push(`Circuit dédié sans dérivation : ${fil} direct du tableau à la prise, environ ${fr(p.len+5,0)} m (à ajuster selon la place du tableau), gaine ICTA Ø20.`); L.push("Prise 20 A : rouge sur L, bleu sur N, vert/jaune sur ⏚."); }
   else if(k==="CUIS"){ L.push(`Circuit dédié : fil H07V-U 6 mm² (ou câble R2V 3G6) du tableau à la sortie de câble, gaine ICTA Ø25, disjoncteur 32 A sur différentiel type A.`); L.push("Sortie de câble à 10 cm minimum du sol derrière la plaque ; raccorder le câble de la plaque dans la boîte (L, N, ⏚)."); }
   else if(k==="LUM"||k==="LEDR"||k==="AP"){ L.push(`Fils dans la gaine ICTA Ø16 : ${fil}, environ ${fr(p.len,1)} m depuis la boîte : orange (retour lampe), bleu (neutre), vert/jaune (terre).`);
@@ -1761,7 +1761,7 @@ function elecSteps(p,pl){ const c=p.c, k=p.k, L=[], sec=c?c.sec:1.5, fil=`fil H0
   else if(k==="I"){ L.push(`Fils dans la gaine ICTA Ø16 entre la boîte et l'interrupteur : 2 fils ${fil}, un rouge (phase) et un orange (retour lampe). Pas de neutre, pas de terre sur un interrupteur à plaque plastique. Environ ${fr(p.len,1)} m.`);
     L.push("Dans la boîte de dérivation : le rouge de l'interrupteur va dans le Wago de la phase, avec le rouge qui vient du tableau. L'orange qui revient de l'interrupteur va dans le Wago des retours lampe, avec l'orange de chaque lampe qu'il allume.");
     L.push(`Interrupteur : la phase (rouge) arrive de la boîte sur la borne L ; le retour lampe (orange) part de la borne 1 vers la boîte. Fils ${fil}, gaine ICTA Ø16, environ ${fr(p.len,1)} m.`); L.push("Le neutre ne passe jamais par l'interrupteur."); }
-  else if(k==="VV"){ L.push(`Va-et-vient : la phase arrive sur le commun (C) du premier, deux navettes (violet et gris) relient les bornes 1-1 et 2-2 des deux interrupteurs, le commun du second renvoie le retour lampe (orange) vers la boîte.`); L.splice(L.length-1,0,`Fils dans la gaine ICTA Ø16 : de la boîte à chaque va-et-vient, 3 fils ${fil} : rouge (ou orange), violet, gris. Environ ${fr(p.len,1)} m par va-et-vient.`,"Dans la boîte de dérivation : le rouge du tableau + le rouge du commun du va-et-vient 1 dans un Wago. Les deux violets ensemble dans un Wago 2 entrées, les deux gris ensemble dans un autre. L'orange du commun du va-et-vient 2 dans le Wago des retours lampe, avec l'orange de la lampe."); }
+  else if(k==="VV"){ L.push(`Va-et-vient : la phase arrive sur le commun (borne L chez Legrand et Schneider) du premier, deux navettes (violet et gris) relient les bornes 1-1 et 2-2 des deux interrupteurs, le commun du second renvoie le retour lampe (orange) vers la boîte.`); L.splice(L.length-1,0,`Fils dans la gaine ICTA Ø16 : de la boîte à chaque va-et-vient, 3 fils ${fil} : rouge (ou orange), violet, gris. Environ ${fr(p.len,1)} m par va-et-vient.`,"Dans la boîte de dérivation : le rouge du tableau + le rouge du commun du va-et-vient 1 dans un Wago. Les deux violets ensemble dans un Wago 2 entrées, les deux gris ensemble dans un autre. L'orange du commun du va-et-vient 2 dans le Wago des retours lampe, avec l'orange de la lampe."); }
   else if(k==="RJ") L.push("Câble catégorie 6 (grade 3) sans coupure ni boîte de dérivation, du coffret de communication à la prise ; câblage T568A de chaque côté ; à 5 cm minimum des câbles électriques en parallèle.");
   return L; }
 /* tableau électrique dessiné : rangées, différentiels, disjoncteurs, peignes, bornier de terre */
@@ -1845,17 +1845,140 @@ function bdSvg(pl,c){ const W=380, items=[]; const name=p=>p.k==="I"?"Interrupte
 
 /* appareil vu de dos : bornes et fils */
 const SECT_TABLE=[["Prises 16 A","2,5 mm²","20 A","12 prises max (ou 1,5 mm² sur 16 A : 8 max)","ICTA Ø20"],["Éclairage, interrupteurs, va-et-vient, rubans LED","1,5 mm²","16 A","8 points lumineux max","ICTA Ø16"],["Four, lave-vaisselle, lave-linge, sèche-linge","2,5 mm²","20 A","1 appareil par circuit","ICTA Ø20"],["Plaque de cuisson","6 mm²","32 A","1 par circuit, différentiel type A","ICTA Ø25"],["Chauffe-eau","2,5 mm²","20 A","contacteur heures creuses","ICTA Ø20"],["Liaisons dans le tableau","10 mm² (16 mm² si ≥ 12 kVA)","—","disjoncteur Enedis → différentiels → peignes","—"],["Terre principale","16 mm² cuivre (25 mm² nu)","—","bornier → barrette → piquet","—"],["24 V des rubans LED","1,5 mm² (2,5 mm² au-delà de 5 m)","—","rouge +, noir −","gorge, profilé"],["RJ45","câble cat. 6 grade 3","—","coffret → prise, sans coupure","ICTA Ø20 à part"]];
-function backSvg(k,c){ const sec=c&&c.sec?String(c.sec).replace(".",","):"1,5", W=360, H=200; let s="", w="", P="";
+/* fiches de branchement par gamme (sources fabricant, vérifiées nov. 2026) */
+const GAMMES_BR={
+ "Legrand Dooxie":{conf:"moyenne",vvMk:false,sim3:true,strip:"non donné pour l'interrupteur, 12 mm pour les prises : suivre le gabarit au dos",smm:"12",
+  bornes:"Bornes automatiques (sans outil), 1,5 à 2,5 mm², fil rigide ou souple. Repérage couleur des bornes au dos.",
+  refs:[["Interrupteur ou va-et-vient","6 000 01"],["Va-et-vient lumineux","6 000 11"],["Poussoir (télérupteur)","6 000 04"],["Prise 2P+T 16 A","6 003 35 (ou à puits 6 003 37)"],["Prise boîte peu profonde (30 mm)","6 003 28 Easyréno"],["Prise double / triple précâblée","6 003 32 / 6 003 33"],["Prise + USB (repiquable 3 × 2,5)","6 003 41"]],
+  sim:"Le 6 000 01 est un va-et-vient à 3 bornes qui sert aussi d'interrupteur simple. Phase sur L, retour lampe sur 1 (la borne 2 reste vide).",
+  vv:"Avec deux 6 000 01 : 1er = phase sur L, 2e = retour lampe sur L, puis 1 relié à 1 et 2 relié à 2 (navettes).",
+  prise:"Bornes automatiques 2 × 2,5 mm², éclips (protection enfants) intégrés. Repères L/N non confirmés : la terre va sur la borne reliée à la broche de terre (pictogramme ⏚), phase et neutre sur les deux autres.",
+  rel:"Poussette de déconnexion : appuyer dessus et tirer le fil en même temps.",
+  pose:"Livré complet (mécanisme + plaque). Fixation à vis dans la boîte, griffes seulement en rénovation. Boîte de 40 mm conseillée (30 mm minimum ; 40 mm pour la prise USB).",
+  pieges:["Repiquage (2 fils dans une borne) confirmé seulement sur la prise USB 6 003 41 : pour les autres prises, repartir de la boîte de dérivation avec un Wago.","Les repères L / 1 / 2 ne sont pas confirmés par la fiche : regarder le marquage au dos avant de câbler."],
+  ok:"bornes automatiques 1,5 à 2,5 mm², poussette, repérage couleur",nc:"repères L/1/2 gravés, longueur de dénudage de l'interrupteur",
+  src:["https://www.legrand.fr/questions-frequentes/comment-cabler-un-interrupteur-va-et-vient","https://assets.legrand.com/pim/DOCUMENT/legrand-dooxie-interrupteurs-prises.pdf"]},
+ "Legrand Céliane":{conf:"moyenne",vvMk:true,sim3:true,strip:"12 mm",smm:"12",
+  bornes:"Bornes automatiques 2 × 2,5 mm² (2 fils par borne possibles), fil rigide ou souple.",
+  refs:[["Interrupteur ou va-et-vient 10 AX","0 670 01 (+ enjoliveur + plaque)"],["Va-et-vient témoin (avec neutre)","0 670 01E"],["Poussoir","0 670 31"],["Prise 2P+T 16 A","0 671 11"],["Prise à vis 2 × 4 mm² (rénovation)","0 671 13"]],
+  sim:"Le 0 670 01 est un va-et-vient (bornes L, 1, 2). Phase sur L, retour lampe sur 1, la borne 2 reste libre.",
+  vv:"Deux 0 670 01 : 1er = phase sur L, 2e = retour lampe sur L, navettes 1 → 1 et 2 → 2.",
+  prise:"0 671 11 : repères L et N au dos, trois bornes de couleur (rouge, bleu, vert) ; la terre va sur la borne reliée à la broche de terre. 2 fils par borne : le repiquage est possible.",
+  rel:"Non précisé par la fiche : tourner et tirer le fil doucement, ou couper et redénuder.",
+  pose:"Mécanisme + enjoliveur + plaque, sur support à vis (griffes seulement en rénovation). Boîte de 40 mm conseillée.",
+  pieges:["La prise 2P sans terre 0 671 10 est réservée à la rénovation : en neuf, toujours 2P+T.","Le va-et-vient témoin 0 670 01E demande un neutre (borne N)."],
+  ok:"repères L/1/2, 2 × 2,5 mm², dénudage 12 mm, repères L/N de la prise",nc:"couleur des bornes ↔ fonction",
+  src:["https://res.cloudinary.com/sonepar-fr/raw/upload/s--_KoAcEsv--/v1/documents/1/F00537FR-09.pdf","https://www.batirmoinscher.com/media/pdf/f/0/f00530fr-03.pdf"]},
+ "Legrand Mosaic":{conf:"moyenne",vvMk:true,sim3:true,strip:"12 mm (10 mm sur le permutateur à vis, 13 mm sur la série antimicrobienne)",smm:"12",
+  bornes:"Bornes automatiques 2 × 2,5 mm² sur interrupteurs, va-et-vient et prise 0 771 11L. Permutateur 0 770 21 : bornes à vis.",
+  refs:[["Interrupteur ou va-et-vient","0 770 11L"],["Va-et-vient à voyant (avec neutre)","0 770 12L"],["Permutateur (3e point de commande)","0 770 21"],["Prise 2P+T 16 A","0 771 11L"],["Prise à vis 2 × 4 mm² (repiquage)","0 771 13"],["Support Batibox à vis / à griffes","0 802 51 / 0 802 61"]],
+  sim:"Le 0 770 11L est un va-et-vient (L, 1, 2). Phase sur L, retour lampe sur 1.",
+  vv:"Deux 0 770 11L : 1er = phase sur L, 2e = retour lampe sur L, navettes 1 → 1 et 2 → 2. Pour 3 points de commande, un permutateur 0 770 21 se place entre les deux, sur les navettes.",
+  prise:"0 771 11L : repères L et N ; la terre va sur la borne reliée à la broche de terre. Repiquage déclaré possible.",
+  rel:"Non précisé. Bornes à vis du permutateur : tournevis plat 4 mm.",
+  pose:"Mécanismes nus : on les clipse sur un support Batibox (à vis ou à griffes), puis la plaque. Boîte de 30 mm minimum pour un va-et-vient, 40 mm pour une prise.",
+  pieges:["Ne pas mélanger mécanismes Mosaic d'avant 2014 et actuels (supports différents).","Les prises 0 772 xx sont au standard allemand : ne pas les acheter en France."],
+  ok:"repères L/N/1/2, 2 × 2,5 mm², 12 mm, permutateur à vis 10 mm",nc:"déverrouillage des bornes automatiques",
+  src:["https://medias.descours-cabaud.com/d180001/medias/docus/260/LEGRAND_40553304_077001_FITE_1.pdf","https://www.legrand.fr/questions-frequentes/comment-cabler-un-interrupteur-va-et-vient"]},
+ "Legrand Niloé Step":{conf:"faible",vvMk:false,sim3:false,strip:"13 mm (bornes automatiques), 10 mm (bornes à vis)",smm:"13",
+  bornes:"Bornes automatiques 2 × 2,5 mm² sur 8 63X 01 / 06 / 08. Bornes à vis sur 8 63X 02 / 03.",
+  refs:[["Interrupteur SIMPLE (2 bornes)","8 631 01"],["Va-et-vient","8 631 06"],["Poussoir","8 631 09"],["Prise 2P+T automatique","8 631 31B (à volets 8 631 33B)"],["Prise 2P+T à vis","8 631 30B"]],
+  sim:"8 631 01 = vrai interrupteur simple à 2 bornes : phase sur une borne, retour lampe sur l'autre.",
+  vv:"Prendre 8 631 06, pas 8 631 01. Convention Legrand : 1er = phase sur L, 2e = retour lampe sur L, navettes 1 → 1 et 2 → 2.",
+  prise:"Terre sur la borne reliée à la broche de terre, phase et neutre sur les deux autres.",
+  rel:"Bornes à vis : tournevis. Bornes automatiques : non précisé.",
+  pose:"Fixation à vis ou à griffes.",
+  pieges:["Piège n°1 : le 8 631 01 n'est PAS un va-et-vient. Pour 2 interrupteurs sur une lampe, acheter deux 8 631 06.","Fiches surtout en anglais : repères des bornes à lire sur le mécanisme."],
+  ok:"bornes automatiques 2 × 2,5 mm², 13 mm, 8 63X 01 = simple",nc:"repères des bornes, prises",
+  src:["https://assets.legrand.com/pim/NP-FT-GT/F03006EN-00.pdf","https://assets.legrand.com/pim/NP-FT-GT/F03006EN-01.pdf"]},
+ "Legrand Art d'Arnould Univers Épure":{conf:"faible",vvMk:false,sim3:true,strip:"non donné pour les interrupteurs, 13 mm pour la prise",smm:"13",
+  bornes:"Interrupteurs à levier : bornes à vis, tournevis plat 4 mm. Interrupteurs à bascule : bornes sans vis, FIL RIGIDE uniquement. Capacité 1,5 mm² pour tous les interrupteurs.",
+  refs:[["Va-et-vient à levier","AR-67x15 (x = finition)"],["Va-et-vient lumineux","AR-67x17"],["Poussoir 6 A","AR-67x07"],["Prise 2P+T 16 A","AR-67x31 / 32 / 33"]],
+  sim:"Va-et-vient : phase sur le commun, retour lampe sur une navette. Le commun est repéré sur le mécanisme.",
+  vv:"Phase sur le commun du 1er, retour lampe sur le commun du 2e, navettes reliées entre elles.",
+  prise:"Bornes automatiques 2 × 2,5 mm², 13 mm.",
+  rel:"Bornes à vis : desserrer au tournevis plat 4 mm.",
+  pose:"Boîte de 40 mm minimum. Fixation par vis (pas de griffes). Plaque métal clipsée : déclipser doucement au tournevis.",
+  pieges:["Interrupteurs en 1,5 mm² seulement : jamais de 2,5 mm².","Version à bascule : pas de fil souple."],
+  ok:"bornes à vis (levier), sans vis fil rigide (bascule), 1,5 mm², boîte 40 mm",nc:"repères des bornes, longueur de dénudage",
+  src:["https://res.cloudinary.com/sonepar-fr/raw/upload/s--KEXuRFFj--/v1/documents/12/F01375FR-07.pdf"]},
+ "Schneider Odace":{conf:"moyenne",vvMk:true,sim3:true,strip:"13 mm avec le gabarit dessiné sur le produit (12 mm sur la fiche) : suivre le gabarit",smm:"13",
+  bornes:"Bornes automatiques sans vis. Va-et-vient 1 × 1,5 à 2 × 2,5 mm² ; prise 1 × 1,5 à 2 × 4 mm² (2 fils par borne, repiquage possible).",
+  refs:[["Interrupteur ou va-et-vient","S520204"],["Prise 2P+T 16 A","S520059"],["Autres références de la gamme","S520263, S520208, S520049"]],
+  sim:"S520204 = va-et-vient (L, 1, 2). Phase sur L, retour lampe sur 1.",
+  vv:"Deux S520204 : 1er = phase sur L, 2e = retour lampe sur L, navettes 1 → 1 et 2 → 2.",
+  prise:"S520059 : 3 bornes, éclips de série, 2 fils par borne. Terre sur la borne reliée à la broche.",
+  rel:"Appuyer du doigt sur la languette de la borne, puis tirer le fil.",
+  pose:"Griffes fournies (serrer au tournevis plat 4 mm) ou vis. Boîte standard.",
+  pieges:["Dénuder avec le gabarit gravé au dos : trop court = mauvais contact, trop long = cuivre apparent."],
+  ok:"repères L/1/2, gabarit 13 mm, libération au doigt",nc:"repères L/N de la prise",
+  src:["https://media.weldom.fr/v2/media/catalog/product/doc_qualite/ims/IMS_5589324.pdf","https://www.batirmoinscher.com/media/pdf/o/d/odace_s520059.pdf"]},
+ "Schneider Unica":{conf:"faible",vvMk:false,sim3:false,strip:"non donné : suivre le gabarit au dos",smm:"12",
+  bornes:"Bornes sans vis (connexion rapide) avec bouton de libération, 0 à 2,5 mm², rigide ou souple.",
+  refs:[["Interrupteur SIMPLE (2 bornes)","NU310118"],["Va-et-vient (3 bornes)","NU310318"],["Poussoir","NU310618"],["Prise 2P+T 16 A","NU305918 (à vis : NU305103)"],["Prise double","NU306918"],["Support","NU7002"]],
+  sim:"NU310118 = interrupteur simple à 2 bornes : phase sur une borne, retour lampe sur l'autre.",
+  vv:"Prendre deux NU310318 (pas NU310118). Phase sur le commun du 1er, retour lampe sur le commun du 2e, navettes reliées entre elles. Lire les repères au dos.",
+  prise:"NU305918 : raccord rapide, éclips de protection. Terre sur la borne reliée à la broche.",
+  rel:"Bouton de libération sur chaque borne : appuyer et tirer.",
+  pose:"Support NU7002 + mécanisme + plaque, à vis ou à griffes. Boîte de 40 mm minimum pour la prise double.",
+  pieges:["NU310118 n'est pas un va-et-vient.","L'ancienne gamme Unica (MGU…) se câble différemment : ne pas mélanger."],
+  ok:"bornes sans vis 0 à 2,5 mm², bouton de libération",nc:"repères, dénudage, repiquage",
+  src:["https://fra-connect.mo.cloudinary.net/PRODUCT/DOCUMENT/1887/NU305918_document.pdf"]},
+ "Schneider Unica Studio (métal)":{conf:"faible",vvMk:false,sim3:false,strip:"non donné : suivre le gabarit au dos",smm:"12",
+  bornes:"Unica Studio = plaques métal seulement. Les mécanismes sont des Unica : bornes sans vis 0 à 2,5 mm², bouton de libération.",
+  refs:[["Plaques métal","NU2802xx à NU2808xx"],["Interrupteur SIMPLE","NU310118"],["Va-et-vient","NU310318"],["Prise 2P+T 16 A","NU305918"],["Support","NU7002"]],
+  sim:"Comme Unica : NU310118, phase sur une borne, retour lampe sur l'autre.",
+  vv:"Comme Unica : deux NU310318, commun du 1er = phase, commun du 2e = retour lampe, navettes entre elles.",
+  prise:"Mécanisme de prise Unica, terre sur la borne reliée à la broche.",
+  rel:"Bouton de libération.",pose:"Plaque clipsée sur un support Unica, fixation à vis ou à griffes.",
+  pieges:["Le câblage ne change pas, seule la plaque change."],
+  ok:"mécanismes Unica",nc:"repères, dénudage, mise à la terre de la plaque métal",
+  src:["https://fra-connect.mo.cloudinary.net/PRODUCT/DOCUMENT/1887/NU305918_document.pdf"]},
+ "Schneider Ovalis":{conf:"moyenne",vvMk:true,sim3:true,strip:"12 mm (fiche), 13 mm avec le gabarit de la notice : suivre le gabarit",smm:"12",
+  bornes:"Bornes sans vis. Va-et-vient 1 × 1,5 à 2 × 2,5 mm² ; prise S260059 1 × 1,5 à 2 × 4 mm² (2 fils par borne).",
+  refs:[["Interrupteur ou va-et-vient","S260204"],["Prise 2P+T 16 A à obturateurs","S260059"]],
+  sim:"S260204 = va-et-vient (L, 1, 2). Phase sur L, retour lampe sur 1.",
+  vv:"Deux S260204 : 1er = phase sur L, 2e = retour lampe sur L, navettes 1 → 1 et 2 → 2.",
+  prise:"S260059 : 3 bornes, aucun repère L/N écrit. Terre sur la borne reliée à la broche ; phase et neutre sur les deux autres.",
+  rel:"Appuyer du doigt sur la languette, puis tirer le fil.",
+  pose:"Griffes ou vis, tournevis plat 4 mm.",
+  pieges:["La prise n'a pas de repère L/N : mettre quand même la phase toujours du même côté sur toutes les prises."],
+  ok:"bornes sans vis, 2 × 4 mm² (prise), 12 mm, libération au doigt",nc:"repère gravé L sur le va-et-vient",
+  src:["https://res.cloudinary.com/sonepar-fr/raw/upload/s--c8-dtkMh--/v1/documents/1887/S260059_document.pdf","https://media.weldom.fr/v2/media/catalog/product/doc_qualite/ims/IMS_5589324.pdf"]},
+ "Schneider Merten System M":{conf:"faible",vvMk:true,sim3:true,strip:"non donné : suivre le gabarit au dos",smm:"12",
+  bornes:"Bornes sans vis. Sections non précisées par la fiche : rester en 1,5 mm² (éclairage) et 2,5 mm² (prises).",
+  refs:[["Interrupteur ou va-et-vient","MTN3116-0000"],["Poussoir inverseur","MTN3156-0000"],["Prise 2P+T FRANÇAISE","MTN2500-xxxx"]],
+  sim:"MTN3116-0000 = va-et-vient (L, 1, 2). Phase sur L, retour lampe sur 1.",
+  vv:"Deux MTN3116-0000 : 1er = phase sur L, 2e = retour lampe sur L, navettes 1 → 1 et 2 → 2.",
+  prise:"MTN2500 : bornes sans vis, éclips. Terre sur la borne reliée à la broche.",
+  rel:"Leviers de déverrouillage (brochure allemande).",
+  pose:"Mécanisme 71 × 71 mm à vis ou à griffes ; enjoliveur et plaque vendus à part.",
+  pieges:["Ne pas acheter les prises MTN2300 : ce sont des prises allemandes (Schuko), pas françaises."],
+  ok:"repères L/1/2, bornes sans vis",nc:"sections, dénudage, repères de la prise",
+  src:["https://www.anjou-connectique.com/media/wysiwyg/Schneider/MTN3116-0000-FT.pdf"]}
+};
+function gamBr(){ const A=appCfg(); return GAMMES_BR[A.g]||GAMMES_BR["Legrand Dooxie"]; }
+function gamFiche(){ const A=appCfg(), G=gamBr(), Li=(t,x)=>`<div style="border-left:4px solid var(--chalk,#1d63c4);padding:2px 8px;font-size:14px"><b>${t}</b><br>${esc(x)}</div>`;
+  return `<div class="box" style="padding:10px 12px"><b>Fiche de branchement : ${esc(A.g)}</b> <span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:${G.conf==="moyenne"?"#e3f4e1":"#fff1d6"}">fiabilité des fiches : ${G.conf}</span>
+    ${appBox()}<div class="cap">Changer de gamme ici change aussi les dessins « vu de dos » et les étapes ci-dessous.</div>
+    <div style="margin:6px 0"><b style="font-size:14px">Ce qu'il faut acheter</b><div style="display:flex;flex-direction:column;gap:2px;margin-top:4px">${G.refs.map(([n,r])=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:14px;border-bottom:1px dashed var(--line,#ccd);padding:2px 0"><span>${esc(n)}</span><b style="white-space:nowrap">${esc(r)}</b></div>`).join("")}</div></div>
+    <div style="display:flex;flex-direction:column;gap:6px">${Li("Bornes",G.bornes)}${Li("Dénudage",G.strip)}${Li("Interrupteur simple",G.sim)}${Li("Va-et-vient",G.vv)}${Li("Prise 2P+T",G.prise)}${Li("Débrancher un fil",G.rel)}${Li("Pose dans la boîte",G.pose)}</div>
+    <div style="margin-top:8px;padding:8px;border-radius:8px;background:#fde4e1;font-size:14px"><b>⚠ Pièges pour un débutant</b><ul style="margin:4px 0 0 18px;padding:0">${G.pieges.map(x=>`<li>${esc(x)}</li>`).join("")}<li>Toujours couper le disjoncteur du circuit ET vérifier l'absence de tension (VAT ou testeur) avant de toucher un fil.</li><li>Un interrupteur ne reçoit jamais le neutre (bleu) ni la terre.</li></ul></div>
+    <p class="cap" style="margin:6px 0 0"><b>Confirmé sur la fiche du fabricant :</b> ${esc(G.ok)}.<br><b>Non confirmé :</b> ${esc(G.nc)}. Pour ces points, lire le marquage au dos du mécanisme : il fait foi sur ce schéma.<br>Sources : ${G.src.map((u,i)=>`<a href="${u}" target="_blank" rel="noopener">fiche ${i+1}</a>`).join(" · ")}</p></div>`; }
+const GAM_REF={"Legrand Dooxie":["6 000 01","6 000 01","6 003 35"],"Legrand Céliane":["0 670 01","0 670 01","0 671 11"],"Legrand Mosaic":["0 770 11L","0 770 11L","0 771 11L"],"Legrand Niloé Step":["8 631 01","8 631 06","8 631 31B"],"Legrand Art d'Arnould Univers Épure":["AR-67x15","AR-67x15","AR-67x31"],"Schneider Odace":["S520204","S520204","S520059"],"Schneider Unica":["NU310118","NU310318","NU305918"],"Schneider Unica Studio (métal)":["NU310118","NU310318","NU305918"],"Schneider Ovalis":["S260204","S260204","S260059"],"Schneider Merten System M":["MTN3116-0000","MTN3116-0000","MTN2500"]};
+function gamRef(i){ return (GAM_REF[appCfg().g]||GAM_REF["Legrand Dooxie"])[i]; }
+function backSvg(k,c,vn){ const sec=c&&c.sec?String(c.sec).replace(".",","):"1,5", W=360, H=200, G=gamBr(), gn=appCfg().g.replace(/^(Legrand|Schneider) /,""), q=G.vvMk?"":" ?"; let s="", w="", P="";
   const term=(x,y,lab,col)=>{ s+=`<rect x="${x-13}" y="${y-13}" width="26" height="26" rx="4" fill="#e8ebed" stroke="#6b7378"/><circle cx="${x}" cy="${y}" r="6" fill="#c9ced3" stroke="#555"/><path d="M${x-4},${y} H${x+4}" stroke="#555" stroke-width="1.5"/><text x="${x}" y="${y+28}" text-anchor="middle" font-size="11" font-weight="700" fill="${col||"#1c2428"}">${lab}</text>`; };
   const wire=(x0,y0,x1,y1,col,lab)=>{ const d=`M${x0},${y0} C${x0},${(y0+y1)/2} ${x1},${(y0+y1)/2} ${x1},${y1}`; w+=`<path d="${d}" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round"/>`+(col===WC.PE?`<path d="${d}" fill="none" stroke="#f1d500" stroke-width="5" stroke-dasharray="7 7"/>`:"")+`<path d="M${x1},${y1-14} V${y1}" stroke="#b87333" stroke-width="3"/>`; if(lab) s+=`<text x="${x0>W/2?x0-6:x0+6}" y="${Math.abs(x0-W/2)<40?y0+30:y0+12}" text-anchor="${x0>W/2?"end":"start"}" font-size="10" font-weight="700" fill="${col===WC.PE?"#2d7a27":col}">${lab}</text>`; };
-  const plate=(t,sub)=>{ P=`<rect x="70" y="58" width="220" height="118" rx="14" fill="#fbfbfa" stroke="#7a8288" stroke-width="2"/><text x="${W/2}" y="${H-6}" text-anchor="middle" font-size="11" font-weight="700" fill="#1c2428">${t}</text>`+(sub?`<text x="${W/2}" y="74" text-anchor="middle" font-size="9" fill="#4a5358">${sub}</text>`:""); };
+  const plate=(t,sub)=>{ P=`<rect x="70" y="58" width="220" height="118" rx="14" fill="#fbfbfa" stroke="#7a8288" stroke-width="2"/><text x="${W/2}" y="${H-6}" text-anchor="middle" font-size="11" font-weight="700" fill="#1c2428">${t}</text>`; if(sub) s+=`<text x="${W/2}" y="74" text-anchor="middle" font-size="9" fill="#4a5358" paint-order="stroke" stroke="#fbfbfa" stroke-width="4">${sub}</text>`;  };
   const L=`${sec} mm² rouge`, N=`${sec} mm² bleu`, T=`${sec} mm² vert/jaune`;
-  if(["PC","PS","FOUR","LV","LL"].includes(k)){ plate(k==="PC"?"Prise 2P+T vue de dos":"Prise 20 A vue de dos","bornes automatiques ou à vis"); term(120,130,"L","#c0392b"); term(240,130,"N","#2d6bd6"); term(180,98,"Terre","#2d7a27");
+  if(["PC","PS","FOUR","LV","LL"].includes(k)){ plate(k==="PC"?`${gn} ${gamRef(2)} vue de dos`:"Prise 20 A vue de dos","terre = borne reliée à la broche"); term(120,130,"L","#c0392b"); term(240,130,"N","#2d6bd6"); term(180,98,"Terre","#2d7a27");
     wire(40,8,120,117,WC.L,L); wire(320,8,240,117,WC.N,N); wire(180,8,180,85,WC.PE,T); }
   else if(k==="CUIS"){ plate("Sortie de câble 32 A","bornier dans la boîte"); term(120,130,"L","#c0392b"); term(180,130,"N","#2d6bd6"); term(240,130,"Terre","#2d7a27"); wire(40,8,120,117,WC.L,"6 mm² rouge"); wire(180,8,180,117,WC.N,"6 mm² bleu"); wire(320,8,240,117,WC.PE,"6 mm² v/j"); }
-  else if(k==="I"){ plate("Interrupteur simple vu de dos","le neutre ne vient jamais ici"); term(130,124,"L","#c0392b"); term(230,124,"1","#e67e22"); wire(40,8,130,111,WC.L,"1,5 mm² rouge (phase)"); wire(320,8,230,111,WC.R,"1,5 mm² orange (retour)"); }
-  else if(k==="VV"){ plate("Va-et-vient vu de dos","C = commun, 1 et 2 = navettes"); term(110,124,"C","#c0392b"); term(180,124,"1","#8e44ad"); term(250,124,"2","#5d6d7e");
-    wire(30,8,110,111,WC.L,"rouge ou orange"); wire(180,8,180,111,WC.N1,"violet"); wire(330,8,250,111,WC.N2,"gris"); s+=`<text x="${W/2}" y="190" text-anchor="middle" font-size="9" fill="#4a5358"></text>`; }
+  else if(k==="I"){ if(G.sim3){ plate(`${gn} ${gamRef(0)} en simple allumage`,q?"repères à lire au dos (L = commun)":"la borne 2 reste vide"); term(110,124,"L"+q,"#c0392b"); term(180,124,"1"+q,"#e67e22"); term(250,124,"2"+q,"#9aa"); wire(40,8,110,111,WC.L,"rouge : phase"); wire(320,8,180,111,WC.R,"orange : retour"); s+=`<text x="250" y="104" text-anchor="middle" font-size="9" fill="#888">vide</text>`; }
+    else { plate(`${gn} ${gamRef(0)} : simple, 2 bornes`,"une borne phase, l'autre retour lampe"); term(130,124,"borne","#c0392b"); term(230,124,"borne","#e67e22"); wire(40,8,130,111,WC.L,"rouge : phase"); wire(320,8,230,111,WC.R,"orange : retour"); } }
+  else if(k==="VV"){ const two=vn===2; plate(`${gn} ${gamRef(1)} : va-et-vient n°${vn||1}`,q?"repères à lire au dos : L = commun":"L = commun, 1 et 2 = navettes"); term(110,124,"L"+q,two?"#e67e22":"#c0392b"); term(180,124,"1"+q,"#8e44ad"); term(250,124,"2"+q,"#5d6d7e");
+    wire(30,8,110,111,two?WC.R:WC.L,two?"orange : retour lampe":"rouge : phase"); wire(180,8,180,111,WC.N1,"violet"); wire(330,8,250,111,WC.N2,"gris"); }
   else if(k==="LUM"||k==="AP"){ plate(k==="AP"?"Applique : bornier":"Boîte DCL au plafond","bornier 3 bornes, puis fiche DCL"); term(120,130,"L","#e67e22"); term(180,130,"N","#2d6bd6"); term(240,130,"Terre","#2d7a27");
     wire(40,8,120,117,WC.R,"1,5 mm² orange"); wire(180,8,180,117,WC.N,"1,5 mm² bleu"); wire(320,8,240,117,WC.PE,"1,5 mm² v/j"); }
   else if(k==="LED"||k==="LEDR"){ P=`<rect x="40" y="60" width="280" height="96" rx="8" fill="#f2f3f4" stroke="#7a8288" stroke-width="2"/>`; s=`<text x="${W/2}" y="44" text-anchor="middle" font-size="11" font-weight="700" fill="#1c2428">Alimentation LED : 230 V → 24 V</text><text x="110" y="78" text-anchor="middle" font-size="9" fill="#4a5358">ENTRÉE (AC)</text><text x="260" y="78" text-anchor="middle" font-size="9" fill="#4a5358">SORTIE (DC)</text>`;
@@ -1865,16 +1988,17 @@ function backSvg(k,c){ const sec=c&&c.sec?String(c.sec).replace(".",","):"1,5", 
   else if(k==="RJ"){ const C=[["blanc-vert","#e8f5e1","#3a9a3a"],["vert","#3a9a3a"],["blanc-orange","#fdeedd","#e67e22"],["bleu","#2d6bd6"],["blanc-bleu","#e2ecfb","#2d6bd6"],["orange","#e67e22"],["blanc-marron","#efe6dd","#7b4a24"],["marron","#7b4a24"]];
     s=C.map(([n,c,st],i)=>`<rect x="${30+i*38}" y="40" width="30" height="90" rx="3" fill="${c}" stroke="${st||c}" stroke-width="3"/><text x="${45+i*38}" y="150" text-anchor="middle" font-size="11" font-weight="700">${i+1}</text><text x="${45+i*38}" y="166" text-anchor="middle" font-size="7" fill="#333">${n}</text>`).join("")+`<text x="${W/2}" y="24" text-anchor="middle" font-size="11" font-weight="700">Câblage T568A (le même aux deux bouts)</text>`; return `<svg viewBox="0 0 ${W} 180" style="width:100%;max-width:440px;height:auto;min-width:0;max-height:none;display:block;background:#fff;border-radius:8px;font-family:system-ui,sans-serif" role="img">${s}</svg>`; }
   else return "";
-  s+=`<text x="${W/2}" y="${H+12}" text-anchor="middle" font-size="9" fill="#b87333">▮ cuivre dénudé 11 à 12 mm, enfoncé à fond dans la borne</text>`;
+  s+=`<text x="${W/2}" y="${H+12}" text-anchor="middle" font-size="9" fill="#b87333">▮ ${k==="CUIS"||k==="LUM"||k==="AP"?"dénuder selon le bornier":`dénuder ${G.smm} mm (gabarit au dos)`}, cuivre à fond</text>`;
   return `<svg viewBox="0 0 ${W} ${H+18}" style="width:100%;max-width:440px;height:auto;min-width:0;max-height:none;display:block;background:#fff;border-radius:8px;font-family:system-ui,sans-serif" role="img">${P}${w}${s}</svg>`; }
 
-function pointSteps(p,pl){ const L=elecSteps(p,pl), full=elecPointSvg(p,pl), back=backSvg(p.k,p.c); WSTAGE=1; const s1=elecPointSvg(p,pl); WSTAGE=0;
+function pointSteps(p,pl){ const L=elecSteps(p,pl), full=elecPointSvg(p,pl), back=p.k==="VV"?backSvg("VV",p.c,1)+`<div style="height:6px"></div>`+backSvg("VV",p.c,2):backSvg(p.k,p.c), G=gamBr(), gt={I:G.sim,VV:G.vv,PC:G.prise}[p.k]; WSTAGE=1; const s1=elecPointSvg(p,pl); WSTAGE=0;
   const inBd=pl.jb&&p.c&&(p.c.t==="PC"||p.c.t==="EC");
   const R=L.map((d,i)=>{ const t=/^Couper/.test(d)?"Couper le courant":/^Au tableau/.test(d)?"Au tableau":/Wago|[Bb]oîte de dérivation/.test(d)?"Dans la boîte de dérivation":/gaine|Fils dans|fil H07|Circuit dédié|câble/.test(d)&&i<4&&!/^Dans la boîte/.test(d)?"Tirer les fils dans la gaine":/^(Prise|Interrupteur|Va-et-vient|Point DCL|Applique|Sortie|Le neutre|Câble catégorie)/.test(d)?"Brancher l'appareil":"À savoir";
     const svg=t==="Couper le courant"?"":t==="Au tableau"||t==="Tirer les fils dans la gaine"?s1:t==="Dans la boîte de dérivation"?(inBd||(p.k==="I"||p.k==="VV")&&pl.jb?bdSvg(pl,p.c):"")+wagoHowSvg():t==="Brancher l'appareil"?back:"";
     return {t,d,svg}; });
   for(let i=R.length-1;i>0;i--) if(R[i].t===R[i-1].t){ R[i-1].d+=" "+R[i].d; R[i-1].svg=R[i-1].svg||R[i].svg; R.splice(i,1); }
   if(back&&!R.some(r=>r.t==="Brancher l'appareil")) R.push({t:"Brancher l'appareil",d:"Chaque fil sur sa borne, comme sur le dessin.",svg:back});
+  if(gt){ const b=R.find(r=>r.t==="Brancher l'appareil"); if(b) b.d+=` Avec ${appCfg().g} : ${gt} Dénudage : ${G.strip}. ${G.rel}`; }
   R.push({t:"Vue d'ensemble",d:"Le circuit complet, du tableau à l'appareil.",svg:full}); return R; }
 function renderElec(){ const room=S.walls[S.cur].room||roomNames()[0], H=elecHouse(), pl=H.R.find(r=>r.room===room)||elecPlan(room);
   const cBadge=c=>c?`<span style="display:inline-block;padding:1px 8px;border-radius:10px;background:${c.t==="EC"?"#fff1d6":c.t==="PC"?"#e3eefc":c.t==="RJ"?"#efe7fb":"#fde4e1"};font-size:12px">${c.no?"C"+c.no+" · ":""}${esc(c.name)}${c.cal?` · ${c.cal} A · ${String(c.sec).replace(".",",")} mm²`:""}</span>`:"";
@@ -1894,6 +2018,7 @@ function renderElec(){ const room=S.walls[S.cur].room||roomNames()[0], H=elecHou
     ${stepper("p"+i,pointSteps(p,pl))}</details>`).join("");
   document.getElementById("plan").innerHTML=`<div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
     <div><b style="font-size:17px">Schémas électriques : ${esc(room)}</b><div class="cap">${pl.pts.length} point(s), ${pl.C.length} circuit(s). Les points se placent dans « Électricité » (murs), « Luminaires » (plafond) et « Créations » (rubans LED).</div></div>
+    ${gamFiche()}
     <div class="box" style="padding:10px 12px"><b>Quel fil pour quoi</b><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">${SECT_TABLE.map(r=>`<div style="border-left:4px solid var(--chalk,#1d63c4);padding:2px 8px;font-size:14px"><b>${esc(r[0])}</b><br><b style="color:#c0392b">${esc(r[1])}</b>${r[2]!=="—"?` · disjoncteur ${esc(r[2])}`:""}${r[4]!=="—"?` · ${esc(r[4])}`:""}<br><span class="cap">${esc(r[3])}</span></div>`).join("")}</div><p class="cap" style="margin:4px 0 0">Fils H07V-U dans les gaines ICTA : rouge ou marron = phase, bleu = neutre (seulement le bleu), vert/jaune = terre (seulement lui), orange ou violet = retour lampe et navettes. Le noir ou le gris sont aussi possibles pour la phase ou les navettes.</p></div>
     ${(()=>{ const ec={t:"EC",name:"Éclairage",cal:16,sec:1.5,idT:"AC",no:2,pts:[{k:"LUM"}],sw:[{k:"I"}],vv:[]}, ev={...ec,sw:[],vv:[{k:"VV"},{k:"VV"}]}, pc={t:"PC",name:"Prises",cal:20,sec:2.5,idT:"AC",no:1,pts:[{k:"PC"},{k:"PC"}]}, fp={jb:true};
       const mk=(id,t,p)=>`<details class="box" style="padding:8px 12px"><summary style="cursor:pointer"><b>${t}</b></summary>${stepper(id,pointSteps(p,fp))}</details>`;
