@@ -39,6 +39,9 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AppBridgePlugin.class);
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // zoom à deux doigts sur toute l'appli, sans les boutons + / − d'Android
+        android.webkit.WebSettings zs = getBridge().getWebView().getSettings();
+        zs.setSupportZoom(true); zs.setBuiltInZoomControls(true); zs.setDisplayZoomControls(false);
         readLegacyOnce();
         keepAuth(getIntent());
     }

@@ -88,6 +88,7 @@ button.ghost{background:transparent}
 .stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .plan{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px;overflow-x:auto}
 .plan svg{display:block;width:100%;height:auto;min-width:520px;max-height:72vh}
+.elecv svg{touch-action:pan-y}
 .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
 .legend i{display:inline-block;width:14px;height:10px;margin-right:5px;vertical-align:-1px;border:1px solid var(--line)}
 .warns{display:flex;flex-direction:column;gap:4px}
@@ -1794,11 +1795,11 @@ function realSvg(p,pl,st){ const c=p.c, k=p.k, FOC={}; if(!c||!c.cal||k==="RJ"||
   const TX0=14, TY=278, row=(c.idT||c.id)==="A"?1:0, pos=((c.no||1)-1)%6, RY=[TY+20,TY+82], MW=9;
   bg+=`<rect x="${TX0}" y="${TY}" width="110" height="170" rx="5" fill="#f7f7f5" stroke="#8a9095" stroke-width="1.5"/>`;
   RY.forEach((ry,r)=>{ bg+=`<rect x="${TX0+4}" y="${ry+15}" width="102" height="6" fill="#b7bcc0"/>`;
-    fg+=`<rect x="${TX0+6}" y="${ry}" width="${MW*4}" height="38" rx="2" fill="#fff" stroke="#6b7378"/><rect x="${TX0+8}" y="${ry+3}" width="${MW*4-4}" height="7" fill="#2d6bd6"/><text x="${TX0+6+MW*2}" y="${ry+9}" text-anchor="middle" font-size="5" fill="#fff">30mA ${r?"A":"AC"}</text><rect x="${TX0+6+MW*2-4}" y="${ry+14}" width="8" height="12" rx="1" fill="#3f4448"/><circle cx="${TX0+12}" cy="${ry+30}" r="2.5" fill="#f1c40f" stroke="#555"/>`;
+    fg+=`<rect x="${TX0+6}" y="${ry}" width="32" height="38" rx="2" fill="#fff" stroke="#6b7378"/><rect x="${TX0+8}" y="${ry+3}" width="28" height="7" fill="#2d6bd6"/><text x="${TX0+22}" y="${ry+9}" text-anchor="middle" font-size="5" fill="#fff">30mA ${r?"A":"AC"}</text><rect x="${TX0+18}" y="${ry+14}" width="8" height="12" rx="1" fill="#3f4448"/><circle cx="${TX0+12}" cy="${ry+30}" r="2.5" fill="#f1c40f" stroke="#555"/>`;
     for(let i=0;i<6;i++){ const x=TX0+44+i*(MW+1), me=r===row&&i===pos; fg+=`<rect x="${x}" y="${ry}" width="${MW}" height="38" rx="1.5" fill="${me?"#fff7d6":"#fff"}" stroke="${me?"#e67e22":"#6b7378"}" stroke-width="${me?1.6:0.8}"/><rect x="${x+2}" y="${ry+14}" width="${MW-4}" height="11" rx="1" fill="#3f4448"/>`; }
-    wr+=`<path d="M${TX0+16},${ry} V${ry-3} H${TX0+104}" fill="none" stroke="${WC.L}" stroke-width="2"/><path d="M${TX0+24},${ry} V${ry-6} H${TX0+104}" fill="none" stroke="${WC.N}" stroke-width="2"/>`; });
+    wr+=line([[TX0+16,ry+38],[TX0+16,ry+42],[TX0+40.5,ry+42],[TX0+40.5,ry-3],[TX0+104,ry-3]],"L",1.6)+line([[TX0+24,ry+38],[TX0+24,ry+45],[TX0+42.8,ry+45],[TX0+42.8,ry-6],[TX0+104,ry-6]],"N",1.6); });
   /* arrivée du disjoncteur de branchement vers les différentiels */
-  wr+=line([[64,254],[64,258],[TX0+3,258],[TX0+3,RY[1]+44],[TX0+16,RY[1]+44],[TX0+16,RY[1]+38]],"L",2.4)+line([[74,254],[74,261],[TX0+6,261],[TX0+6,RY[1]+47],[TX0+24,RY[1]+47],[TX0+24,RY[1]+38]],"N",2.4)+line([[TX0+3,RY[0]+44],[TX0+16,RY[0]+44],[TX0+16,RY[0]+38]],"L",1.6)+line([[TX0+6,RY[0]+47],[TX0+24,RY[0]+47],[TX0+24,RY[0]+38]],"N",1.6);
+  wr+=line([[64,254],[64,258],[TX0+3,258],[TX0+3,RY[1]-12],[TX0+16,RY[1]-12],[TX0+16,RY[1]]],"L",2.4)+line([[74,254],[74,261],[TX0+6,261],[TX0+6,RY[1]-9],[TX0+24,RY[1]-9],[TX0+24,RY[1]]],"N",2.4)+line([[TX0+3,RY[0]-12],[TX0+16,RY[0]-12],[TX0+16,RY[0]]],"L",2)+line([[TX0+6,RY[0]-9],[TX0+24,RY[0]-9],[TX0+24,RY[0]]],"N",2);
   T(TX0+55,TY-3,"Tableau électrique",{}); FOC.tab=[0,TY-11,230,192];
   /* bornier de terre */
   const BTy=TY+150; fg+=`<rect x="${TX0+20}" y="${BTy}" width="76" height="8" rx="2" fill="#3aa335"/><path d="M${TX0+20},${BTy+4} H${TX0+96}" stroke="#f1d500" stroke-width="2" stroke-dasharray="5 5"/>${Array.from({length:7},(_,i)=>`<circle cx="${TX0+26+i*11}" cy="${BTy+4}" r="2" fill="#c9a24d" stroke="#555" stroke-width=".5"/>`).join("")}`;
@@ -1928,7 +1929,25 @@ function zoomOpen(svg){ const o=document.createElement("div"); o.id="zoomov"; o.
     P.delete(e.pointerId); last=null; }; o.addEventListener("pointerup",up); o.addEventListener("pointercancel",up);
   o.addEventListener("wheel",e=>{ e.preventDefault(); at(e.deltaY<0?1.15:1/1.15,e.clientX,e.clientY); },{passive:false});
   }
-document.addEventListener("click",e=>{ if(typeof S==="undefined"||S.view!=="elec") return; const sv=e.target.closest("#plan svg"); if(!sv||e.target.closest("button,select,input,summary,a")) return; zoomOpen(sv); });
+/* zoom à deux doigts directement sur les dessins des schémas (viewBox), glisser quand zoomé, double-tap = retour */
+(()=>{ const P=new Map(); let sv=null, last=null, tap=0, tapX=0, tapY=0, down=null;
+  const vbOf=s=>s.getAttribute("viewBox").split(/[\s,]+/).map(Number), set=(s,v)=>s.setAttribute("viewBox",v.map(x=>+x.toFixed(2)).join(" "));
+  const clamp=(s,v)=>{ const o=s.dataset.vb0.split(" ").map(Number); v[2]=Math.min(o[2],Math.max(o[2]/10,v[2])); v[3]=v[2]*o[3]/o[2]; v[0]=Math.min(o[0]+o[2]-v[2],Math.max(o[0],v[0])); v[1]=Math.min(o[1]+o[3]-v[3],Math.max(o[1],v[1])); s.style.touchAction=v[2]<o[2]-.5?"none":"pan-y"; return v; };
+  const reset=s=>{ s.setAttribute("viewBox",s.dataset.vb0); s.style.touchAction="pan-y"; };
+  document.addEventListener("pointerdown",e=>{ if(typeof S==="undefined"||S.view!=="elec") return; const s=e.target.closest&&e.target.closest("#plan svg"); if(!s||!s.getAttribute("viewBox")) return;
+    if(!s.dataset.vb0) s.dataset.vb0=vbOf(s).join(" "); if(sv!==s){ P.clear(); sv=s; } P.set(e.pointerId,[e.clientX,e.clientY]);
+    if(P.size===2){ const [a,b]=[...P.values()]; last={d:Math.hypot(a[0]-b[0],a[1]-b[1]),m:[(a[0]+b[0])/2,(a[1]+b[1])/2]}; if(down) down.multi=true; } else if(P.size===1){ last=null; down={x:e.clientX,y:e.clientY,t:Date.now(),multi:false}; } },true);
+  document.addEventListener("pointermove",e=>{ if(!sv||!P.has(e.pointerId)) return; const pv=P.get(e.pointerId); P.set(e.pointerId,[e.clientX,e.clientY]); const r=sv.getBoundingClientRect(); let v=vbOf(sv); const k=v[2]/r.width;
+    if(P.size===2&&last&&last.d>0){ const [a,b]=[...P.values()], d=Math.hypot(a[0]-b[0],a[1]-b[1]), m=[(a[0]+b[0])/2,(a[1]+b[1])/2], f=d/last.d;
+      const px=v[0]+(m[0]-r.left)*k, py=v[1]+(m[1]-r.top)*k, nw=v[2]/f, nk=nw/r.width; v=[px-(m[0]-r.left)*nk-(m[0]-last.m[0])*nk, py-(m[1]-r.top)*nk-(m[1]-last.m[1])*nk, nw, v[3]/f];
+      set(sv,clamp(sv,v)); last={d,m}; e.preventDefault(); }
+    else if(P.size===1&&sv.style.touchAction==="none"){ v[0]-=(e.clientX-pv[0])*k; v[1]-=(e.clientY-pv[1])*k; set(sv,clamp(sv,v)); } },{passive:false});
+  const up=e=>{ if(!sv||!P.has(e.pointerId)) return;
+    if(down&&!down.multi&&P.size===1&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<10&&Date.now()-down.t<250){ const now=Date.now(); if(now-tap<300&&Math.hypot(e.clientX-tapX,e.clientY-tapY)<30){ const o=sv.dataset.vb0.split(" ").map(Number), v=vbOf(sv);
+        if(v[2]<o[2]-.5) reset(sv); else { const r=sv.getBoundingClientRect(), k=v[2]/r.width, px=v[0]+(e.clientX-r.left)*k, py=v[1]+(e.clientY-r.top)*k; set(sv,clamp(sv,[px-v[2]/6,py-v[3]/6,v[2]/3,v[3]/3])); } tap=0; }
+      else { tap=now; tapX=e.clientX; tapY=e.clientY; } }
+    P.delete(e.pointerId); last=null; if(!P.size) sv=null; };
+  document.addEventListener("pointerup",up,true); document.addEventListener("pointercancel",up,true); })();
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-stgo]"); if(!b) return; const box=b.closest("[data-stp]"), cur=b.closest("[data-sti]"), n=+box.dataset.n, i=Math.max(0,Math.min(n-1,+cur.dataset.sti+ +b.dataset.stgo)); box.querySelectorAll(":scope>[data-sti]").forEach(d=>d.style.display=+d.dataset.sti===i?"":"none"); box.scrollIntoView({block:"nearest"}); });
 /* dénuder et mettre un fil dans un Wago */
 function wagoHowSvg(){ const W=360; let s=`<text x="${W/2}" y="14" text-anchor="middle" font-size="11" font-weight="700">Mettre un fil dans un Wago 221</text>`;
@@ -2147,8 +2166,8 @@ function renderElec(){ const room=S.walls[S.cur].room||roomNames()[0], H=elecHou
   const legend=`<div class="cap" style="display:flex;flex-wrap:wrap;gap:10px">${Object.entries(WN).filter(([k])=>!["P","M"].includes(k)).map(([k,n])=>`<span><i style="display:inline-block;width:22px;height:4px;vertical-align:middle;background:${k==="PE"?"repeating-linear-gradient(90deg,#3aa335 0 6px,#f1d500 6px 12px)":WC[k]}"></i> ${n}</span>`).join("")}</div>`;
   const cards=pl.pts.map((p,i)=>`<details class="box" style="padding:8px 12px"${i<2?" open":""}><summary style="cursor:pointer"><b>${esc(p.n)}</b> ${cBadge(p.c)}</summary>
     ${stepper("p"+i,pointSteps(p,pl))}</details>`).join("");
-  document.getElementById("plan").innerHTML=`<div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
-    <div><b style="font-size:17px">Schémas électriques : ${esc(room)}</b><div class="cap">${pl.pts.length} point(s), ${pl.C.length} circuit(s). Les points se placent dans « Électricité » (murs), « Luminaires » (plafond) et « Créations » (rubans LED). <b>Toucher un dessin pour l'agrandir et zoomer.</b></div></div>
+  document.getElementById("plan").innerHTML=`<div class="elecv" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+    <div><b style="font-size:17px">Schémas électriques : ${esc(room)}</b><div class="cap">${pl.pts.length} point(s), ${pl.C.length} circuit(s). Les points se placent dans « Électricité » (murs), « Luminaires » (plafond) et « Créations » (rubans LED). <b>Zoomer sur un dessin : écarter deux doigts dessus (double-tap pour revenir).</b></div></div>
     ${gamFiche()}
     <div class="box" style="padding:10px 12px"><b>Quel fil pour quoi</b><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">${SECT_TABLE.map(r=>`<div style="border-left:4px solid var(--chalk,#1d63c4);padding:2px 8px;font-size:14px"><b>${esc(r[0])}</b><br><b style="color:#c0392b">${esc(r[1])}</b>${r[2]!=="—"?` · disjoncteur ${esc(r[2])}`:""}${r[4]!=="—"?` · ${esc(r[4])}`:""}<br><span class="cap">${esc(r[3])}</span></div>`).join("")}</div><p class="cap" style="margin:4px 0 0">Fils H07V-U dans les gaines ICTA : rouge ou marron = phase, bleu = neutre (seulement le bleu), vert/jaune = terre (seulement lui), orange ou violet = retour lampe et navettes. Le noir ou le gris sont aussi possibles pour la phase ou les navettes.</p></div>
     ${(()=>{ const ec={t:"EC",name:"Éclairage",cal:16,sec:1.5,idT:"AC",no:2,pts:[{k:"LUM"}],sw:[{k:"I"}],vv:[]}, ev={...ec,sw:[],vv:[{k:"VV"},{k:"VV"}]}, pc={t:"PC",name:"Prises",cal:20,sec:2.5,idT:"AC",no:1,pts:[{k:"PC"},{k:"PC"}]}, fp={jb:true};
