@@ -1728,7 +1728,7 @@ function elecPointSvg(p,pl){ const c=p.c, k=p.k, B=[], Wr=[], tb={id:"tb",x:10,y
     const direct=!(k==="PC"&&pl.jb), y=direct?160:290, dev={id:"d",x:90,y,w:180,h:62,t:k==="CUIS"?"Sortie de câble 32 A":k==="PC"?(p.dbl?"Prise double 16 A":"Prise 16 A"):"Prise spécialisée 20 A",s:["2P+T"],terms:[["L","L",60,"t"],["N","N",90,"t"],["PE","T",120,"t"]]};
     B.push(tb,dev);
     if(!direct){ const n=c.pts.length+1; B.push(bd(bdT(["L","N","PE"].map(a=>[a+"o","",TX[a],"b"])),[[60,58,Math.min(5,n),WC.L],[170,58,Math.min(5,n),WC.N],[280,58,Math.min(5,n),WC.PE]],`1 Wago par couleur : 1 arrivée + ${n-1} prise(s)`));
-      ["L","N","PE"].forEach(a=>Wr.push(["tb."+a,"bd."+a+"i",WC[a]],["bd."+a+"o","d."+a,WC[a]])); }
+      ["L","N","PE"].forEach(a=>Wr.push(["tb."+a,"bd."+a+"i",WC[a],a==="N"?`3 fils ${String(c.sec).replace(".",",")} mm²`:""],["bd."+a+"o","d."+a,WC[a],a==="N"?`3 fils ${String(c.sec).replace(".",",")} mm²`:""])); }
     else ["L","N","PE"].forEach(a=>Wr.push(["tb."+a,"d."+a,WC[a],a==="N"?`direct ${String(c.sec).replace(".",",")} mm², sans dérivation`:""]));
     return wireSvg(B,Wr); }
   if(["LUM","AP","LED","LEDR","I","VV"].includes(k)){
@@ -1736,7 +1736,7 @@ function elecPointSvg(p,pl){ const c=p.c, k=p.k, B=[], Wr=[], tb={id:"tb",x:10,y
     const lamp={id:"l",x:10,y:290,w:150,h:72,t:led?"Alimentation LED":k==="AP"?"Applique":"Lampe (DCL)",s:[led?"230 V → 24 V, puis ruban":"douille DCL"],terms:[["R","L",40,"t"],["N","N",80,"t"],["PE","T",120,"t"]]};
     const s1=vv?{id:"s1",x:190,y:290,w:160,h:72,t:"Va-et-vient 1",terms:[["C","C",50,"t"],["1","1",60,"b"],["2","2",110,"b"]]}:{id:"s1",x:190,y:290,w:160,h:62,t:"Interrupteur",s:["simple allumage"],terms:[["L","L",50,"t"],["R","1",110,"t"]]};
     B.push(tb,bd(bdT([["Ro","R",40,"b"],["No","N",80,"b"],["PEo","T",120,"b"],["Lo","L",240,"b"],...(vv?[["R2","R",165,"b"]]:[])]),[[60,52,Math.min(5,n),WC.N],[150,52,Math.min(5,n),WC.PE],[240,52,Math.min(5,n),WC.R],[300,52,3,WC.L]]),lamp,s1);
-    ["L","N","PE"].forEach(a=>Wr.push(["tb."+a,"bd."+a+"i",WC[a]])); Wr.push(["bd.No","l.N",WC.N],["bd.PEo","l.PE",WC.PE],["bd.Ro","l.R",WC.R]);
+    ["L","N","PE"].forEach(a=>Wr.push(["tb."+a,"bd."+a+"i",WC[a],a==="N"?"3 fils 1,5 mm²":""])); Wr.push(["bd.No","l.N",WC.N,"1,5 mm²"],["bd.PEo","l.PE",WC.PE],["bd.Ro","l.R",WC.R]);
     if(vv){ B.push({id:"s2",x:10,y:420,w:170,h:62,t:"Va-et-vient 2",terms:[["1","1",50,"t"],["2","2",100,"t"],["C","C",165,"t"]]});
       Wr.push(["bd.Lo","s1.C",WC.L],["s1.1","s2.1",WC.N1,"navette 1"],["s1.2","s2.2",WC.N2,"navette 2"],["s2.C","bd.R2",WC.R,"retour"]); }
     else Wr.push(["bd.Lo","s1.L",WC.L],["s1.R","bd.Ro",WC.R,"retour"]);
@@ -1773,7 +1773,7 @@ function tableauSvg(Hs){ const MW=24, X0=34, RH=196, rows=Hs.ids, W=380, top=118
   bg+=`<rect x="10" y="${top-26}" width="${W-20}" height="${Ht-top-4}" rx="10" fill="#eef0f1" stroke="#9aa3a8" stroke-width="2"/>`; s+=`<text x="20" y="${top-10}" font-size="11" font-weight="700" fill="#1c2428">Tableau (coffret ${rows.length} rangées × 13 modules)</text>`;
   // câbles de liaison 10 mm² : descente à gauche vers le haut de chaque différentiel
   const fx=[W/2-14,W/2+14]; wires+=`<path d="M${fx[0]},60 V${top-34} H22 V${top+(rows.length-1)*RH+26}" fill="none" stroke="${WC.L}" stroke-width="4"/><path d="M${fx[1]},60 V${top-30} H28 V${top+(rows.length-1)*RH+32}" fill="none" stroke="${WC.N}" stroke-width="4"/>`;
-  const GT=[]; rows.forEach((r,ri)=>{ const y=top+ri*RH, ry=y+40, mh=96;
+  s+=`<text x="${W/2+20}" y="${top-38}" font-size="9" font-weight="700" fill="#1c2428">2 fils 10 mm² (rouge, bleu)</text>`; const GT=[]; rows.forEach((r,ri)=>{ const y=top+ri*RH, ry=y+40, mh=96;
     s+=`<rect x="18" y="${ry+mh/2-6}" width="${W-36}" height="12" fill="#b9bfc3"/>`; // rail DIN
     // différentiel (2 modules)
     const ix=X0+4, iw=MW*2;
@@ -1789,13 +1789,13 @@ function tableauSvg(Hs){ const MW=24, X0=34, RH=196, rows=Hs.ids, W=380, top=118
       s+=`<text x="${x+MW/2-1}" y="${ry+mh+44}" text-anchor="middle" font-size="9" font-weight="700" fill="#1c2428">C${c.no}</text>`;
       // sorties du circuit : phase et neutre en bas, terre vers le bornier
       wires+=`<path d="M${x+MW/2-4},${ry+mh-8} V${ry+mh+30}" stroke="${WC.L}" stroke-width="3" fill="none"/><path d="M${x+MW/2+3},${ry+mh-8} V${ry+mh+30}" stroke="${WC.N}" stroke-width="3" fill="none"/>`;
-      s+=`<text x="${x+MW/2-1}" y="${ry+mh+56}" text-anchor="middle" font-size="7" fill="#4a5358">${c.sec}²</text>`; GT.push([x+MW/2-1,ry+mh+60]); });
+      s+=`<text x="${x+MW/2-1}" y="${ry+mh+56}" text-anchor="middle" font-size="7.5" font-weight="700" fill="#4a5358">${String(c.sec).replace(".",",")} mm²</text>`; GT.push([x+MW/2-1,ry+mh+60]); });
     for(let k=r.cs.length;k<8&&dx0+k*MW+MW<W-20;k++){ const x=dx0+k*MW; s+=`<rect x="${x}" y="${ry}" width="${MW-2}" height="${mh}" rx="3" fill="none" stroke="#b3babf" stroke-dasharray="3 3"/>`; }
     s+=`<text x="${dx0+r.cs.length*MW+6}" y="${ry+mh/2+3}" font-size="8" fill="#4a5358">${r.cs.length<8?"réserve":""}</text>`;
     // peigne : sortie du différentiel (bas) remontée sur le peigne des disjoncteurs (haut)
     if(r.cs.length){ const xe=dx0+(r.cs.length-1)*MW+MW/2-1;
       wires+=`<path d="M${ix+12},${ry+mh-8} V${ry+mh+12} H${dx0-3} V${ry-16} H${xe+4}" fill="none" stroke="${WC.L}" stroke-width="3"/><path d="M${ix+iw-12},${ry+mh-8} V${ry+mh+6} H${dx0-8} V${ry-22} H${xe+4}" fill="none" stroke="${WC.N}" stroke-width="3"/>`;
-      s+=`<rect x="${dx0}" y="${ry-20}" width="${xe-dx0+6}" height="10" rx="2" fill="#fafafa" stroke="#7a8288"/><text x="${(dx0+xe)/2}" y="${ry-12}" text-anchor="middle" font-size="7" fill="#4a5358">peigne phase + neutre</text>`;
+      s+=`<rect x="${dx0}" y="${ry-20}" width="${xe-dx0+6}" height="10" rx="2" fill="#fafafa" stroke="#7a8288"/><text x="${(dx0+xe)/2}" y="${ry-12}" text-anchor="middle" font-size="7" fill="#4a5358">peigne phase + neutre</text><text x="${dx0-4}" y="${ry+mh+22}" text-anchor="end" font-size="7" fill="#4a5358">10 mm²</text>`;
       r.cs.forEach((c,ci)=>{ const x=dx0+ci*MW+MW/2-1; wires+=`<path d="M${x},${ry-10} V${ry+8}" stroke="#7a8288" stroke-width="2"/>`; }); }
   });
   // bornier de terre
@@ -1839,6 +1839,31 @@ function bdSvg(pl,c){ const W=380, items=[]; const name=p=>p.k==="I"?"Interrupte
     s+=`<text x="${wg.x}" y="${wg.y+24}" text-anchor="middle" font-size="8.5" font-weight="700" fill="${k==="PE"?"#2d7a27":WC[k]}">${k==="PE"?"Terre":k==="R"?"Retour":k==="N1"?"Nav. 1":k==="N2"?"Nav. 2":k==="L"?"Phase":"Neutre"} · ${wg.n}</text>`; });
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:560px;height:auto;min-width:0;max-height:none;display:block;background:#fff;border-radius:8px;font-family:system-ui,sans-serif" role="img" aria-label="Boîte de dérivation">${bg}${wr}${s}</svg>`; }
 
+/* appareil vu de dos : bornes et fils */
+const SECT_TABLE=[["Prises 16 A","2,5 mm²","20 A","12 prises max (ou 1,5 mm² sur 16 A : 8 max)","ICTA Ø20"],["Éclairage, interrupteurs, va-et-vient, rubans LED","1,5 mm²","16 A","8 points lumineux max","ICTA Ø16"],["Four, lave-vaisselle, lave-linge, sèche-linge","2,5 mm²","20 A","1 appareil par circuit","ICTA Ø20"],["Plaque de cuisson","6 mm²","32 A","1 par circuit, différentiel type A","ICTA Ø25"],["Chauffe-eau","2,5 mm²","20 A","contacteur heures creuses","ICTA Ø20"],["Liaisons dans le tableau","10 mm² (16 mm² si ≥ 12 kVA)","—","disjoncteur Enedis → différentiels → peignes","—"],["Terre principale","16 mm² cuivre (25 mm² nu)","—","bornier → barrette → piquet","—"],["24 V des rubans LED","1,5 mm² (2,5 mm² au-delà de 5 m)","—","rouge +, noir −","gorge, profilé"],["RJ45","câble cat. 6 grade 3","—","coffret → prise, sans coupure","ICTA Ø20 à part"]];
+function backSvg(k,c){ const sec=c&&c.sec?String(c.sec).replace(".",","):"1,5", W=360, H=200; let s="", w="", P="";
+  const term=(x,y,lab,col)=>{ s+=`<rect x="${x-13}" y="${y-13}" width="26" height="26" rx="4" fill="#e8ebed" stroke="#6b7378"/><circle cx="${x}" cy="${y}" r="6" fill="#c9ced3" stroke="#555"/><path d="M${x-4},${y} H${x+4}" stroke="#555" stroke-width="1.5"/><text x="${x}" y="${y+28}" text-anchor="middle" font-size="11" font-weight="700" fill="${col||"#1c2428"}">${lab}</text>`; };
+  const wire=(x0,y0,x1,y1,col,lab)=>{ const d=`M${x0},${y0} C${x0},${(y0+y1)/2} ${x1},${(y0+y1)/2} ${x1},${y1}`; w+=`<path d="${d}" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round"/>`+(col===WC.PE?`<path d="${d}" fill="none" stroke="#f1d500" stroke-width="5" stroke-dasharray="7 7"/>`:"")+`<path d="M${x1},${y1-14} V${y1}" stroke="#b87333" stroke-width="3"/>`; if(lab) s+=`<text x="${x0>W/2?x0-6:x0+6}" y="${Math.abs(x0-W/2)<40?y0+30:y0+12}" text-anchor="${x0>W/2?"end":"start"}" font-size="10" font-weight="700" fill="${col===WC.PE?"#2d7a27":col}">${lab}</text>`; };
+  const plate=(t,sub)=>{ P=`<rect x="70" y="58" width="220" height="118" rx="14" fill="#fbfbfa" stroke="#7a8288" stroke-width="2"/><text x="${W/2}" y="${H-6}" text-anchor="middle" font-size="11" font-weight="700" fill="#1c2428">${t}</text>`+(sub?`<text x="${W/2}" y="74" text-anchor="middle" font-size="9" fill="#4a5358">${sub}</text>`:""); };
+  const L=`${sec} mm² rouge`, N=`${sec} mm² bleu`, T=`${sec} mm² vert/jaune`;
+  if(["PC","PS","FOUR","LV","LL"].includes(k)){ plate(k==="PC"?"Prise 2P+T vue de dos":"Prise 20 A vue de dos","bornes automatiques ou à vis"); term(120,130,"L","#c0392b"); term(240,130,"N","#2d6bd6"); term(180,98,"Terre","#2d7a27");
+    wire(40,8,120,117,WC.L,L); wire(320,8,240,117,WC.N,N); wire(180,8,180,85,WC.PE,T); }
+  else if(k==="CUIS"){ plate("Sortie de câble 32 A","bornier dans la boîte"); term(120,130,"L","#c0392b"); term(180,130,"N","#2d6bd6"); term(240,130,"Terre","#2d7a27"); wire(40,8,120,117,WC.L,"6 mm² rouge"); wire(180,8,180,117,WC.N,"6 mm² bleu"); wire(320,8,240,117,WC.PE,"6 mm² v/j"); }
+  else if(k==="I"){ plate("Interrupteur simple vu de dos","le neutre ne vient jamais ici"); term(130,124,"L","#c0392b"); term(230,124,"1","#e67e22"); wire(40,8,130,111,WC.L,"1,5 mm² rouge (phase)"); wire(320,8,230,111,WC.R,"1,5 mm² orange (retour)"); }
+  else if(k==="VV"){ plate("Va-et-vient vu de dos","C = commun, 1 et 2 = navettes"); term(110,124,"C","#c0392b"); term(180,124,"1","#8e44ad"); term(250,124,"2","#5d6d7e");
+    wire(30,8,110,111,WC.L,"rouge ou orange"); wire(180,8,180,111,WC.N1,"violet"); wire(330,8,250,111,WC.N2,"gris"); s+=`<text x="${W/2}" y="190" text-anchor="middle" font-size="9" fill="#4a5358"></text>`; }
+  else if(k==="LUM"||k==="AP"){ plate(k==="AP"?"Applique : bornier":"Boîte DCL au plafond","bornier 3 bornes, puis fiche DCL"); term(120,130,"L","#e67e22"); term(180,130,"N","#2d6bd6"); term(240,130,"Terre","#2d7a27");
+    wire(40,8,120,117,WC.R,"1,5 mm² orange"); wire(180,8,180,117,WC.N,"1,5 mm² bleu"); wire(320,8,240,117,WC.PE,"1,5 mm² v/j"); }
+  else if(k==="LED"||k==="LEDR"){ P=`<rect x="40" y="60" width="280" height="96" rx="8" fill="#f2f3f4" stroke="#7a8288" stroke-width="2"/>`; s=`<text x="${W/2}" y="44" text-anchor="middle" font-size="11" font-weight="700" fill="#1c2428">Alimentation LED : 230 V → 24 V</text><text x="110" y="78" text-anchor="middle" font-size="9" fill="#4a5358">ENTRÉE (AC)</text><text x="260" y="78" text-anchor="middle" font-size="9" fill="#4a5358">SORTIE (DC)</text>`;
+    term(80,120,"L","#e67e22"); term(120,120,"N","#2d6bd6"); term(160,120,"⊥","#2d7a27"); term(240,120,"+V","#c0392b"); term(285,120,"−V","#2d2d2d");
+    wire(20,8,80,107,WC.R,"orange"); wire(120,8,120,107,WC.N,""); wire(175,8,160,107,WC.PE,""); wire(240,215,240,133,"#c0392b",""); wire(300,215,285,133,"#2d2d2d","");
+    s+=`<text x="230" y="205" text-anchor="end" font-size="10" font-weight="700" fill="#1c2428">vers le ruban : rouge +, noir −</text>`; return `<svg viewBox="0 0 ${W} 220" style="width:100%;max-width:440px;height:auto;min-width:0;max-height:none;display:block;background:#fff;border-radius:8px;font-family:system-ui,sans-serif" role="img">${P}${w}${s}</svg>`; }
+  else if(k==="RJ"){ const C=[["blanc-vert","#e8f5e1","#3a9a3a"],["vert","#3a9a3a"],["blanc-orange","#fdeedd","#e67e22"],["bleu","#2d6bd6"],["blanc-bleu","#e2ecfb","#2d6bd6"],["orange","#e67e22"],["blanc-marron","#efe6dd","#7b4a24"],["marron","#7b4a24"]];
+    s=C.map(([n,c,st],i)=>`<rect x="${30+i*38}" y="40" width="30" height="90" rx="3" fill="${c}" stroke="${st||c}" stroke-width="3"/><text x="${45+i*38}" y="150" text-anchor="middle" font-size="11" font-weight="700">${i+1}</text><text x="${45+i*38}" y="166" text-anchor="middle" font-size="7" fill="#333">${n}</text>`).join("")+`<text x="${W/2}" y="24" text-anchor="middle" font-size="11" font-weight="700">Câblage T568A (le même aux deux bouts)</text>`; return `<svg viewBox="0 0 ${W} 180" style="width:100%;max-width:440px;height:auto;min-width:0;max-height:none;display:block;background:#fff;border-radius:8px;font-family:system-ui,sans-serif" role="img">${s}</svg>`; }
+  else return "";
+  s+=`<text x="${W/2}" y="${H+12}" text-anchor="middle" font-size="9" fill="#b87333">▮ cuivre dénudé 11 à 12 mm, enfoncé à fond dans la borne</text>`;
+  return `<svg viewBox="0 0 ${W} ${H+18}" style="width:100%;max-width:440px;height:auto;min-width:0;max-height:none;display:block;background:#fff;border-radius:8px;font-family:system-ui,sans-serif" role="img">${P}${w}${s}</svg>`; }
+
 function renderElec(){ const room=S.walls[S.cur].room||roomNames()[0], H=elecHouse(), pl=H.R.find(r=>r.room===room)||elecPlan(room);
   const cBadge=c=>c?`<span style="display:inline-block;padding:1px 8px;border-radius:10px;background:${c.t==="EC"?"#fff1d6":c.t==="PC"?"#e3eefc":c.t==="RJ"?"#efe7fb":"#fde4e1"};font-size:12px">${c.no?"C"+c.no+" · ":""}${esc(c.name)}${c.cal?` · ${c.cal} A · ${String(c.sec).replace(".",",")} mm²`:""}</span>`:"";
   const tab=`<div class="box" style="padding:10px 12px"><b>Du compteur au tableau</b>
@@ -1854,9 +1879,10 @@ function renderElec(){ const room=S.walls[S.cur].room||roomNames()[0], H=elecHou
     <p class="cap" style="margin:4px 0 0">Une boîte par circuit, ou une grande boîte avec les Wago de chaque circuit bien séparés et repérés (étiquette C1, C2…). Les fils de chaque circuit restent dans leur gaine.</p></div>`:"";
   const legend=`<div class="cap" style="display:flex;flex-wrap:wrap;gap:10px">${Object.entries(WN).filter(([k])=>!["P","M"].includes(k)).map(([k,n])=>`<span><i style="display:inline-block;width:22px;height:4px;vertical-align:middle;background:${k==="PE"?"repeating-linear-gradient(90deg,#3aa335 0 6px,#f1d500 6px 12px)":WC[k]}"></i> ${n}</span>`).join("")}</div>`;
   const cards=pl.pts.map((p,i)=>`<details class="box" style="padding:8px 12px"${i<2?" open":""}><summary style="cursor:pointer"><b>${esc(p.n)}</b> ${cBadge(p.c)}</summary>
-    <div style="margin-top:6px">${elecPointSvg(p,pl)}</div><ol style="margin:6px 0 0 18px;padding:0;font-size:14px;display:flex;flex-direction:column;gap:3px">${elecSteps(p,pl).map(x=>`<li>${esc(x)}</li>`).join("")}</ol></details>`).join("");
+    <div style="margin-top:6px">${elecPointSvg(p,pl)}</div>${(()=>{ const b=backSvg(p.k,p.c); return b?`<div style="margin-top:8px"><b style="font-size:13px">Vue de dos : où mettre chaque fil</b>${b}</div>`:""; })()}<ol style="margin:6px 0 0 18px;padding:0;font-size:14px;display:flex;flex-direction:column;gap:3px">${elecSteps(p,pl).map(x=>`<li>${esc(x)}</li>`).join("")}</ol></details>`).join("");
   document.getElementById("plan").innerHTML=`<div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
     <div><b style="font-size:17px">Schémas électriques : ${esc(room)}</b><div class="cap">${pl.pts.length} point(s), ${pl.C.length} circuit(s). Les points se placent dans « Électricité » (murs), « Luminaires » (plafond) et « Créations » (rubans LED).</div></div>
+    <div class="box" style="padding:10px 12px"><b>Quel fil pour quoi</b><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">${SECT_TABLE.map(r=>`<div style="border-left:4px solid var(--chalk,#1d63c4);padding:2px 8px;font-size:14px"><b>${esc(r[0])}</b><br><b style="color:#c0392b">${esc(r[1])}</b>${r[2]!=="—"?` · disjoncteur ${esc(r[2])}`:""}${r[4]!=="—"?` · ${esc(r[4])}`:""}<br><span class="cap">${esc(r[3])}</span></div>`).join("")}</div><p class="cap" style="margin:4px 0 0">Fils H07V-U dans les gaines ICTA : rouge ou marron = phase, bleu = neutre (seulement le bleu), vert/jaune = terre (seulement lui), orange ou violet = retour lampe et navettes. Le noir ou le gris sont aussi possibles pour la phase ou les navettes.</p></div>
     ${tab}${bdBox}${legend}${cards||'<p class="hint">Aucun point électrique dans cette pièce : ajoutez des prises, interrupteurs ou luminaires.</p>'}
     <p class="hint">Schémas indicatifs selon la NF C 15-100 (prises : 12 socles max par circuit 20 A en 2,5 mm² ; éclairage : 8 points max par circuit 16 A en 1,5 mm²). Faites contrôler l'installation (Consuel pour une installation neuve).</p></div>`;
   document.getElementById("extra").innerHTML=""; document.getElementById("legend").innerHTML=`<span>Schémas de raccordement : du tableau à la boîte de dérivation, puis à chaque prise, interrupteur et lumière.</span>`; }
