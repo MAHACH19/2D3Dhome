@@ -2507,10 +2507,15 @@ function kitChecks(room){
 function kitMaterials(room){
   const K=kitCfg(room); if(!K.on||!K.items.length) return [];
   const rows=[], add=(des,det,q,u)=>{ if(q>0) rows.push({cat:"Cuisine IKEA",des,det,q,u}); }, cnt={};
-  K.items.forEach(it=>{ const k=kitItem(it); if(k){ if(!cnt[k.n]) cnt[k.n]={k,n:0}; cnt[k.n].n++; } });
-  Object.values(cnt).forEach(({k,n})=>{ add(k.n,k.t==="app"?"":k.id==="custom"?"à faire faire ou à adapter":"caisson et aménagement intérieur",n,"u");
-    if(k.t!=="app" && !/hotteinox|etag/.test(k.f)) add(`Façade(s) ${K.facade} pour ${k.n.replace(/^METOD /,"").split(",")[0].split(" +")[0]}`,"",n,"lot");
+  K.items.forEach(it=>{ const k=kitItem(it); if(k){ const fa=it.fac||K.facade, key=k.n+"|"+fa; if(!cnt[key]) cnt[key]={k,n:0,fa}; cnt[key].n++; } });
+  Object.values(cnt).forEach(({k,n,fa})=>{ add(k.n,k.t==="app"?"":k.id==="custom"?"à faire faire ou à adapter":"caisson et aménagement intérieur",n,"u");
+    if(k.t!=="app" && !/hotteinox|etag/.test(k.f)) add(`Façade(s) ${fa} pour ${k.n.replace(/^METOD /,"").split(",")[0].split(" +")[0]}`,"",n,"lot");
     if(k.t==="bas"||k.t==="col") add("Pied réglable METOD 8 cm","4 par meuble au sol",4*n,"u"); });
+  { const jo=K.items.reduce((a,it)=>a+(it.jg?1:0)+(it.jd?1:0),0), ti=K.items.reduce((a,it)=>a+(+it.ti||0),0), et=K.items.reduce((a,it)=>a+(it.et>0?+it.et:0),0), led=K.items.filter(it=>it.led&&(kitItem(it)||{}).t==="haut");
+    add(`Joue de finition ${K.facade}`,"côté visible d'un meuble",jo,"u"); add("Tiroir intérieur MAXIMERA","à l'intérieur d'un élément à porte",ti,"u"); add("Tablette METOD / UTRUSTA","étagères choisies",et,"u");
+    add("Éclairage LED sous meuble mural","réglette + alimentation",led.length,"u");
+    const HD=handleOf(null,room), nh=K.items.reduce((a,it)=>{ const k=kitItem(it); return a+(k&&k.t!=="app"&&!/ouvert|etag|hotteinox/.test(it.f||k.f)?frontPanels(it.f||k.f,0,k.w,0,700).filter(p=>p[4]!=="four"&&p[4]!=="lv").length:0); },0);
+    if(HD.m!=="sans") add(`Poignée ${(HANDLES.find(h=>h[0]===HD.m)||[])[1]} · ${(HFIN.find(h=>h[0]===HD.f)||[])[1]}`,"une par porte ou tiroir",nh,"u"); }
   const runs=kitRuns(room), lenT=runs.reduce((a,r)=>a+(r.b-r.a),0);
   const PL=planOf(K,room);
   if(PL.tile){ const m2=lenT*650/1e6, nez=lenT/1000;
@@ -2557,7 +2562,7 @@ function kitPanel(w){
         ${it.k==="custom"||it.k==="ilot"?`<div class="row" style="grid-template-columns:1fr"><label class="f">Nom<input data-ki="${i}" data-kk="n" value="${esc(it.n||"")}" placeholder="Ex. meuble four en hauteur"></label></div>`:""}
         <div class="row">
           <label class="f">Pose<select data-ki="${i}" data-kk="t">${[["","Comme le modèle"],["bas","Au sol, sous plan"],["col","Colonne au sol"],["haut","Mural"],["app","Libre (îlot, électroménager)"]].map(([v,l])=>`<option value="${v}"${(it.t||"")===v?" selected":""}>${l}</option>`).join("")}</select></label>
-          <label class="f">Façade<select data-ki="${i}" data-kk="f">${[["","Comme le modèle"],["1p","1 porte"],["2p","2 portes"],["3t","3 tiroirs"],["4t","4 tiroirs"],["col2","2 portes superposées"],["collv","Lave-vaisselle en hauteur"],["four","Four"],["micro","Micro-ondes"],["ouvert","Ouvert (niches)"],["frigo","Réfrigérateur"]].map(([v,l])=>`<option value="${v}"${(it.f||"")===v?" selected":""}>${l}</option>`).join("")}</select></label>
+          <label class="f">Façade<select data-ki="${i}" data-kk="f">${[["","Comme le modèle"],["1p","1 porte"],["2p","2 portes"],["3t","3 tiroirs"],["4t","4 tiroirs"],["2t","2 tiroirs"],["1t1p","1 tiroir + 1 porte"],["vit","Porte vitrée"],["rel","Porte relevable"],["col2","2 portes superposées"],["collv","Lave-vaisselle en hauteur"],["four","Four"],["micro","Micro-ondes"],["ouvert","Ouvert (niches)"],["frigo","Réfrigérateur"]].map(([v,l])=>`<option value="${v}"${(it.f||"")===v?" selected":""}>${l}</option>`).join("")}</select></label>
         </div>
         <div class="row">
           <label class="f">Largeur (cm)<input type="number" min="5" step="0.5" data-ki="${i}" data-kk="w" value="${it.w?it.w/10:""}" placeholder="${(KIT.find(q=>q.id===it.k)||{w:600}).w/10}"></label>
@@ -2981,7 +2986,8 @@ function v3Box(s,xa,xb,oa,ob,za,zb,mat){
 function frontPanels(f,x0,x1,fz0,z1){ const H=z1-fz0, R=[];
   const hs=c=>{ let p=fz0; c.forEach(v=>{ R.push([x0,x1,p,fz0+H*v]); p=fz0+H*v; }); R.push([x0,x1,p,z1]); };
   if(f==="2p"){ const m=(x0+x1)/2; R.push([x0,m,fz0,z1],[m,x1,fz0,z1]); }
-  else if(f==="3t") hs([.5,.75]); else if(f==="4t") hs([.25,.5,.75]); else if(f==="col2"||f==="frigo") hs([.62]);
+  else if(f==="3t") hs([.5,.75]); else if(f==="2t") hs([.5]); else if(f==="1t1p") R.push([x0,x1,fz0,fz0+H*.78],[x0,x1,fz0+H*.78,z1]);
+  else if(f==="rel") R.push([x0,x1,fz0,z1,"rel"]); else if(f==="vit"){ R.push([x0,x1,fz0,z1,"vit"]); } else if(f==="4t") hs([.25,.5,.75]); else if(f==="col2"||f==="frigo") hs([.62]);
   else if(f==="us"){ const m=(x0+x1)/2; R.push([x0,x1,fz0,fz0+H*.62],[x0,m,fz0+H*.62,z1],[m,x1,fz0+H*.62,z1]); }
   else if(f==="collv"){ R.push([x0,x1,fz0,fz0+400],[x0,x1,fz0+420,fz0+1240,"lv"],[x0,x1,fz0+1260,z1]); }
   else if(f==="four"){ R.push([x0,x1,fz0,fz0+120],[x0,x1,fz0+140,Math.min(z1,fz0+740),"four"]); if(z1>fz0+760) R.push([x0,x1,fz0+760,z1]); }
@@ -3228,24 +3234,30 @@ function buildScene(){
       wallSets.push({room,k,objs:scene.children.slice(c0),nx:s.nx,ny:s.ny,mx:(s.x0+s.x1)/2,my:(s.y0+s.y1)/2,H:h});
       // cuisine
       if(K.on) K.items.forEach((it,idx)=>{ if(it.wall!==wid(w)) return; const b=kitBox(it,K,w.H); if(!b) return; const kk=b.k;
-        const fc=kk.c||(FACADES.find(f=>f.n===K.facade)||FACADES[0]).c, x0=it.x, x1=it.x+kk.w, d0=g.T, d1=g.T+b.d-20, base=kk.t==="bas"||kk.t==="col";
+        const fc=kk.c||(FACADES.find(f=>f.n===(it.fac||K.facade))||FACADES[0]).c, x0=it.x, x1=it.x+kk.w, d0=g.T, d1=g.T+b.d-20, base=kk.t==="bas"||kk.t==="col";
         const tg={kind:"kit",room,idx}, carc=v3Mat(kk.t==="app"?fc:"#f2f0ea"), fm=v3Mat(fc,{roughness:.55});
         const add=(m)=>{ m.userData=tg; scene.add(m); pick.push(m); };
         if(base) add(v3Box(s,x0+5,x1-5,d0,d1-50,0,80,v3Mat(shade(fc,0.6))));
         const op=!!it.open&&kk.t!=="app"||(!!it.open&&kk.t==="app"&&(kk.f==="frigo"||kk.f==="us")), cz0=base?80:b.z0;
         if(!op) add(v3Box(s,x0+1,x1-1,d0,d1,cz0,b.z1,carc));
         else { const ci=v3Mat("#f7f5f0"); add(v3Box(s,x0+1,x0+19,d0,d1,cz0,b.z1,carc)); add(v3Box(s,x1-19,x1-1,d0,d1,cz0,b.z1,carc)); add(v3Box(s,x0+19,x1-19,d0,d1,cz0,cz0+18,ci)); add(v3Box(s,x0+19,x1-19,d0,d1,b.z1-18,b.z1,ci)); add(v3Box(s,x0+19,x1-19,d0,d0+8,cz0,b.z1,ci));
-          if(!/[34]t/.test(kk.f)&&b.z1-cz0>500) for(let q=1;q<=Math.floor((b.z1-cz0)/400);q++){ const z=cz0+(b.z1-cz0)*q/(Math.floor((b.z1-cz0)/400)+1); add(v3Box(s,x0+19,x1-19,d0+8,d1-20,z,z+16,ci)); } }
+          const nEt=it.et!==undefined&&it.et!==""?+it.et:(!/[234]t/.test(kk.f)&&b.z1-cz0>500?Math.floor((b.z1-cz0)/400):0), nTi=+it.ti||0, tz=cz0+18+nTi*150;
+          for(let q=0;q<nTi;q++){ const z=cz0+20+q*150, sh=200; add(v3Box(s,x0+30,x1-30,d0+40+sh,d1-30+sh,z,z+12,ci)); add(v3Box(s,x0+30,x1-30,d1-42+sh,d1-30+sh,z,z+120,ci)); add(v3Box(s,x0+30,x0+42,d0+40+sh,d1-30+sh,z,z+110,ci)); add(v3Box(s,x1-42,x1-30,d0+40+sh,d1-30+sh,z,z+110,ci)); }
+          for(let q=1;q<=nEt;q++){ const z=tz+(b.z1-tz)*q/(nEt+1); add(v3Box(s,x0+19,x1-19,d0+8,d1-20,z,z+16,ci)); } }
+        { const jz=kk.t==="haut"?b.z0:0; if(it.jg) add(v3Box(s,x0-19,x0,d0,d1+19,jz,b.z1,fm)); if(it.jd) add(v3Box(s,x1,x1+19,d0,d1+19,jz,b.z1,fm)); }
+        if(it.led&&kk.t==="haut"){ add(v3Box(s,x0+30,x1-30,d1-90,d1-60,b.z0-6,b.z0,v3Mat("#ffffff",{emissive:new THREE.Color("#fff6e6"),emissiveIntensity:V.nuit?2:1}))); if(V.nuit){ const L=new THREE.PointLight("#fff1dc",.5,2.5,1.6), m0=v3Box(s,(x0+x1)/2-1,(x0+x1)/2+1,d1-80,d1-70,b.z0-200,b.z0-199,carc); m0.geometry.computeBoundingSphere(); L.position.copy(m0.geometry.boundingSphere.center); scene.add(L); } }
         const fz0=base?80:b.z0;
         frontPanels(kk.f,x0+2,x1-2,fz0+2,b.z1-2).forEach(p=>{ const pm=p[4]==="four"?M.dark:fm;
           if(it.open){ const a=p[0]+1.5, bb=p[1]-1.5, c=p[2]+1.5, d=p[3]-1.5, hor=(d-c)<500&&!p[4];
             if(p[4]==="lv"||p[4]==="four"){ add(v3Box(s,a,bb,d1,d1+(d-c),c,c+19,pm)); return; }
+            if(p[4]==="rel"){ add(v3Box(s,a,bb,d1,d1+(d-c)*0.9,d,d+19,pm)); return; }
             if(hor){ const sh=380; add(v3Box(s,a,bb,d1+sh,d1+sh+19,c,d,pm)); const tm=v3Mat("#eceae4"); add(v3Box(s,a+25,bb-25,d1-120+sh,d1+sh,c+15,c+27,tm)); add(v3Box(s,a+25,a+37,d1-120+sh,d1+sh,c+15,c+(d-c)*0.7,tm)); add(v3Box(s,bb-37,bb-25,d1-120+sh,d1+sh,c+15,c+(d-c)*0.7,tm)); add(v3Box(s,(a+bb)/2-80,(a+bb)/2+80,d1+sh+19,d1+sh+40,d-60,d-45,M.steel)); return; }
-            const right=kk.f==="2p"&&p[0]>x0+10||kk.f==="us"&&p[0]>(x0+x1)/2-5; if(right) add(v3Box(s,bb-19,bb,d1,d1+(bb-a),c,d,pm)); else add(v3Box(s,a,a+19,d1,d1+(bb-a),c,d,pm)); return; } add(v3Box(s,p[0]+1.5,p[1]-1.5,d1,d1+19,p[2]+1.5,p[3]-1.5,pm));
+            const right=kk.f==="2p"&&p[0]>x0+10||kk.f==="us"&&p[0]>(x0+x1)/2-5||kk.f!=="2p"&&kk.f!=="us"&&it.hg==="d"; if(p[4]==="vit"){ const gm=v3Mat("#dfe9ee",{transparent:true,opacity:.35,roughness:.05}); if(right){ add(v3Box(s,bb-19,bb,d1,d1+(bb-a),c,d,gm)); } else add(v3Box(s,a,a+19,d1,d1+(bb-a),c,d,gm)); return; } if(right) add(v3Box(s,bb-19,bb,d1,d1+(bb-a),c,d,pm)); else add(v3Box(s,a,a+19,d1,d1+(bb-a),c,d,pm)); return; } if(p[4]==="vit"){ const a=p[0]+1.5,bb=p[1]-1.5,c=p[2]+1.5,d=p[3]-1.5; [[a,a+60,c,d],[bb-60,bb,c,d],[a,bb,c,c+60],[a,bb,d-60,d]].forEach(q=>add(v3Box(s,q[0],q[1],d1,d1+19,q[2],q[3],pm))); add(v3Box(s,a+60,bb-60,d1+6,d1+10,c+60,d-60,v3Mat("#dfe9ee",{transparent:true,opacity:.35,roughness:.05}))); }
+          else add(v3Box(s,p[0]+1.5,p[1]-1.5,d1,d1+19,p[2]+1.5,p[3]-1.5,pm));
           if(p[4]==="four") add(v3Box(s,p[0]+60,p[1]-60,d1+19,d1+21,p[2]+80,p[3]-120,v3Mat("#3d4248",{roughness:.2})));
-          if(kk.t!=="app"||kk.f==="frigo"||kk.f==="us"){ const hor=(p[3]-p[2])<500||p[4], HD=handleOf(it,room), hm=handleMat(HD.f);
-            const c=hor?[(p[0]+p[1])/2,p[3]-52]:[kk.f==="2p"&&p[0]>x0+10?p[0]+40:p[1]-40, kk.t==="haut"?p[2]+140:p[3]-120];
-            handleBoxes(HD.m,[p[0],p[1],p[2],p[3]],c,hor,kk.t==="haut").forEach(q=>add(v3Box(s,q[0],q[1],d1+19+q[4],d1+19+q[5],q[2],q[3],hm))); } });
+          if(kk.t!=="app"||kk.f==="frigo"||kk.f==="us"){ const hor=(p[3]-p[2])<500||(p[4]&&p[4]!=="vit"), HD=handleOf(it,room), hm=handleMat(HD.f);
+            const rel=p[4]==="rel", hor2=hor||rel, c=rel?[(p[0]+p[1])/2,p[2]+50]:hor?[(p[0]+p[1])/2,p[3]-52]:[kk.f==="2p"&&p[0]>x0+10||kk.f!=="2p"&&kk.f!=="us"&&it.hg==="d"?p[0]+40:p[1]-40, kk.t==="haut"?p[2]+140:p[3]-120];
+            if(!it.open) handleBoxes(HD.m,[p[0],p[1],p[2],p[3]],c,hor2,kk.t==="haut"||rel).forEach(q=>add(v3Box(s,q[0],q[1],d1+19+q[4],d1+19+q[5],q[2],q[3],hm))); } });
         if(kk.f==="ouvert"||kk.f==="etag"){ const ns=Math.max(1,Math.round((b.z1-fz0)/350)); for(let q=1;q<ns;q++){ const z=fz0+(b.z1-fz0)*q/ns; add(v3Box(s,x0+19,x1-19,d0,d1,z,z+19,carc)); } }
         if(kk.f==="hotte") add(v3Box(s,x0,x1,d0,d1+30,b.z0-40,b.z0,M.steel));
       });
@@ -3467,6 +3479,19 @@ function v3MoveStep(k){ const s=V3.sel, st=S.v3.step||50; if(!s) return; const v
   if(s.kind==="kit"){ const it=kitCfg(s.room).items[s.idx], sg=roomGeom(s.room).segs.find(q=>wid(q.w)===it.wall)||roomGeom(s.room).segs[0], ki=kitItem(it); if(!sg) return; const u=dx*sg.dx+dy*sg.dy; if(Math.abs(u)<0.2) return; it.x=Math.max(0,Math.min(sg.w.L-(ki?ki.w:0),(it.x||0)+Math.sign(u)*st)); return; }
   if(Math.abs(dx)>=Math.abs(dy)){ dx=Math.sign(dx)*st; dy=0; } else { dy=Math.sign(dy)*st; dx=0; }
   const it=s.kind==="lum"?lumList(s.room)[s.idx]:s.kind==="meub"?meubles(s.room)[s.idx]:null; if(!it) return; it.x=Math.round((it.x||0)+dx); it.y=Math.round((it.y||0)+dy); }
+const KFRONTS={bas:[["1p","1 porte"],["2p","2 portes"],["1t1p","1 tiroir + 1 porte"],["2t","2 tiroirs"],["3t","3 tiroirs"],["4t","4 tiroirs"],["ouvert","Ouvert (niches)"]],haut:[["1p","1 porte"],["2p","2 portes"],["vit","Porte vitrée"],["rel","Porte relevable"],["ouvert","Ouvert (niches)"]],col:[["1p","1 porte"],["col2","2 portes superposées"],["2p","2 portes"],["vit","Porte vitrée"],["ouvert","Ouvert (niches)"]]};
+function kitCfgHtml(s){ const K=kitCfg(s.room), it=K.items[s.idx], kk=kitItem(it); if(!kk||kk.t==="app") return ""; const fr=KFRONTS[kk.t]||KFRONTS.bas, cur=it.f||kk.f, sel=(k,opts,v)=>`<select data-popk="${k}">${opts.map(([a,b])=>`<option value="${a}"${String(v)===String(a)?" selected":""}>${b}</option>`).join("")}</select>`;
+  const one=!["2p","col2","us"].includes(cur)&&!/t$/.test(cur)&&cur!=="ouvert"&&cur!=="rel";
+  return `<details open style="margin-top:8px;border-top:1px solid var(--line,#0002);padding-top:6px"><summary style="cursor:pointer"><b>Configurer l'élément</b> <span class="cap">comme le planificateur IKEA</span></summary>
+    <label class="f" style="margin-top:4px">Élément${sel("kk",KIT.filter(q=>q.g===(KIT.find(z=>z.id===it.k)||{}).g).map(q=>[q.id,q.n.replace(/^METOD /,"")]),it.k)}</label>
+    <label class="f">Façade${sel("kf",fr.some(([a])=>a===cur)?fr:[[cur,"Comme le modèle"],...fr],cur)}</label>
+    ${one?`<div class="cap" style="margin:2px 0">Charnières <button type="button" data-pop="hg:g" class="${it.hg!=="d"?"pri":"ghost"}" style="padding:2px 8px">à gauche</button> <button type="button" data-pop="hg:d" class="${it.hg==="d"?"pri":"ghost"}" style="padding:2px 8px">à droite</button></div>`:""}
+    <label class="f">Style de façade${sel("kfac",[["","Comme la cuisine ("+K.facade+")"],...FACADES.map(f=>[f.n,f.n])],it.fac||"")}</label>
+    <div style="display:flex;gap:6px"><label class="f" style="flex:1">Étagères${sel("ket",[["","Auto"],[0,"Aucune"],[1,"1"],[2,"2"],[3,"3"],[4,"4"]],it.et??"")}</label>${kk.t!=="haut"?`<label class="f" style="flex:1">Tiroirs intérieurs${sel("kti",[[0,"Aucun"],[1,"1"],[2,"2"],[3,"3"]],it.ti||0)}</label>`:""}</div>
+    <label class="chk"><input type="checkbox" data-popk="kjg" ${it.jg?"checked":""}> Joue de finition à gauche</label>
+    <label class="chk"><input type="checkbox" data-popk="kjd" ${it.jd?"checked":""}> Joue de finition à droite</label>
+    ${kk.t==="haut"?`<label class="chk"><input type="checkbox" data-popk="kled" ${it.led?"checked":""}> Éclairage LED sous le meuble</label>`:""}
+    <p class="hint" style="margin:2px 0 0">Touchez « Ouvrir » pour voir l'intérieur (portes, tiroirs, étagères).</p></details>`; }
 function v3PopHtml(){ const s=V3.sel, paints=[...DIVERS.filter(d=>/laque|Finish|Window/i.test(d.n)).map(d=>d.n),...PEINT.map(p=>p.n)];
   const sw=(cur)=>`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">${NUANCIER.map(([n,c])=>`<button type="button" data-pop="sw:${c}" title="${n}" aria-label="${n}" style="width:26px;height:26px;padding:0;border-radius:50%;background:${c};border:2px solid ${c===cur?"#1d63c4":"#0003"}"></button>`).join("")}</div>`;
   const close=`<button type="button" data-pop="close" class="ghost" style="float:right;padding:2px 8px">✕</button>`;
@@ -3493,13 +3518,17 @@ function v3PopHtml(){ const s=V3.sel, paints=[...DIVERS.filter(d=>/laque|Finish|
   return `${close}<b>${esc(name)}</b>
     <label class="f" style="margin-top:6px">Couleur<input type="color" data-popk="col" value="${col}" style="height:34px;padding:2px"></label>${sw(col)}
     <label class="f">Peinture (je peins moi-même)<select data-popk="peint"><option value="">${isK?"Façade IKEA d'origine":"Pas encore choisie"}</option>${paints.map(n=>`<option${n===it.peint?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
-    <div class="btns" style="margin-top:6px"><button type="button" data-pop="open">${it.open?"Fermer":"Ouvrir"}</button>${isK?"":`<button type="button" data-pop="rot">Tourner 90°</button>`}<button type="button" data-pop="del" class="ghost">Supprimer</button></div>
+    <div class="btns" style="margin-top:6px"><button type="button" data-pop="open" class="pri">${it.open?"Fermer":"Ouvrir"}</button>${isK?"":`<button type="button" data-pop="rot">Tourner 90°</button>`}<button type="button" data-pop="del" class="ghost">Supprimer</button></div>
+    ${isK?kitCfgHtml(s):""}
     ${(()=>{ const HD=handleOf(it,isK?s.room:undefined); return handleSw(HD.m,HD.f,isK?(S.v3.pgOne?"ce meuble seulement":"toute la cuisine"):"")+(isK?`<label class="chk" style="margin-top:4px"><input type="checkbox" data-popk="pgone" ${S.v3.pgOne?"checked":""}> Changer seulement ce meuble</label>`:""); })()}
     ${v3MovePad()}<p class="hint">Vous pouvez aussi faire glisser le meuble sélectionné${isK?" : il suit le mur le plus proche, vous pouvez le changer de mur":""}.</p>`; }
 const DOORS=[["pleine","Pleine lisse"],["panneaux","4 panneaux (moulurée)"],["rainuree","Rainurée"],["vitree","Vitrée"],["coulissante","Coulissante en applique"],["galandage","Galandage (dans la cloison)"]];
 function v3PopInput(e){ const el=e.target, k=el.dataset&&el.dataset.popk; if(!k) return; const s=V3.sel; if(!s) return;
   if(s.kind==="wall"){ const w=S.walls[s.i]; if(k==="wpeint") w.peintN=el.value; if(k==="wcol") w.teinte=el.value; }
   else if(s.kind==="door"){ const o=S.walls[s.i].openings[s.op]; if(k==="dstyle") o.style=el.value; if(k==="dcol") o.color=el.value; if(k==="dopen") o.open=+el.value; }
+  else if(s.kind==="kit"&&/^k(k|f|fac|et|ti|jg|jd|led)$/.test(k)){ const it=kitCfg(s.room).items[s.idx], f={kk:"k",kf:"f",kfac:"fac",et:"et",ket:"et",kti:"ti",kjg:"jg",kjd:"jd",kled:"led"}[k];
+    if(el.type==="checkbox") it[f]=el.checked; else if(f==="et") it.et=el.value===""?undefined:+el.value; else if(f==="ti") it.ti=+el.value; else if(f==="k"){ it.k=el.value; delete it.f; delete it.w; } else it[f]=el.value||undefined;
+    if(e.type==="change"){ save(); v3Rebuild(); renderSide(); const pop=document.getElementById("v3pop"), st=pop.scrollTop; pop.innerHTML=v3PopHtml(); fillThumbs(pop); pop.scrollTop=st; } return; }
   else if(k==="pgone"){ S.v3.pgOne=el.checked; save(); const pop=document.getElementById("v3pop"); pop.innerHTML=v3PopHtml(); return; }
   else if(k==="mvx"||k==="mvy"){ const it=s.kind==="lum"?lumList(s.room)[s.idx]:meubles(s.room)[s.idx]; if(it&&el.value!==""){ it[k==="mvx"?"x":"y"]=Math.round(+el.value*10); if(e.type!=="change"){ save(); v3Rebuild(); return; } } }
   else { const it=s.kind==="kit"?kitCfg(s.room).items[s.idx]:meubles(s.room)[s.idx]; if(k==="col") it.c=el.value; if(k==="peint") it.peint=el.value; }
@@ -3511,6 +3540,7 @@ function v3PopBtn(k){ const s=V3.sel; if(!s) return;
   if(k.startsWith("sw:")){ const c=k.slice(3); if(s.kind==="wall") S.walls[s.i].teinte=c; else if(s.kind==="door") S.walls[s.i].openings[s.op].color=c; else (s.kind==="kit"?kitCfg(s.room).items[s.idx]:meubles(s.room)[s.idx]).c=c; }
   if(k==="wreset") delete S.walls[s.i].teinte;
   if(k.startsWith("step:")) S.v3.step=+k.slice(5);
+  if(k.startsWith("hg:")&&s.kind==="kit") kitCfg(s.room).items[s.idx].hg=k.slice(3);
   if(k.startsWith("pg:")||k.startsWith("pf:")){ const f=k.slice(0,2), v=k.slice(3), it=s.kind==="kit"?kitCfg(s.room).items[s.idx]:s.kind==="meub"?meubles(s.room)[s.idx]:null;
     if(s.kind==="kit"&&!S.v3.pgOne){ const K=kitCfg(s.room); K[f]=v; K.items.forEach(q=>{ delete q[f]; if(f==="pf") delete q.poignee; }); } else if(it){ it[f]=v; if(f==="pf") delete it.poignee; } }
   if(k.startsWith("mv:")) v3MoveStep(k.slice(3));
