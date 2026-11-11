@@ -494,6 +494,7 @@ function appCfg(){ if(!S.app) S.app={g:"Legrand Dooxie",f:"Blanc"}; if(!APPAR[S.
 function appCol(){ const A=appCfg(); return (APPAR[A.g].find(x=>x[0]===A.f)||APPAR[A.g][0])[1]; }
 function appBox(){ const A=appCfg(); return `<div class="row" style="margin:6px 0"><label class="f">Gamme d'appareillage<select data-app="g">${Object.keys(APPAR).map(k=>`<option${k===A.g?" selected":""}>${esc(k)}</option>`).join("")}</select></label>
   <label class="f">Finition<select data-app="f">${APPAR[A.g].map(([n])=>`<option${n===A.f?" selected":""}>${esc(n)}</option>`).join("")}</select></label></div>`; }
+document.addEventListener("change",e=>{ if(e.target.matches&&e.target.matches("[data-tabm]")){ S.tabM=e.target.value==="Hager"?"Hager":"Autre"; save(); renderAll(); } });
 document.addEventListener("change",e=>{ const k=e.target.dataset&&e.target.dataset.app; if(!k) return; const A=appCfg(); A[k]=e.target.value; appCfg(); save(); renderAll(); if(S.view==="visite"&&typeof v3Rebuild==="function") v3Rebuild(); });
 function ptLabels(points){ const c={}; return points.map(p=>{ const d=PTS[p.type]||PTS["Prise 16 A"]; c[d.k]=(c[d.k]||0)+1; return d.k+c[d.k]; }); }
 const ENDUITS = [
@@ -1788,7 +1789,7 @@ function realSvg(p,pl,st){ const c=p.c, k=p.k, FOC={}; if(!c||!c.cal||k==="RJ"||
   T(69,203,"Compteur Linky");
   /* disjoncteur de branchement (AGCP) */
   bg+=`<rect x="34" y="210" width="70" height="44" rx="4" fill="#e9e9e6" stroke="#8a8f93"/><rect x="62" y="216" width="14" height="22" rx="2" fill="#3f4448"/><rect x="64" y="218" width="10" height="9" rx="1" fill="#e04b3a"/><circle cx="46" cy="230" r="6" fill="#fff" stroke="#8a8f93"/><path d="M46,230 L50,226" stroke="#333"/><text x="92" y="234" text-anchor="middle" font-size="6" fill="#333">500mA</text>`;
-  wr+=line([[64,192],[64,210]],"L",3)+line([[74,192],[74,210]],"N",3);
+  wr+=line([[64,192],[64,210]],"N",3)+line([[74,192],[74,210]],"L",3);
   T(69,263,"Disjoncteur de branchement"); FOC.cut=[0,112,240,160];
   if(st==="cut"){ fg+=`<rect x="62" y="216" width="14" height="22" rx="2" fill="#3f4448"/><rect x="64" y="228" width="10" height="9" rx="1" fill="#27ae60"/><text x="69" y="235" text-anchor="middle" font-size="6" font-weight="700" fill="#fff">0</text><path d="M84,222 C100,222 100,236 84,236" fill="none" stroke="#c0392b" stroke-width="1.6"/><path d="M84,236 l4,-4 M84,236 l5,1" stroke="#c0392b" stroke-width="1.6"/>`; T(132,226,"basculer la manette",{a:"start",c:"#c0392b",s:8}); T(132,236,"sur 0 (vert) = coupé",{a:"start",c:"#c0392b",s:8}); T(132,140,"puis vérifier",{a:"start",s:8,c:"#c0392b"}); T(132,150,"l'absence de tension",{a:"start",s:8,c:"#c0392b"}); T(132,160,"avec un VAT",{a:"start",s:8,c:"#c0392b"}); }
   /* tableau */
@@ -1796,10 +1797,10 @@ function realSvg(p,pl,st){ const c=p.c, k=p.k, FOC={}; if(!c||!c.cal||k==="RJ"||
   bg+=`<rect x="${TX0}" y="${TY}" width="110" height="170" rx="5" fill="#f7f7f5" stroke="#8a9095" stroke-width="1.5"/>`;
   RY.forEach((ry,r)=>{ bg+=`<rect x="${TX0+4}" y="${ry+15}" width="102" height="6" fill="#b7bcc0"/>`;
     fg+=`<rect x="${TX0+6}" y="${ry}" width="32" height="38" rx="2" fill="#fff" stroke="#6b7378"/><rect x="${TX0+8}" y="${ry+3}" width="28" height="7" fill="#2d6bd6"/><text x="${TX0+22}" y="${ry+9}" text-anchor="middle" font-size="5" fill="#fff">30mA ${r?"A":"AC"}</text><rect x="${TX0+18}" y="${ry+14}" width="8" height="12" rx="1" fill="#3f4448"/><circle cx="${TX0+12}" cy="${ry+30}" r="2.5" fill="#f1c40f" stroke="#555"/>`;
-    for(let i=0;i<6;i++){ const x=TX0+44+i*(MW+1), me=r===row&&i===pos; fg+=`<rect x="${x}" y="${ry}" width="${MW}" height="38" rx="1.5" fill="${me?"#fff7d6":"#fff"}" stroke="${me?"#e67e22":"#6b7378"}" stroke-width="${me?1.6:0.8}"/><rect x="${x+2}" y="${ry+14}" width="${MW-4}" height="11" rx="1" fill="#3f4448"/>`; }
-    wr+=line([[TX0+16,ry+38],[TX0+16,ry+42],[TX0+40.5,ry+42],[TX0+40.5,ry-3],[TX0+104,ry-3]],"L",1.6)+line([[TX0+24,ry+38],[TX0+24,ry+45],[TX0+42.8,ry+45],[TX0+42.8,ry-6],[TX0+104,ry-6]],"N",1.6); });
+    for(let i=0;i<6;i++){ const x=TX0+44+i*(MW+1), me=r===row&&i===pos; fg+=`<rect x="${x}" y="${ry}" width="${MW}" height="38" rx="1.5" fill="${me?"#fff7d6":"#fff"}" stroke="${me?"#e67e22":"#6b7378"}" stroke-width="${me?1.6:0.8}"/><rect x="${x+2}" y="${ry+11}" width="${MW-4}" height="10" rx="1" fill="#3f4448"/><rect x="${x}" y="${ry+24}" width="${MW}" height="1.4" fill="#1f6fd1"/><text x="${x+MW/2}" y="${ry+32}" text-anchor="middle" font-size="4.2" font-weight="700" fill="#333">${me?"C"+c.cal:""}</text>`; }
+    wr+=line([[TX0+16,ry+38],[TX0+16,ry+42],[TX0+40.5,ry+42],[TX0+40.5,ry-3],[TX0+104,ry-3]],"N",1.6)+line([[TX0+24,ry+38],[TX0+24,ry+45],[TX0+42.8,ry+45],[TX0+42.8,ry-6],[TX0+104,ry-6]],"L",1.6); });
   /* arrivée du disjoncteur de branchement vers les différentiels */
-  wr+=line([[64,254],[64,258],[TX0+3,258],[TX0+3,RY[1]-12],[TX0+16,RY[1]-12],[TX0+16,RY[1]]],"L",2.4)+line([[74,254],[74,261],[TX0+6,261],[TX0+6,RY[1]-9],[TX0+24,RY[1]-9],[TX0+24,RY[1]]],"N",2.4)+line([[TX0+3,RY[0]-12],[TX0+16,RY[0]-12],[TX0+16,RY[0]]],"L",2)+line([[TX0+6,RY[0]-9],[TX0+24,RY[0]-9],[TX0+24,RY[0]]],"N",2);
+  wr+=line([[64,254],[64,258],[TX0+3,258],[TX0+3,RY[1]-12],[TX0+16,RY[1]-12],[TX0+16,RY[1]]],"N",2.4)+line([[74,254],[74,261],[TX0+6,261],[TX0+6,RY[1]-9],[TX0+24,RY[1]-9],[TX0+24,RY[1]]],"L",2.4)+line([[TX0+3,RY[0]-12],[TX0+16,RY[0]-12],[TX0+16,RY[0]]],"N",2)+line([[TX0+6,RY[0]-9],[TX0+24,RY[0]-9],[TX0+24,RY[0]]],"L",2);
   T(TX0+55,TY-3,"Tableau électrique",{}); FOC.tab=[0,TY-11,230,192];
   /* bornier de terre */
   const BTy=TY+150; fg+=`<rect x="${TX0+20}" y="${BTy}" width="76" height="8" rx="2" fill="#3aa335"/><path d="M${TX0+20},${BTy+4} H${TX0+96}" stroke="#f1d500" stroke-width="2" stroke-dasharray="5 5"/>${Array.from({length:7},(_,i)=>`<circle cx="${TX0+26+i*11}" cy="${BTy+4}" r="2" fill="#c9a24d" stroke="#555" stroke-width=".5"/>`).join("")}`;
@@ -1811,7 +1812,7 @@ function realSvg(p,pl,st){ const c=p.c, k=p.k, FOC={}; if(!c||!c.cal||k==="RJ"||
   /* sortie du disjoncteur du circuit */
   const bx=TX0+44+pos*(MW+1)+MW/2, by=RY[row]+38, EX=121, phase=["I","VV","LUM","AP","LED","LEDR"].includes(k);
   const outW=["L","N","PE"];
-  wr+=line([[bx-2,by],[bx-2,by+5],[EX-3,by+5],[EX-3,TY]],"L",1.8)+line([[bx+2,by],[bx+2,by+9],[EX,by+9],[EX,TY]],"N",1.8)+line([[TX0+92,BTy],[EX+3,BTy],[EX+3,TY]],"PE",1.8);
+  wr+=line([[bx+2,by],[bx+2,by+5],[EX-3,by+5],[EX-3,TY]],"L",1.8)+line([[bx-2,by],[bx-2,by+9],[EX,by+9],[EX,TY]],"N",1.8)+line([[TX0+92,BTy],[EX+3,BTy],[EX+3,TY]],"PE",1.8);
   if(!st||st==="tab"||st==="gaine") T(134,RY[row]+14,`disjoncteur ${c.cal} A`,{a:"start",c:"#b35a00"}); if(!st||st==="tab"||st==="gaine") T(134,RY[row]+25,`circuit n° ${c.no||1}`,{a:"start",b:0,s:7.5,c:"#b35a00"});
   wr+=`<path d="M${bx+5},${RY[row]+19} L132,${RY[row]+11}" stroke="#e67e22" stroke-width="1"/>`;
   /* appareils */
@@ -1968,6 +1969,76 @@ const TAB_STEPS=["Tout se fait hors tension : le disjoncteur de branchement Ened
  "Toutes les terres (vert/jaune) des circuits vont sur le bornier de terre, une par vis. Le bornier part en 16 mm² cuivre vers la barrette de mesure puis le piquet de terre (moins de 100 Ω).",
  "Coller l'étiquette de chaque disjoncteur (C1 Prises cuisine…), fermer les obturateurs des modules vides, remonter le capot.",
  "Remise sous tension : disjoncteur de branchement, puis chaque différentiel, puis les disjoncteurs un par un. Appuyer sur le bouton T de chaque différentiel : il doit déclencher. Tester chaque prise avec un testeur."];
+/* tableau Hager réaliste (coffret Gamma+ 13, ID SanVis CDS74xF, disjoncteurs MFS7xx, peignes KB163P/N), étape par étape */
+const HAGER_DJ={2:"MFS702",10:"MFS710",16:"MFS716",20:"MFS720",32:"MFN732"}, HAGER_ID={AC:"CDS742F",A:"CDS743F"};
+function tabMarque(){ return S.tabM||"Hager"; }
+function hagerTabSvg(Hs,st){ const rows=Hs.ids, W=380, MW=24, X0=30, RH=150, TOP=104, Ht=TOP+rows.length*RH+70, full=st===undefined||st>=99, on=full||st>=9, sh=k=>full||st===0||st>=k;
+  let bg="", dv="", wr="", tp="", lb="";
+  const T=(x,y,t,o={})=>{ lb+=`<text x="${x}" y="${y}" text-anchor="${o.a||"middle"}" font-size="${o.s||9}" font-weight="${o.b===0?400:700}" fill="${o.c||"#1c2428"}" paint-order="stroke" stroke="${o.h||"#fff"}" stroke-width="${o.sw||3}" stroke-linejoin="round">${t}</text>`; };
+  const ln=(pts,c,w,pe)=>{ const d="M"+pts.map(q=>q.join(",")).join(" L"); return `<path d="${d}" fill="none" stroke="#fff" stroke-width="${w+3}" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"/>`+(pe?`<path d="${d}" fill="none" stroke="#f1d500" stroke-width="${w}" stroke-dasharray="5 5" stroke-linejoin="round"/>`:""); };
+  const scr=(x,y)=>`<circle cx="${x}" cy="${y}" r="3.6" fill="#d9dcdf" stroke="#6b7378" stroke-width=".8"/><path d="M${x-2.4},${y} H${x+2.4}" stroke="#555" stroke-width="1"/>`;
+  const hole=(x,y)=>`<rect x="${x-3.2}" y="${y-3}" width="6.4" height="6" rx="1" fill="#2b2f33"/>`;
+  const RED=WC.L, BLUE=WC.N, BRN="#7b4a24";
+  /* disjoncteur de branchement Enedis */
+  const AG=`<rect x="150" y="4" width="80" height="46" rx="5" fill="#e9e9e6" stroke="#8a8f93"/><rect x="183" y="10" width="14" height="24" rx="2" fill="#3f4448"/>`+(st===0?`<rect x="185" y="24" width="10" height="9" rx="1" fill="#27ae60"/><text x="190" y="31" text-anchor="middle" font-size="7" font-weight="700" fill="#fff">0</text>`:`<rect x="185" y="12" width="10" height="9" rx="1" fill="#e04b3a"/>`)+`<circle cx="164" cy="22" r="6" fill="#fff" stroke="#8a8f93"/><text x="216" y="27" text-anchor="middle" font-size="6.5" fill="#333">500mA</text>`;
+  T(144,20,"disjoncteur de",{a:"end",s:8.5}); T(144,31,"branchement",{a:"end",s:8.5}); T(144,42,"(Enedis)",{a:"end",s:7.5,b:0});
+  if(st===0){ T(240,22,"basculer sur 0",{a:"start",c:"#c0392b"}); T(240,34,"puis VAT : 0 V",{a:"start",c:"#c0392b"}); }
+  /* coffret Gamma+ 13 */
+  bg+=`<rect x="14" y="70" width="352" height="${Ht-74}" rx="10" fill="#fbfbfa" stroke="#9aa0a6" stroke-width="2"/>`;
+  T(24,Ht-8,"Hager Gamma+ 13",{a:"start",s:8,b:0,c:"#6b7378"});
+  /* borniers phase (marron) et neutre (bleu) dans les angles */
+  const bornier=(x,c,lab)=>`<rect x="${x}" y="78" width="70" height="16" rx="3" fill="${c}"/>${Array.from({length:6},(_,i)=>`<rect x="${x+5+i*11}" y="82" width="7" height="8" rx="1" fill="#1d2023" opacity=".55"/>`).join("")}`;
+  if(sh(1)){ bg+=bornier(24,BRN)+bornier(286,BLUE); T(59,104,"bornier phase",{s:7.5,b:0}); T(321,104,"bornier neutre",{s:7.5,b:0}); }
+  rows.forEach((row,r)=>{ const yR=TOP+r*RH, yT=yR+28, yB=yR+118, cs=row.cs.slice(0,8), n=cs.length, xb=i=>X0+56+i*MW;
+    /* rail DIN */
+    if(sh(1)) bg+=`<rect x="22" y="${yR+64}" width="336" height="14" fill="#c4c8cc" stroke="#9aa0a6"/>${Array.from({length:20},(_,i)=>`<rect x="${28+i*16.5}" y="${yR+69}" width="9" height="4" rx="2" fill="#a2a8ad"/>`).join("")}`;
+    if(!sh(2)) return;
+    /* interrupteur différentiel 2 modules : N à gauche, L à droite */
+    const ix=X0, idRef=HAGER_ID[row.t]||"CDS742F";
+    dv+=`<rect x="${ix}" y="${yT}" width="48" height="90" rx="3" fill="#f1f2f3" stroke="#7d858b"/><rect x="${ix}" y="${yT+56}" width="48" height="2.2" fill="#1f6fd1"/>`+scr(ix+12,yT+8)+scr(ix+36,yT+8)+scr(ix+12,yB-8)+scr(ix+36,yB-8)+
+      `<text x="${ix+12}" y="${yT+20}" text-anchor="middle" font-size="6.5" font-weight="700" fill="#2d6bd6">N</text><text x="${ix+36}" y="${yT+20}" text-anchor="middle" font-size="6.5" font-weight="700" fill="#333">L</text>`+
+      `<rect x="${ix+19}" y="${on?yT+24:yT+34}" width="10" height="16" rx="2" fill="#3a3f44"/>`+(on?"":`<circle cx="${ix+24}" cy="${yT+46}" r="2" fill="#f4c20d"/>`)+
+      `<rect x="${ix+5}" y="${yT+26}" width="8" height="6" rx="1" fill="${on?"#d63c2f":"#2fa84f"}"/><rect x="${ix+34}" y="${yT+26}" width="9" height="9" rx="1.5" fill="#f2c94c" stroke="#8a6d00" stroke-width=".6"/><text x="${ix+38.5}" y="${yT+33}" text-anchor="middle" font-size="6" font-weight="700" fill="#333">T</text>`+
+      `<text x="${ix+24}" y="${yT+68}" text-anchor="middle" font-size="6.2" font-weight="700" fill="#333">40A 30mA</text><text x="${ix+24}" y="${yT+76}" text-anchor="middle" font-size="6" fill="#333">type ${row.t}</text><text x="${ix+24}" y="${yT+53}" text-anchor="middle" font-size="5.2" fill="#5b6268">${idRef}</text>`;
+    /* disjoncteurs 1 module : N à gauche, L à droite ; haut = peigne, bas = QuickConnect */
+    cs.forEach((c,i)=>{ const x=xb(i), ref=HAGER_DJ[c.cal]||"MFS7"+c.cal;
+      dv+=`<rect x="${x}" y="${yT}" width="${MW-1}" height="90" rx="2.5" fill="#f1f2f3" stroke="#7d858b"/>`+scr(x+6.5,yT+8)+scr(x+16.5,yT+8)+(c.cal>=32?scr(x+6.5,yB-8)+scr(x+16.5,yB-8):hole(x+6.5,yB-8)+hole(x+16.5,yB-8))+
+        `<rect x="${x+3}" y="${yT+16}" width="${MW-7}" height="9" rx="1" fill="#fff" stroke="#c9cdd1" stroke-width=".6"/>`+
+        `<rect x="${x+7}" y="${on?yT+30:yT+40}" width="9" height="15" rx="2" fill="#3a3f44"/>`+(on?"":`<circle cx="${x+11.5}" cy="${yT+52}" r="1.9" fill="#f4c20d"/>`)+
+        `<rect x="${x}" y="${yT+56}" width="${MW-1}" height="2.2" fill="#1f6fd1"/><text x="${x+11.5}" y="${yT+70}" text-anchor="middle" font-size="7" font-weight="700" fill="#333">C${c.cal}</text><text x="${x+11.5}" y="${yT+78}" text-anchor="middle" font-size="4.6" fill="#5b6268">${ref}</text>`;
+      if(sh(8)) tp+=`<text x="${x+11.5}" y="${yT+22.5}" text-anchor="middle" font-size="5.3" font-weight="700" fill="#1c2428">n°${c.no}</text>`; });
+    /* obturateurs des modules libres */
+    for(let i=n;i<11;i++) dv+=`<rect x="${xb(i)}" y="${yT+18}" width="${MW-1}" height="54" rx="2" fill="#e9ebec" stroke="#b9bec2"/>`;
+    /* peignes : neutre bleu (KB163N) au-dessus, phase marron (KB163P) */
+    if(sh(3)&&n){ const xa=xb(0)+2, xz=xb(n-1)+MW-3;
+      wr+=`<rect x="${xa}" y="${yR+6}" width="${xz-xa}" height="6" rx="2" fill="#2d6bd6"/><rect x="${xa}" y="${yR+15}" width="${xz-xa}" height="6" rx="2" fill="#8b5a2b"/>`;
+      cs.forEach((c,i)=>{ const x=xb(i); wr+=`<rect x="${x+5.2}" y="${yR+12}" width="2.6" height="${yT+8-yR-12}" fill="#2d6bd6"/><rect x="${x+15.2}" y="${yR+21}" width="2.6" height="${yT+8-yR-21}" fill="#8b5a2b"/>`; });
+      wr+=`<rect x="${xz}" y="${yR+5}" width="5" height="17" rx="1.5" fill="#f4c20d"/>`; }
+    /* arrivée sur le haut du différentiel, depuis les borniers */
+    if(sh(4)){ wr+=ln([[43.5+r*11,94],[43.5+r*11,97],[26,97],[26,yR+2],[ix+36,yR+2],[ix+36,yT+8]],RED,3.4)+ln([[305.5+r*11,94],[305.5+r*11,100],[20,100],[20,yR-2],[ix+12,yR-2],[ix+12,yT+8]],BLUE,3.4); }
+    /* sortie bas du différentiel vers l'entrée des peignes */
+    if(sh(5)&&n){ wr+=ln([[ix+12,yB-8],[ix+12,yB+8],[ix+51,yB+8],[ix+51,yT+1],[xb(0)+6.5,yT+1],[xb(0)+6.5,yT+8]],BLUE,2.6)+ln([[ix+36,yB-8],[ix+36,yB+3],[ix+54,yB+3],[ix+54,yR+2],[xb(0)+16.5,yR+2],[xb(0)+16.5,yT+8]],RED,2.6); }
+    /* départs des circuits par le bas (QuickConnect) */
+    if(sh(6)) cs.forEach((c,i)=>{ const x=xb(i), ec=c.t==="EC";
+      wr+=ln([[x+6.5,yB-8],[x+6.5,yB+22]],BLUE,2)+ln([[x+16.5,yB-8],[x+16.5,yB+22]],ec?RED:RED,2);
+      dv+=`<rect x="${x+3}" y="${yB+22}" width="17" height="8" rx="2" fill="#d3d7da" stroke="#7d858b"/>`; T(x+11.5,yB+40,String(c.sec).replace(".",","),{s:6.5,b:0}); });
+    T(356,yR+RH-6,`rangée ${r+1}`,{a:"end",s:7.5,b:0,c:"#6b7378"}); });
+  /* bornier de terre sur la traverse */
+  if(sh(1)){ const yt=Ht-46; bg+=`<rect x="40" y="${yt}" width="300" height="12" rx="3" fill="#3aa335"/><path d="M40,${yt+6} H340" stroke="#f1d500" stroke-width="3" stroke-dasharray="7 7"/>${Array.from({length:14},(_,i)=>`<rect x="${48+i*21}" y="${yt+2}" width="8" height="8" rx="1" fill="#1d2023" opacity=".5"/>`).join("")}`; T(190,yt-4,"bornier de terre (traverse)",{s:7.5,b:0});
+    if(sh(7)){ const nC=Math.min(13,rows.reduce((a,x)=>a+Math.min(8,x.cs.length),0)); for(let i=0;i<nC;i++) wr+=ln([[52+i*21,yt+10],[52+i*21,yt+30]],WC.PE,2,1); wr+=ln([[330,yt+10],[330,Ht+8]],WC.PE,4,1); T(326,Ht-6,"16 mm² → barrette",{a:"end",s:7.5}); } }
+  if(sh(4)) { wr+=ln([[186,50],[186,64],[34,64],[34,80]],RED,4)+ln([[194,50],[194,68],[300,68],[300,80]],BLUE,4); T(100,60,"10 mm² rouge",{s:7.5,c:RED}); T(258,62,"10 mm² bleu",{s:7.5,c:BLUE}); }
+  const dim=st===0?` opacity=".35"`:"";
+  return `<svg viewBox="0 0 ${W} ${Ht+10}" style="width:100%;max-width:520px;height:auto;min-width:0;max-height:none;display:block;background:#fff;border-radius:8px;font-family:system-ui,sans-serif" role="img" aria-label="Tableau Hager"><g${dim}>${bg}${dv}${wr}${tp}</g>${AG}${lb}</svg>`; }
+const TAB_STEPS_H=["Tout se fait hors tension : la manette du disjoncteur de branchement Enedis sur 0 (vert), puis vérifier au VAT qu'il n'y a plus de tension. Ne jamais ouvrir le capot plombé.",
+ "Coffret Hager Gamma+ 13 modules par rangée (GD213A 2 rangées, GD313A 3, GD413A 4), dans la GTL, manettes entre 1 m et 1,80 m du sol. Le bornier de terre est sur la traverse du bas, les borniers phase (marron) et neutre (bleu) dans les angles. Garder 20 % de modules libres.",
+ "Clipser sur le rail, de gauche à droite : l'interrupteur différentiel (2 modules : CDS742F 40 A 30 mA type AC, ou CDS743F type A pour plaque et lave-linge), puis ses disjoncteurs SanVis 1 module : MFS710 (10 A), MFS716 (16 A), MFS720 (20 A), MFN732 (32 A, bornes à vis, pour le 6 mm²). 8 au plus par différentiel. Sur ces appareils Hager, le NEUTRE est à GAUCHE (fiches : « position du neutre gauche »), la phase à droite ; vérifier le marquage de l'appareil.",
+ "Peignes horizontaux sur les bornes du HAUT des disjoncteurs : kit peigne Hager SanVis KBS763 (13 modules ; fiche des MFS) : peigne neutre dans les bornes N (à gauche), peigne phase dans les bornes L (à droite). Les couper à la longueur de la rangée à la pince, sans couper au milieu d'un appareil, et mettre un capuchon sur les dents libres. Serrer chaque vis à 1,9 N·m.",
+ "Arrivée par le HAUT du différentiel : fil bleu 10 mm² du bornier neutre vers la borne N (gauche), fil rouge 10 mm² du bornier phase vers la borne L (droite). Les borniers reçoivent le câble venant du disjoncteur de branchement. Serrer à 2,8 N·m.",
+ "Sortie par le BAS du différentiel vers le PREMIER disjoncteur de la rangée : bleu de la borne N du bas vers la borne N du haut du 1er disjoncteur, rouge de la borne L du bas vers sa borne L du haut, dans la borne de repiquage (la même borne que la dent du peigne), en 10 mm², fils courts. Le peigne distribue ensuite le courant aux autres disjoncteurs. Ainsi le différentiel protège tous les disjoncteurs de sa rangée.",
+ "Chaque circuit sort par le BAS de son disjoncteur (bornes automatiques QuickConnect, 1,5 à 4 mm²) : bleu dans la borne de gauche (N), rouge dans la borne de droite. Dénuder à la longueur indiquée sur le côté du disjoncteur (environ 12 mm d'après des utilisateurs), enfoncer droit et à fond, tirer pour vérifier. Le 6 mm² du 32 A ne rentre pas dans une borne QuickConnect (4 mm² max) : utiliser un MFN732, à vis en haut et en bas, serré à 1,9 N·m.",
+ "Toutes les terres vert/jaune des circuits vont sur le bornier de terre de la traverse, une par borne. Le bornier repart en 16 mm² vers la barrette de mesure puis le piquet de terre (moins de 100 Ω).",
+ "Écrire le numéro et le nom de chaque circuit dans le porte-étiquette de son disjoncteur, fermer les modules vides avec des obturateurs, reposer le capot.",
+ "Remise sous tension : disjoncteur de branchement, puis chaque différentiel, puis les disjoncteurs un par un (le point jaune disparaît quand la manette est en haut). Appuyer sur le bouton test de chaque différentiel : il doit déclencher. Tester chaque prise."];
 /* boîte de dérivation ouverte : gaines, Wago à leviers, fils */
 function bdSvg(pl,c){ const W=380, items=[]; const name=p=>p.k==="I"?"Interrupteur":p.k==="VV"?"Va-et-vient":p.k==="LED"||p.k==="LEDR"?"Alim. LED":p.k==="AP"?"Applique":p.k==="LUM"?"Lampe":p.dbl?"Prise double":"Prise";
   const ec=c.t==="EC", devs=c.pts.filter(p=>!["I","VV"].includes(p.k)), sws=ec?[...(c.sw||[]),...(c.vv||[])]:[];
@@ -2154,8 +2225,8 @@ function renderElec(){ const room=S.walls[S.cur].room||roomNames()[0], H=elecHou
   const cBadge=c=>c?`<span style="display:inline-block;padding:1px 8px;border-radius:10px;background:${c.t==="EC"?"#fff1d6":c.t==="PC"?"#e3eefc":c.t==="RJ"?"#efe7fb":"#fde4e1"};font-size:12px">${c.no?"C"+c.no+" · ":""}${esc(c.name)}${c.cal?` · ${c.cal} A · ${String(c.sec).replace(".",",")} mm²`:""}</span>`:"";
   const tab=`<div class="box" style="padding:10px 12px"><b>Du compteur au tableau</b>
     <ol style="margin:6px 0 0 18px;padding:0;font-size:14px;display:flex;flex-direction:column;gap:3px"><li>Compteur Linky (Enedis) → disjoncteur de branchement 500 mA (AGCP, réglé selon l'abonnement) : ne pas y toucher, c'est la limite Enedis.</li><li>Disjoncteur de branchement → tableau : câble 2 × 10 mm² (ou 16 mm²) + parafoudre si zone orageuse ; barrette de terre reliée au piquet de terre (fil 16 mm² vert/jaune, résistance &lt; 100 Ω).</li><li>Dans le tableau : un interrupteur différentiel 30 mA pour 8 circuits au plus (au moins 1 type A pour lave-linge et plaque de cuisson), puis un disjoncteur par circuit. Peignes en haut, pas de fil volant.</li></ol>
-    <div style="margin-top:10px"><b>Câbler le tableau, étape par étape</b>${stepper("tab",TAB_STEPS.map((d,i)=>({t:TAB_TITLES[i],d,svg:tableauSvg(H,i)})))}</div>
-    <details style="margin-top:6px"><summary style="cursor:pointer"><b>Tableau terminé</b></summary>${tableauSvg(H)}</details>
+    <div style="margin-top:10px"><b>Câbler le tableau, étape par étape</b><label class="f" style="margin:6px 0">Marque du tableau<select data-tabm>${["Hager","Autre marque (dessin générique)"].map(m=>`<option${(tabMarque()==="Hager")===(m==="Hager")?" selected":""}>${m}</option>`).join("")}</select></label>${tabMarque()==="Hager"?stepper("tab",TAB_STEPS_H.map((d,i)=>({t:TAB_TITLES[i],d,svg:hagerTabSvg(H,i)}))):stepper("tab",TAB_STEPS.map((d,i)=>({t:TAB_TITLES[i],d,svg:tableauSvg(H,i)})))}</div>
+    <details style="margin-top:6px"><summary style="cursor:pointer"><b>Tableau terminé</b></summary>${tabMarque()==="Hager"?hagerTabSvg(H):tableauSvg(H)}</details>
     <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${H.ids.map((x,i)=>`<div style="border:1px solid var(--line,#ccd);border-radius:8px;padding:6px 8px"><b>Interrupteur différentiel ${i+1} : 40 A, 30 mA type ${x.t}</b> <span class="cap">${x.cs.length} circuit(s)</span><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${x.cs.map(cBadge).join("")||'<span class="cap">réserve (lave-linge, plaque)</span>'}</div></div>`).join("")}</div></div>`;
   const bdBox=pl.jb?`<div class="box" style="padding:10px 12px"><b>Boîte de dérivation de la pièce</b> <span class="cap">au plafond, dans le plénum, sous une trappe 30 × 30 cm</span>
     <ul style="margin:6px 0 0 18px;padding:0;font-size:14px">${pl.C.filter(c=>c.t==="PC"||c.t==="EC").map(c=>{ const n=c.pts.filter(p=>p.k!=="I"&&p.k!=="VV").length+1;
