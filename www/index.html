@@ -794,7 +794,12 @@ function compute(wall){
   const lens=[...oss.lens].filter(v=>v>0).sort((a,b)=>a-b); if(!lens.length) lens.push(3000);
   const need=H-10;
   const Sm = lens.find(l=>l>=need) || lens[lens.length-1];
-  if(need>Sm) ko(`Hauteur supérieure au plus long montant (${cm(Sm)} cm) : montants éclissés (recouvrement 30 cm compté).`);
+  const ECL=300; let eclN=0;
+  if(need>Sm){ const xs=[...new Set(studs.filter(s=>s.kind!=="coupe").map(s=>Math.round(s.x/100)))].sort((a,b)=>a-b);
+    studs.forEach(s=>{ if(s.kind==="coupe"||s.y1-s.y0-10<=Sm) return; const n=s.y1-s.y0-10, top=xs.indexOf(Math.round(s.x/100))%2===0;
+      // éclissage par emboîtement : un montant entier + un complément, recouvrement ECL, jonctions décalées d'un montant à l'autre
+      s.ecl=top?[s.y0+Sm-ECL,s.y0+Sm]:[s.y0+n-Sm,s.y0+n-Sm+ECL]; s.eclC=n-Sm+ECL; eclN++; });
+    ko(`Hauteur ${cm(need)} cm supérieure au plus long montant (${cm(Sm)} cm) : ${eclN} montant(s) rallongé(s) par éclissage (emboîtement d'un complément de ${cm(need-Sm+ECL)} cm, recouvrement ${cm(ECL)} cm, 4 vis TRPF par jonction), jonctions décalées une fois en haut, une fois en bas. Des montants plus longs (2,60 m, 2,70 m ou 3 m) évitent l'éclissage.`,"DTU 25.41 / fabricant"); }
   const studPieces = studs.map(s=>(s.kind==="coupe"? s.y1-s.y0 : H)-10);
   if(adj.end!=="libre") studPieces.push(H-10);
   if(adj.start==="rentrant") okk(`Départ contre le doublage du mur précédent : doublage de ${cm(L)} cm pour un mur brut de ${cm(L-adj.dL)} cm.`);
@@ -985,7 +990,7 @@ function compute(wall){
   checks.sort((a,b)=>a.ok-b.ok);
   return {wall,adj,corniere,L,H,ops,studs,rails,ins,plates,checks,murMode,chevQty,chevs,appuis,Sm,Sp,W,pla,peint,pts,renf,les,memA,kb,dfit,dface,
     studPieces,studBins,railBins,railTotal,insBins,insArea,insPanels,plateCount,netArea,joints,
-    cutStuds:studs.filter(s=>s.kind==="coupe").length};
+    cutStuds:studs.filter(s=>s.kind==="coupe").length, eclN};
 }
 
 /* ---------- Matériaux ---------- */
@@ -995,7 +1000,7 @@ function materials(r){
   add("Ossature", `${o.mont(oss.g)} · ${cm(r.Sm)} cm`, `${r.studPieces.length} pièces dont ${r.cutStuds} recoupées, entraxe ${oss.e/10} cm`, r.studBins.length, "u");
   add("Ossature", `${o.rail(oss.g)} · ${cm(oss.railLen)} cm`, `${fr(r.railTotal/1000,2)} m linéaires (haut, bas, traverses${r.renf.length?", renforts":""})`, r.railBins.length, "u");
   add("Ossature", "Fixations des rails (chevilles ou clous)", "1 tous les 60 cm environ", Math.ceil(r.railTotal/600)+r.rails.length, "u");
-  add("Ossature", "Vis TRPF 13 (assemblage métal)", "traverses et montants recoupés", (r.cutStuds*2 + r.rails.filter(x=>x.kind==="traverse").length*4), "u");
+  add("Ossature", "Vis TRPF 13 (assemblage métal)", `traverses et montants recoupés${r.eclN?`, ${r.eclN} éclissage(s) de montants (4 vis chacun)`:""}`, (r.cutStuds*2 + r.rails.filter(x=>x.kind==="traverse").length*4 + (r.eclN||0)*4), "u");
   if(iso.on){
     { const des=`${iso.f} ${iso.n} · ${iso.ep} mm · ${cm(iso.W)}×${cm(iso.Lg)} cm`; const det=`${r.murMode?"chevillé contre le mur, ":"entre montants, "}${fr(r.insArea,2)} m² posés, pertes ${iso.perte} %, R = ${fr(iso.ep/1000/iso.lambda,2)} m²·K/W`;
       if(iso.pk){ const dl=`${des} · lot de ${iso.pk}`; if(iso.prixPk&&iso.ep===145&&(S.prices[dl]===undefined||S.prices[dl]===""||S.prices[dl]===0)) S.prices[dl]=iso.prixPk;
@@ -1679,6 +1684,7 @@ function chantierSteps(w,r){
     r.appuis?`${r.appuis} appui(s) intermédiaire(s) pour tenir les montants à mi-hauteur (pattes à la pierre, sans traverser l'isolant ni la membrane, ou avec manchette).`:"Contre-cloison autoportante : montants tenus par les rails seulement."]});
   const ax=[...new Set(r.studs.filter(s=>s.kind!=="coupe").map(s=>Math.round(s.x)))].sort((a,b)=>a-b);
   st.push({k:"studs",t:`Poser les montants ${oss.g} mm`,d:[`${ax.length} montants pleine hauteur, coupés à ${cm(H-10)} cm (hauteur − 1 cm), ${r.studBins.length} longueur(s) de ${cm(r.Sm)} cm. Axes depuis le début du mur : ${ax.map(x=>cm(x)).join(" · ")} cm.`,
+    r.eclN?`Montants trop courts pour ${cm(H-10)} cm : ${r.eclN} montant(s) rallongé(s). Emboîter un complément de ${cm(H-10-r.Sm+300)} cm sur 30 cm dans le montant de ${cm(r.Sm)} cm et visser 4 vis TRPF (2 par aile). Jonction en haut sur un montant, en bas sur le suivant (zones rouges sur le plan), jamais toutes à la même hauteur.`:"",
     r.cutStuds?`${r.cutStuds} montant(s) coupé(s) au-dessus et au-dessous des ouvertures ; ${tr.length} traverse(s) de rail en linteau et en appui.`:"Pas de montant coupé.",oss.double?"Montants doublés de part et d'autre des ouvertures.":"","Ouverture des montants côté plaque de départ, sertir ou visser rail-montant (vis TRPF 9,5 mm)."].filter(Boolean)});
   const pts=r.pts||[]; if(pts.length||r.renf.length) st.push({k:"res",t:"Passer les réseaux dans le vide technique",d:[...(pts.length?[`Points : ${ptLabels(w.points||[]).map((lab,i)=>`${lab} (${w.points[i].type}) à ${cm(w.points[i].x)} cm, h ${cm(w.points[i].y)} cm`).join(" ; ")}.`]:[]),
     r.renf.length?`${r.renf.length} renfort(s) pour fixer les sorties d'eau.`:"","Gaines ICTA en partie haute, tubes d'eau en partie basse, sans percer la membrane ; boîtes d'encastrement étanches si besoin.","Prendre une photo du mur ouvert avec un mètre : utile pour retrouver les gaines plus tard."].filter(Boolean)});
@@ -2328,6 +2334,8 @@ function renderPlan(r){
 
   const studOp = v==="pla" ? .35 : v==="fin" ? 0 : (v==="iso" && r.murMode) ? 0 : 1;
   r.studs.forEach(s=>parts.push(R(s.x,s.y0,FL,s.y1-s.y0,`fill="url(#g-metal)" stroke="${s.kind==="cadre"?"#4c5a66":"#7d8790"}"`,`stroke-width="${s.kind==="cadre"?fs*.08:fs*.04}" opacity="${studOp}"`)));
+  if(studOp>0.3&&(v==="oss"||v==="all"||v==="pla")){ let lab=false; r.studs.forEach(s=>{ if(!s.ecl) return; parts.push(R(s.x-fs*.12,s.ecl[0],FL+fs*.24,s.ecl[1]-s.ecl[0],`fill="#e5533d" fill-opacity=".55" stroke="#a8321f"`,`stroke-width="${fs*.06}" opacity="${studOp}"`));
+    if(!lab&&v!=="pla"){ lab=true; parts.push(T(s.x+FL+fs*.4,Y((s.ecl[0]+s.ecl[1])/2)+fs*.3,`éclisse ${cm(s.ecl[1]-s.ecl[0])} cm`,"start",`font-size="${fs*.75}" font-weight="700" style="fill:#a8321f"`)); } }); }
   r.rails.forEach(s=>parts.push(R(s.x0,s.y0,s.x1-s.x0,s.y1-s.y0,`fill="url(#g-metal-v)" stroke="#4c5a66"`,`stroke-width="${fs*.04}" opacity="${studOp}"`)));
   if((v==="iso"||v==="all") && r.murMode) r.chevs.forEach(c=>{
     const cx=c.x, cy=Y(c.y), rr=Math.max(28,fs*.55);
