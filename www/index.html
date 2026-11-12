@@ -1104,6 +1104,11 @@ function renderSide(){ renderQuick();
       <label class="f">Longueur (cm)<input id="w-L" type="number" min="10" step="0.5" data-b="w.L" data-cm value="${w.L/10}"></label>
       <label class="f">Hauteur sous plafond (cm)<input id="w-H" type="number" min="10" step="0.5" data-b="w.H" data-cm value="${w.H/10}"></label>
     </div>
+    <details class="l3"${w.L3?" open":""} style="margin:0 0 8px"><summary style="cursor:pointer"><b>Mur pas droit : 3 mesures de longueur</b></summary>
+      <div class="row" style="grid-template-columns:repeat(3,1fr)">${["En bas","Au milieu","En haut"].map((t,k)=>`<label class="f">${t} (cm)<input type="number" min="10" step="0.1" data-l3="${k}" value="${w.L3&&w.L3[k]?w.L3[k]/10:""}" placeholder="${w.L/10}"></label>`).join("")}</div>
+      ${(()=>{ const m=(w.L3||[]).filter(x=>x>0); if(!m.length) return `<p class="hint" style="margin:0">Mesure le mur brut (pierre à pierre) à environ 10 cm du sol, à mi-hauteur et à 10 cm du plafond. L'appli prend la plus courte pour l'ossature et les plaques.</p>`; const mn=Math.min(...m), mx=Math.max(...m);
+        return `<p class="hint" style="margin:0">Longueur retenue : <b>${cm(mn)} cm</b> (la plus courte), pour que l'ossature et les plaques passent partout.${mx-mn>=5?` Écart de ${cm(mx-mn)} cm entre tes mesures : la fibre de la dernière colonne se recoupe en biais sur place (${["bas","milieu","haut"].map((t,k)=>w.L3[k]?t+" "+cm(w.L3[k]):"").filter(Boolean).join(", ")} cm), et le jeu derrière l'angle est repris par la bande d'angle.`:""}</p>`; })()}
+    </details>
     <div class="row" style="grid-template-columns:1fr">
       <label class="f">Plaques de ce mur<select id="w-pla" data-b="w.plaN" data-re><option value=""${!w.plaN?" selected":""}>Comme les réglages généraux</option>${PLA.map(p=>`<option${p.n===w.plaN?" selected":""}>${esc(p.n)}</option>`).join("")}</select></label>
       <label class="f">Couleur de ce mur<select data-wcol="1">${[["","Couleur du produit ("+(/teint/i.test(w.peintN||S.fin.peint.n)?"teinte générale":"blanc")+")"],...NUANCIER.map(([n,c])=>[c,n]),...(w.teinte&&!NUANCIER.some(x=>x[1]===w.teinte)?[[w.teinte,"Personnalisée"]]:[])].map(([c,n])=>`<option value="${c}"${(w.teinte||"")===c?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
@@ -4501,6 +4506,8 @@ function onField(e){
     if(el.dataset.act==="plan"){ const p=PLA.find(p=>p.n===v); Object.assign(S.pla,p,{lens:[...p.lens]}); }
     renderAll(); return;
   }
+  if(el.dataset.l3!==undefined){ const w=S.walls[S.cur], k=+el.dataset.l3, v=parseFloat(String(el.value).replace(",",".")); w.L3=(w.L3||[0,0,0]).slice(0,3); w.L3[k]=v>=1?Math.round(v*10):0;
+    const m=w.L3.filter(x=>x>0); if(!m.length) delete w.L3; else w.L=Math.min(...m); const iL=document.getElementById("w-L"); if(iL) iL.value=w.L/10; renderOut(); return; }
   if(!el.dataset.b) return;
   let val;
   if(el.type==="checkbox") val=el.checked;
@@ -4509,6 +4516,7 @@ function onField(e){
   else if(el.dataset.num!==undefined){ val=parseFloat(el.value); if(isNaN(val)) return; }
   else val=el.value;
   setPath(el.dataset.b,val);
+  if(el.dataset.b==="w.L"){ const w=S.walls[S.cur]; if(w&&w.L3) delete w.L3; }
   if(el.dataset.b==="w.name") document.querySelector(`[data-wall="${S.cur}"]`).textContent=val||"Mur";
   if(el.dataset.b.endsWith(".type")){
     const ps=el.dataset.b.split("."), i=+ps[2];
