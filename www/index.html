@@ -107,6 +107,8 @@ td.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-num
 td.cat{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
 td small{color:var(--muted);display:block}
 td input{width:84px;padding:3px 6px;text-align:right}
+td textarea.ren{display:block;width:100%;min-width:140px;resize:none;overflow:hidden;field-sizing:content;text-align:left;border:0;border-bottom:1px dashed var(--line,#bbc);border-radius:0;background:transparent;padding:2px 0;font:inherit;color:inherit}
+td textarea.ren:focus{border-bottom:1px solid var(--accent,#1d63c4);outline:none}
 tfoot td{font-weight:600;border-bottom:0;border-top:2px solid var(--ink)}
 .cap{font-size:12px;color:var(--muted)}
 .steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
@@ -255,6 +257,11 @@ section.box{border-radius:12px}
   #printdoc h2{font-size:14pt;margin:0 0 6pt}
   #printdoc h3{font-size:13pt;margin:8pt 0 4pt}
   #printdoc .pd-svg svg{width:100%;max-height:15cm}
+  #printdoc .pd-el{margin:0 0 8pt}#printdoc .pd-el h3,#printdoc .pd-elt{break-after:avoid;page-break-after:avoid}#printdoc .pd-elg>div{break-inside:avoid;page-break-inside:avoid}
+  #printdoc .pd-elg{display:grid;grid-template-columns:1fr 1fr;gap:6pt;align-items:start}
+  #printdoc .pd-elg svg{width:100%;height:auto;max-height:13cm}
+  #printdoc .pd-elg .pd-elb{grid-column:1/-1}#printdoc .pd-elg .pd-elb svg{max-height:7cm}
+  #printdoc .pd-elt{font-size:9pt;margin:2pt 0 4pt 14pt;padding:0}#printdoc .pd-elt li{margin:0 0 1pt}
   #printdoc table{width:100%;border-collapse:collapse;font-size:9.5pt}
   #printdoc td,#printdoc th{border-bottom:1px solid #999;padding:3pt 4pt;text-align:left;vertical-align:top}
   #printdoc .box{border:0;padding:0;background:none}
@@ -4346,6 +4353,13 @@ function renderOut(){
     else map.set(k,{...m, det: S.scope==="wall"?m.det:""});
   }));
   let rows=[...map.values()];
+  if(S.scope!=="wall"){ // vue pièce / chantier : un seul produit par ligne (formats et puissances regroupés, détail conservé)
+    const base=d=>d.replace(/ · [\d,.]+ ?[×x] ?[\d,.]+ cm$/,"").replace(/ · [\d,.]+ cm$/,"").replace(/ (≥ )?[\d,.]+ W$/,""), G=new Map();
+    rows.forEach(m=>{ const b=m.paint||m.per?m.des:base(m.des), k=m.cat+"|"+m.u+"|"+b; if(!G.has(k)) G.set(k,{b,L:[]}); G.get(k).L.push(m); });
+    rows=[...G.values()].map(({b,L})=>{ if(L.length<2) return L[0]; const f=L[0], pk=L.every(x=>x.pack===f.pack)?f.pack:undefined, O=S.owned||{}, Lb=L.filter(x=>!O[x.des]), Lq=Lb.length?Lb:L, sz=x=>x.des.slice(b.length).replace(/^ · |^ /,"");
+      const q=Lq.reduce((a,x)=>a+x.q,0), pv=Lq.reduce((a,x)=>a+(Number(S.prices[x.des])||0)*x.q,0), Lo=L.filter(x=>O[x.des]);
+      return {...f, des:b, q, det:"regroupé : "+Lq.map(x=>`${fr(x.q,x.q%1?1:0)} × ${sz(x)}`).join(" + ")+(Lb.length&&Lo.length?" · déjà en stock : "+Lo.map(x=>`${fr(x.q,x.q%1?1:0)} × ${sz(x)}`).join(" + "):""), pack:pk, packName:pk?f.packName:undefined, pfb:q?pv/q:0, grp:L.map(x=>x.des), ownAll:!Lb.length}; });
+  }
   rows.forEach(m=>{
     if(m.per){ m.q=Math.ceil(m.raw/m.per-1e-9); m.det=(m.det?m.det+" · ":"")+`${fr(m.raw,1)} ${m.rawU} au total`; }
   });
@@ -4360,9 +4374,9 @@ function renderOut(){
   rows.forEach(m=>{ if(m.pack){ const n=Math.ceil(m.q/m.pack); m.det=(m.det?m.det+" · ":"")+`soit ${n} ${m.packName}`; } });
   let total=0;
   const body=rows.map(m=>{
-    const own=!!(S.owned||{})[m.des], p=Number(S.prices[m.des])||0, t=own?0:p*m.q*(m.share??1); total+=t;
-    const img=encodeURIComponent(m.des.replace(/ · .*$/,"").replace(/\(.*?\)/g,""));
-    return `<tr${own?' style="opacity:.55"':""}><td><input type="checkbox" aria-label="J'ai déjà ${esc(m.des)}" data-mown="${esc(m.des)}" ${own?"checked":""}></td><td class="cat">${m.cat}</td><td>${esc(m.des)} <a href="https://www.google.com/search?tbm=isch&q=${img}" target="_blank" rel="noopener" style="color:var(--chalk);font-size:12px;white-space:nowrap">voir les photos</a>${m.det?`<small>${esc(m.det)}</small>`:""}</td>
+    const own=ownOf(m), p=priceOf(m), t=own?0:p*m.q*(m.share??1), nm=dname(m); total+=t;
+    const img=encodeURIComponent(nm.replace(/ · .*$/,"").replace(/\(.*?\)/g,""));
+    return `<tr${own?' style="opacity:.55"':""}><td><input type="checkbox" aria-label="J'ai déjà ${esc(m.des)}" data-mown="${esc(m.des)}" ${own?"checked":""}></td><td class="cat">${m.cat}</td><td><textarea class="ren" rows="${Math.min(4,Math.ceil(nm.length/24))}" data-ren="${esc(m.des)}" placeholder="${esc(m.des)}" aria-label="Nom du produit (modifiable)" title="Touchez pour renommer le produit">${esc(nm)}</textarea><a href="https://www.google.com/search?tbm=isch&q=${img}" target="_blank" rel="noopener" style="color:var(--chalk);font-size:12px;white-space:nowrap">voir les photos</a>${nm!==m.des?`<small>calculé comme : ${esc(m.des)}</small>`:""}${m.det?`<small>${esc(m.det)}</small>`:""}</td>
       <td class="n">${fr(m.q,m.cat==="Divers"||(m.cat==="Sol"&&m.u==="m²")||(m.u==="L"&&!m.paint)?1:0)}</td><td>${m.u}</td>
       <td class="n"><input type="number" min="0" step="0.01" aria-label="Prix unitaire ${esc(m.des)}" data-price="${esc(m.des)}" value="${p||""}" placeholder="0"></td>
       <td class="n">${own?"déjà":t?fr(t,2)+" €"+(m.share!==undefined&&m.share<0.999?`<small>part du mur</small>`:""):"—"}</td></tr>`;
@@ -4591,12 +4605,13 @@ document.getElementById("extra").addEventListener("click",e=>{ const b=e.target.
 document.getElementById("extra").addEventListener("click",e=>{ const b=e.target.closest("[data-step]"); if(b){ S.finStep=+b.dataset.step; renderOut(); } });
 document.getElementById("tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b){S.view=b.dataset.view; renderOut();} });
 document.getElementById("scope").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b){S.scope=b.dataset.scope; renderOut();} });
-document.getElementById("tbl").addEventListener("input",e=>{ const el=e.target; if(el.dataset.price!==undefined){ S.prices[el.dataset.price]=parseFloat(el.value)||0; save(); } });
+document.getElementById("tbl").addEventListener("input",e=>{ const el=e.target; if(el.dataset.price!==undefined){ S.prices[el.dataset.price]=el.value===""?"":(parseFloat(el.value)||0); save(); } });
 document.getElementById("tbl").addEventListener("change",e=>{
   const el=e.target;
   if(el.dataset.mown!==undefined){ S.owned=S.owned||{}; S.owned[el.dataset.mown]=el.checked; renderOut(); return; }
+  if(el.dataset.ren!==undefined){ S.rename=S.rename||{}; const v=el.value.replace(/\s*\n\s*/g," ").trim(); if(!v||v===el.dataset.ren) delete S.rename[el.dataset.ren]; else S.rename[el.dataset.ren]=v; renderOut(); return; }
   if(el.dataset.price===undefined) return;
-  S.prices[el.dataset.price]=parseFloat(el.value)||0; renderOut();
+  S.prices[el.dataset.price]=el.value===""?"":(parseFloat(el.value)||0); renderOut();
 });
 document.getElementById("tools").addEventListener("change",e=>{
   const el=e.target;
@@ -4668,7 +4683,7 @@ resetBtn.addEventListener("click",()=>{
 });
 document.getElementById("copy").addEventListener("click",async e=>{
   const rows=JSON.parse(document.getElementById("tbl").dataset.rows||"[]");
-  const txt=["Lot\tDésignation\tQuantité\tUnité\tDéjà\tPrix unitaire\tTotal",...rows.map(m=>{const own=!!(S.owned||{})[m.des], p=Number(S.prices[m.des])||0;return [m.cat,m.des,m.q,m.u,own?"oui":"",String(p).replace(".",","),own?"0":String(+(p*m.q).toFixed(2)).replace(".",",")].join("\t")})].join("\n");
+  const txt=["Lot\tDésignation\tQuantité\tUnité\tDéjà\tPrix unitaire\tTotal",...rows.map(m=>{const own=ownOf(m), p=priceOf(m);return [m.cat,dname(m),m.q,m.u,own?"oui":"",String(p).replace(".",","),own?"0":String(+(p*m.q).toFixed(2)).replace(".",",")].join("\t")})].join("\n");
   const btn=e.currentTarget;
   try{ await navigator.clipboard.writeText(txt); btn.textContent="Copié"; }
   catch(err){ const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy"); btn.textContent="Copié";}catch(x){btn.textContent="Sélectionnez et copiez";} ta.remove(); }
@@ -4678,20 +4693,23 @@ document.getElementById("copy").addEventListener("click",async e=>{
 /* ---------- Liste de courses par magasin ---------- */
 const SHOP_STORES=["Brico Dépôt","Tecnomat","Mildecor","IKEA","Action","Vevor","Internet","Autre"];
 const STORE_CAT={"Finition":"Mildecor","Peinture":"Mildecor","Cuisine IKEA":"IKEA","Mes meubles":"Autre","Électricité":"Tecnomat","Plomberie":"Tecnomat","VMC":"Tecnomat","Sol":"Tecnomat"};
-function storeOf(m){ const o=(S.store||{})[m.des]; return o||STORE_CAT[m.cat]||"Brico Dépôt"; }
+function storeOf(m){ const Z=S.store||{}, o=Z[m.des]||(m.grp?m.grp.map(d=>Z[d]).find(Boolean):""); return o||STORE_CAT[m.cat]||"Brico Dépôt"; }
 function shopGroups(rows){
-  const g=new Map(); rows.filter(m=>m.q>0&&!(S.owned||{})[m.des]).forEach(m=>{ const st=storeOf(m); if(!g.has(st)) g.set(st,[]); g.get(st).push(m); });
-  return SHOP_STORES.filter(x=>g.has(x)).map(st=>{ const list=g.get(st); return {st,list,tot:list.reduce((a,m)=>a+(Number(S.prices[m.des])||0)*m.q,0)}; });
+  const g=new Map(); rows.filter(m=>m.q>0&&!ownOf(m)).forEach(m=>{ const st=storeOf(m); if(!g.has(st)) g.set(st,[]); g.get(st).push(m); });
+  return SHOP_STORES.filter(x=>g.has(x)).map(st=>{ const list=g.get(st); return {st,list,tot:list.reduce((a,m)=>a+priceOf(m)*m.q,0)}; });
 }
 const qtyTxt=m=>`${fr(m.q,m.q%1?1:0)} ${m.u}`;
+function priceOf(m){ const v=S.prices[m.des]; if(m.grp&&v!==undefined&&v!==""&&v!==null) return Number(v)||0; return Number(v)||Number(m.pfb)||0; }
+function ownOf(m){ return !!((S.owned||{})[m.des]||m.ownAll); }
+function dname(m){ const R=S.rename||{}, r=R[m.des]||(m.grp?m.grp.map(d=>R[d]).find(Boolean):""); return r&&String(r).trim()?String(r).trim():m.des; }
 function renderShop(rows){
   const el=document.getElementById("shoplist"); if(!el) return; const B=S.bought||{}, G=shopGroups(rows);
   const n=G.reduce((a,x)=>a+x.list.length,0), d=G.reduce((a,x)=>a+x.list.filter(m=>B[m.des]).length,0);
-  el.innerHTML=!n?`<p class="hint">Rien à acheter pour cette portée.</p>`:`<div class="cap">${d}/${n} articles achetés</div>`+G.map(x=>`<div class="shopg"><h3><span>${esc(x.st)}</span><span class="cap">${x.list.length} article(s)${x.tot?" · ≈ "+fr(x.tot,2)+" €":""}</span></h3>${x.list.map(m=>`<div class="shopr${B[m.des]?" done":""}"><input type="checkbox" style="width:22px;height:22px" aria-label="Acheté ${esc(m.des)}" data-bought="${esc(m.des)}" ${B[m.des]?"checked":""}><span><b>${esc(qtyTxt(m))}</b> — ${esc(m.des)} <span class="cap">(${esc(m.cat)})</span></span><select aria-label="Magasin pour ${esc(m.des)}" data-store="${esc(m.des)}">${SHOP_STORES.map(o=>`<option${o===x.st?" selected":""}>${o}</option>`).join("")}</select></div>`).join("")}</div>`).join("");
+  el.innerHTML=!n?`<p class="hint">Rien à acheter pour cette portée.</p>`:`<div class="cap">${d}/${n} articles achetés</div>`+G.map(x=>`<div class="shopg"><h3><span>${esc(x.st)}</span><span class="cap">${x.list.length} article(s)${x.tot?" · ≈ "+fr(x.tot,2)+" €":""}</span></h3>${x.list.map(m=>`<div class="shopr${B[m.des]?" done":""}"><input type="checkbox" style="width:22px;height:22px" aria-label="Acheté ${esc(m.des)}" data-bought="${esc(m.des)}" ${B[m.des]?"checked":""}><span><b>${esc(qtyTxt(m))}</b> — ${esc(dname(m))} <span class="cap">(${esc(m.cat)})</span></span><select aria-label="Magasin pour ${esc(m.des)}" data-store="${esc(m.des)}">${SHOP_STORES.map(o=>`<option${o===x.st?" selected":""}>${o}</option>`).join("")}</select></div>`).join("")}</div>`).join("");
 }
 function shopTitle(){ const w=S.walls[S.cur]; return "Liste de courses — "+(S.scope==="wall"?w.name:S.scope==="room"?"pièce "+(w.room||""):"tout le chantier"); }
 function shopText(){ const rows=JSON.parse(document.getElementById("tbl").dataset.rows||"[]"), B=S.bought||{};
-  return shopTitle()+"\n"+shopGroups(rows).map(x=>`\n== ${x.st} ==\n`+x.list.map(m=>`${B[m.des]?"[x]":"[ ]"} ${qtyTxt(m)} — ${m.des}`).join("\n")).join("\n"); }
+  return shopTitle()+"\n"+shopGroups(rows).map(x=>`\n== ${x.st} ==\n`+x.list.map(m=>`${B[m.des]?"[x]":"[ ]"} ${qtyTxt(m)} — ${dname(m)}${m.grp?" ("+m.det.replace(/^regroupé : /,"")+")":""}`).join("\n")).join("\n"); }
 document.getElementById("shoplist").addEventListener("change",e=>{ const el=e.target;
   if(el.dataset.bought!==undefined){ S.bought=S.bought||{}; if(el.checked) S.bought[el.dataset.bought]=1; else delete S.bought[el.dataset.bought]; }
   else if(el.dataset.store!==undefined){ S.store=S.store||{}; S.store[el.dataset.store]=el.value; }
@@ -4705,7 +4723,7 @@ document.getElementById("shop-print").addEventListener("click",()=>{
   const rows=JSON.parse(document.getElementById("tbl").dataset.rows||"[]"), B=S.bought||{};
   let pp=document.getElementById("shopprint"); if(!pp){ pp=document.createElement("div"); pp.id="shopprint"; document.body.appendChild(pp); }
   const G=shopGroups(rows), tot=G.reduce((a,x)=>a+x.tot,0);
-  pp.innerHTML=`<h1 style="font-size:20px;margin:0 0 4px">${esc(shopTitle())}</h1><div>${new Date().toLocaleDateString("fr-FR")}${tot?" · total estimé "+fr(tot,2)+" €":""}</div>`+G.map(x=>`<h2>${esc(x.st)}${x.tot?" — ≈ "+fr(x.tot,2)+" €":""}</h2><table><tr><th style="width:24px">✓</th><th>Qté</th><th>Article</th><th>Prix u.</th></tr>${x.list.map(m=>`<tr><td>${B[m.des]?"☑":"☐"}</td><td style="white-space:nowrap">${esc(qtyTxt(m))}</td><td>${esc(m.des)}</td><td>${Number(S.prices[m.des])?fr(Number(S.prices[m.des]),2)+" €":""}</td></tr>`).join("")}</table>`).join("");
+  pp.innerHTML=`<h1 style="font-size:20px;margin:0 0 4px">${esc(shopTitle())}</h1><div>${new Date().toLocaleDateString("fr-FR")}${tot?" · total estimé "+fr(tot,2)+" €":""}</div>`+G.map(x=>`<h2>${esc(x.st)}${x.tot?" — ≈ "+fr(x.tot,2)+" €":""}</h2><table><tr><th style="width:24px">✓</th><th>Qté</th><th>Article</th><th>Prix u.</th></tr>${x.list.map(m=>`<tr><td>${B[m.des]?"☑":"☐"}</td><td style="white-space:nowrap">${esc(qtyTxt(m))}</td><td>${esc(dname(m))}${m.grp?`<br><small>${esc(m.det.replace(/^regroupé : /,""))}</small>`:""}</td><td>${priceOf(m)?fr(priceOf(m),2)+" €":""}</td></tr>`).join("")}</table>`).join("");
   document.body.classList.add("pshop"); const off=()=>document.body.classList.remove("pshop");
   if(APP){ APP.print(shopTitle()); } else { addEventListener("afterprint",off,{once:true}); try{ window.print(); }catch(x){ off(); } }
 });
@@ -5030,6 +5048,7 @@ function renderDossOpts(){ const el=document.getElementById("dossopts"); if(!el)
   el.innerHTML=`<label class="f">Commencer par<select data-dso="ordre"><option value="iso"${O.ordre==="iso"?" selected":""}>L'isolant (chevillé sur la pierre), puis l'ossature</option><option value="oss"${O.ordre==="oss"?" selected":""}>L'ossature, puis l'isolant glissé derrière</option></select></label>
     <label class="chk"><input type="checkbox" data-dso="crea" ${O.crea?"checked":""}> Créations en placo (coffrages, niches…)</label>
     <label class="chk"><input type="checkbox" data-dso="cuis" ${O.cuis?"checked":""}> Pose de la cuisine (meubles, hauteurs, plan de travail)</label>
+    <label class="chk"><input type="checkbox" data-dso="elec" ${O.elec!==false?"checked":""}> Électricité de chaque mur avec son câblage (points, circuits, schémas)</label>
     <details${O.client||O.auteur?" open":""}><summary class="cap" style="cursor:pointer">Page de garde pour le client</summary><div class="row">
       <label class="f">Client<input data-dso="client" value="${esc(O.client||"")}" placeholder="M. et Mme …"></label>
       <label class="f">Adresse du chantier<input data-dso="adresse" value="${esc(O.adresse||"")}"></label>
@@ -5050,6 +5069,11 @@ function buildDossier(rooms){
   const O=dossOpts(), keep={cur:S.cur,view:S.view,scope:S.scope}, plan=document.getElementById("plan"), keepPlan=plan.innerHTML, ex=document.getElementById("extra"), keepEx=ex.innerHTML, lg=document.getElementById("legend"), keepLg=lg.innerHTML;
   let SNO=0; const uniq=h=>{ const p="d"+(++SNO)+"-"; return h.replace(/ id="([^"]+)"/g,(m,x)=>` id="${p}${x}"`).replace(/url\(#([^)]+)\)/g,(m,x)=>`url(#${p}${x})`).replace(/href="#([^"]+)"/g,(m,x)=>`href="#${p}${x}"`); };
   const snap=(i,v)=>{ S.cur=i; S.view=v; const r=compute(S.walls[i]); renderPlan(r); return uniq(plan.innerHTML).replace(/data-pc="\d+"/g,""); };
+  const EL=O.elec!==false; let EH=null; if(EL){ try{ EH=withCC(elecHouse)(); }catch(e){ EH=null; } }
+  const cTxt=c=>c?`${c.no?"C"+c.no+" · ":""}${c.name}${c.cal?` · disjoncteur ${c.cal} A · fil ${String(c.sec).replace(".",",")} mm²`:""}${c.idT?` · différentiel 30 mA type ${c.idT}`:""}`:"sans circuit";
+  const elPt=(p,pl,j)=>{ let rl="", fu="", bk=""; try{ rl=realSvg(p,pl)||""; }catch(e){} try{ fu=fullSvg(p,pl)||""; }catch(e){} try{ bk=p.k==="VV"?backSvg("VV",p.c,1)+backSvg("VV",p.c,2):(backSvg(p.k,p.c)||""); }catch(e){}
+    let st=[]; try{ st=elecSteps(p,pl)||[]; }catch(e){}
+    return `<div class="pd-el"><h3>É${j} · ${esc(p.n)}</h3><p class="pd-cap">${esc(cTxt(p.c))}${p.len?` · ≈ ${fr(p.len,1)} m de gaine depuis la boîte`:""}</p>${st.length?`<ol class="pd-elt">${st.map(d=>`<li>${esc(d)}</li>`).join("")}</ol>`:""}${rl||fu||bk?`<div class="pd-elg">${rl?`<div>${uniq(rl)}</div>`:""}${fu?`<div>${uniq(fu)}</div>`:""}${bk?`<div class="pd-elb">${uniq(bk)}</div>`:""}</div>`:""}</div>`; };
   const RW=S.walls.filter(w=>rooms.includes(w.room||"")), surf=withCC(()=>RW.reduce((a,w)=>a+compute(w).netArea,0))(), today=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
   const compo=[S.iso.on?`Isolant fibre de bois ${S.iso.n?esc(S.iso.n)+" ":""}${S.iso.ep} mm chevillé sur la pierre`:"",S.mem.on?`Membrane ${esc(S.mem.n)} (frein-vapeur côté chaud)`:"",`Ossature métallique ${S.oss.g} mm, entraxe ${S.oss.e/10} cm`,`Parement ${esc(S.pla.n)}`,S.fin.rat.on?"Bandes et ratissage, primaire et peinture":""].filter(Boolean);
   let html=`<div class="pd-cover"><div class="pd-brand"><span>${LOGO_SVG}</span><div><b>${esc(O.auteur||"Calepinage")}</b>${O.contact?`<small>${esc(O.contact)}</small>`:""}</div></div>
@@ -5061,8 +5085,10 @@ function buildDossier(rooms){
     <section class="pd-page"><h2>Ordre de pose</h2><ol class="pd-steps pd-col">${[..."Préparer les murs (pierre brossée, humidité traitée)|".split("|").filter(Boolean),...(O.ordre==="oss"?["Rails haut et bas, puis montants aux cotes indiquées (M1, M2…)","Isolant fibre de bois glissé derrière les montants et chevillé, panneau par panneau (liste I1, I2…)","Membrane Vario Xtra, lé par lé sur les montants, recouvrements au KB1"]:["Isolant fibre de bois chevillé, panneau par panneau (liste I1, I2…)","Membrane Vario Xtra, lé par lé, recouvrements au KB1","Rails haut et bas, puis montants aux cotes indiquées (M1, M2…)"]),"Réseaux électriques et eau dans le vide technique","Plaques dans l'ordre P1, P2… (bord aminci coupé dans les angles), vis aux positions indiquées",...(O.crea&&rooms.some(r=>creas(r).length)?["Créations en placo (coffrages, niches…)"]:[]),"Bandes, ratissage MIL'12, primaire et peinture",...(O.cuis&&rooms.some(r=>kitCfg(r).on&&kitCfg(r).items.length)?["Pose de la cuisine (après les finitions des murs)"]:[])].map((t,q)=>poseLi(poseKey(t),t,q+1)).join("")}</ol>
     <h2>Liste des murs</h2><table class="pd-t"><thead><tr><th>N°</th><th>Mur</th><th>Longueur × hauteur</th></tr></thead><tbody>${RW.map((w,n)=>`<tr><td>${n+1}</td><td>${esc(w.name)}</td><td>${cm(w.L)} × ${cm(w.H)} cm</td></tr>`).join("")}</tbody></table></section>`;
   try{ withCC(()=>{
+    if(EL&&EH){ const C=EH.R.filter(x=>rooms.includes(x.room)).flatMap(x=>x.C.filter(c=>c.cal)); if(C.length){ let tb=""; try{ tb=tabMarque()==="Hager"?hagerTabSvg(EH):tableauSvg(EH); }catch(e){}
+      html+=`<section class="pd-page"><h2>Électricité : tableau et circuits</h2><p class="pd-cap">Couper le disjoncteur général avant toute intervention. Câblage selon NF C 15-100 ; fils : phase rouge (ou marron/noir), neutre bleu, terre vert/jaune, retours orange ou violet.</p><table class="pd-t"><thead><tr><th>Circuit</th><th>Protection</th><th>Fil</th><th>Points</th></tr></thead><tbody>${C.map(c=>`<tr><td><b>${c.no?"C"+c.no:""}</b> ${esc(c.name)}</td><td>${c.cal} A${c.idT?` · ID 30 mA type ${c.idT}`:""}</td><td>${String(c.sec).replace(".",",")} mm²</td><td>${c.pts.length+(c.sw?c.sw.length:0)+(c.vv?c.vv.length:0)}</td></tr>`).join("")}</tbody></table>${tb?`<h3>Tableau terminé</h3><div class="pd-svg">${uniq(tb)}</div>`:""}</section>`; } }
     rooms.forEach(room=>{
-      const idx=S.walls.map((w,i)=>[w,i]).filter(([w])=>(w.room||"")===room);
+      const idx=S.walls.map((w,i)=>[w,i]).filter(([w])=>(w.room||"")===room), epl=EL&&EH?EH.R.find(x=>x.room===room):null; let ej=0;
       S.cur=idx[0][1]; S.view="piece"; renderPlan(compute(S.walls[S.cur]));
       html+=`<section class="pd-page"><h2>Pièce : ${esc(room)}</h2><p class="pd-cap">Plan vu de dessus, murs numérotés dans le sens des aiguilles d'une montre.</p><div class="pd-svg">${uniq(plan.innerHTML)}</div></section>`;
       idx.forEach(([w,i],n)=>{ const r=compute(w); S.cur=i;
@@ -5077,7 +5103,11 @@ function buildDossier(rooms){
         const cl=cutList(r), scr=screwPts(r);
         html+=`<section class="pd-page"><h3 class="pd-sec" style="--pc:${POSE_COL.pla}">Mur ${n+1} · Plaques et vis</h3><div class="pd-svg">${snap(i,"pla")}</div><table class="pd-t"><thead><tr><th>Plaque</th><th>Position</th><th>Dimensions</th><th>Coupes</th><th>Vis</th></tr></thead><tbody>${cl.map(c=>{ const p=r.plates.find(q=>q.layer===c.layer&&q.x===c.x&&q.w===c.w&&q.h===c.h)||{x:c.x,y:10,w:c.w,h:c.h}; const sc=scr.filter(([x,y])=>x>=p.x-1&&x<=p.x+p.w+1&&y>=p.y&&y<=p.y+p.h), xs=[...new Set(sc.map(v=>Math.round(clamp(v[0]-p.x,10,p.w-10))))].sort((a,b)=>a-b);
           return `<tr><td><b>${c.nm}</b></td><td>${cm(c.x)} cm</td><td><b>${cm(c.w)} × ${cm(c.h)}</b></td><td>${c.notes.map(esc).join("<br>")||"entière"}</td><td>${sc.length} vis, montants à ${xs.map(x=>cm(x)).join(" · ")} cm du bord gauche, tous les 30 cm en hauteur</td></tr>`; }).join("")}</tbody></table></section>`;
+        const ep=epl?epl.pts.filter(p=>p.wall===w):[];
+        if(ep.length) html+=`<section class="pd-page"><h3 class="pd-sec" style="--pc:#d9822b">Mur ${n+1} · Électricité et câblage</h3><p class="pd-cap">${ep.length} point(s) sur ce mur. Positions depuis le début du mur (angle gauche vu depuis la pièce), hauteurs depuis le sol fini. Gaines passées dans le vide technique avant les plaques.</p>${ep.map(p=>elPt(p,epl,++ej)).join("")}</section>`;
       });
+      const eo=epl?epl.pts.filter(p=>!p.wall&&p.c&&p.c.cal):[];
+      if(eo.length) html+=`<section class="pd-page"><h2>Électricité du plafond et des équipements : ${esc(room)}</h2>${eo.map(p=>elPt(p,epl,++ej)).join("")}</section>`;
       const C=O.crea?creas(room):[]; if(C.length) html+=`<section class="pd-page"><h2>Créations en placo : ${esc(room)}</h2>${C.map((c,k)=>`<h3>${k+1}. ${esc(CREA[c.t].n)}</h3>${creaSvg(c,room)}${creaTable(c,room)}`).join("")}</section>`;
       if(O.cuis) html+=kitDossier(room);
     });
