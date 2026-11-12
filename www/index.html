@@ -2294,7 +2294,8 @@ function renderPlan(r){
   if(S.view==="logement"){ renderLogement(); return; }
   if(S.view==="plafond"){ renderCeil(); return; }
   const {L,H}=r, v=S.view, big=Math.max(L,H), fs=Math.max(38,big/48);
-  const padL=fs*5.4, padR=fs*1.5, padT=fs*1.6, padB=fs*((v==="oss"||v==="all")?9.2:6.5);
+  const fibTot=(v==="iso"||v==="all")&&r.isoOn&&r.murMode&&r.ins&&r.ins.length;
+  const padL=fs*5.4, padR=fs*1.5, padT=fs*1.6, padB=fs*((v==="oss"||v==="all")?9.2:6.5)+(fibTot?fs*2.6:0);
   const Y=y=>H-y;
   const parts=[];
   const R=(x,y,w,h,cls,extra="")=>`<rect x="${x}" y="${Y(y+h)}" width="${w}" height="${h}" ${cls} ${extra}/>`;
@@ -2425,7 +2426,10 @@ function renderPlan(r){
   parts.push(T(0,dimY+fs*1.5+cumOff,(v==="pla"||v==="fin")?"joints de plaques":v==="res"?"axes des points":(v==="iso"&&r.murMode)?"colonnes de panneaux (chevilles au milieu)":(cum?"axes des montants, cotés depuis le début du mur":"axes des montants"),"start",`font-size="${fs*.7}" style="fill:var(--muted)"`));
   parts.push(line(0,totY,L,totY,.06,"var(--ink)"));
   parts.push(line(0,totY-fs*.5,0,totY+fs*.5,.07,"var(--ink)")+line(L,totY-fs*.5,L,totY+fs*.5,.07,"var(--ink)"));
-  parts.push(T(L/2,totY-fs*.4,`${cm(L)} cm`,"middle",`font-weight="600"`));
+  parts.push(T(L/2,totY-fs*.4,fibTot?`ossature et plaques : ${cm(L)} cm`:`${cm(L)} cm`,"middle",`font-weight="600"`));
+  if(fibTot){ const X=r.ins.flatMap(p=>[p.x,p.x+p.w]), f0=Math.min(...X), f1=Math.max(...X), fy=totY+fs*2.2, fc="#9a6a2e";
+    parts.push(line(f0,fy,f1,fy,.07,fc)+line(f0,fy-fs*.5,f0,fy+fs*.5,.08,fc)+line(f1,fy-fs*.5,f1,fy+fs*.5,.08,fc));
+    parts.push(T((f0+f1)/2,fy-fs*.4,`fibre de bois : ${cm(f1-f0)} cm${f0<-1?` (dont ${cm(-f0)} avant l'ossature)`:""}${f1>L+1?` (${cm(f1-L)} après l'ossature)`:""}`,"middle",`font-weight="700" style="fill:${fc}"`)); }
   // Cotes de hauteur sur le côté (1re colonne de panneaux / plaques, ouvertures, points)
   const pcs=cutPieces(r,v), first=pcs.filter(q=>q.x<=1);
   let vt=[0,H];
@@ -2450,7 +2454,7 @@ function renderPlan(r){
 
   const fP=(v==="iso"||v==="all")&&r.adj.fib?r.adj.fib:{pre:0,cut:0};
   if(fP.pre||fP.cut) parts.push(`<text x="${L/2}" y="${-padT*0.3}" text-anchor="middle" font-size="${fs*.7}" style="fill:var(--muted)">fibre continue dans les angles : ${fP.pre?`${cm(fP.pre)} cm avant le doublage`:""}${fP.pre&&fP.post?" · ":""}${fP.post?`${cm(fP.post)} cm après, jusqu'à la pierre`:fP.cut?`${fP.pre?" · ":""}s'arrête contre la fibre du mur suivant`:""} · longueur de fibre ${cm(L+fP.pre+(fP.post??fP.cut))} cm</text>`);
-  const vb=[-padL-fP.pre,-padT,L+padL+padR+fP.pre+fP.cut,H+padT+padB].join(" ");
+  const vb=[-padL-fP.pre,-padT,L+padL+padR+fP.pre+Math.max(fP.cut,fP.post||0),H+padT+padB].join(" ");
   document.getElementById("plan").innerHTML=`<svg viewBox="${vb}" role="img" aria-label="Calepinage du mur ${esc(S.walls[S.cur].name)}">${parts.join("")}</svg>`;
 
   const lg={
