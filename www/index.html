@@ -874,7 +874,7 @@ function compute(wall){
   }
   const insBins = iso.on ? ffd(insPieces, iso.Lg) : [];
   const insArea = murMode ? ((L+(FC.post??FC.cut)+FC.pre)*H - ops.reduce((a,o)=>a+Math.max(0,Math.min(o.x1,L)-Math.max(o.x,0))*Math.max(0,o.y1-Math.max(o.y,0)),0))/1e6 : ins.reduce((a,p)=>a+p.w*p.h,0)/1e6;
-  const insPanels = Math.ceil(insBins.length*(1+(iso.perte||0)/100));
+  let insPanels = Math.ceil(insBins.length*(1+(iso.perte||0)/100));
 
   // Plaques
   const plens=[...pla.lens].filter(v=>v>0).sort((a,b)=>a-b); if(!plens.length) plens.push(2500);
@@ -994,8 +994,18 @@ function compute(wall){
     else okk("Préparation et peinture renseignées.","DTU 59.1");
   }
 
+  // Mur pas droit (3 mesures) : l'isolant, collé à la pierre, suit la vraie longueur à chaque hauteur ; les plaques aussi quand le bout du mur est contre de la pierre ou du placo collé
+  let biasD=null, plaBias=false;
+  { const M=(wall.L3||[]).map((v,k)=>v>0?[[100,H/2,H-100][k],v]:null).filter(Boolean);
+    if(M.length>1){ const mn=Math.min(...M.map(m=>m[1])); if(Math.max(...M.map(m=>m[1]))-mn>=5){
+      biasD=y=>{ if(y<=M[0][0]) return M[0][1]-mn; for(let k=1;k<M.length;k++) if(y<=M[k][0]){ const [y0,a]=M[k-1],[y1,b]=M[k]; return a+(b-a)*(y-y0)/(y1-y0)-mn; } return M[M.length-1][1]-mn; };
+      const rwB=roomWalls(wall._src||wall), iB=rwB.findIndex(x=>x===wall._src||x.name===wall.name), nxt=iB>=0&&(iB<rwB.length-1||wall.angle!=="libre")?rwB[(iB+1)%rwB.length]:null;
+      plaBias=!!nxt&&nxt!==(wall._src||wall)&&(isCol(nxt)||nxt.noDbl);
+      if(murMode&&iso.on){ const xe=Math.max(...ins.map(p=>p.x+p.w)); ins.forEach(p=>{ if(p.x+p.w>=xe-1){ p.dB=biasD(p.y); p.dT=biasD(p.y+p.h); if(Math.max(p.dB,p.dT)>2){ p.bias=true; p.cut=true; } } }); }
+      if(plaBias) plates.forEach(p=>{ if(p.x+p.w>=L-1){ p.dB=biasD(p.y); p.dT=biasD(p.y+p.h); if(Math.max(p.dB,p.dT)>2){ p.bias=true; p.cut=true; } } });
+      okk(`Mur pas droit (${M.map(m=>cm(m[1])).join(" / ")} cm) : ossature et rails calés sur la plus courte (${cm(mn)} cm). La fibre de la dernière colonne est recoupée en biais pour suivre la pierre (jusqu'à ${cm(Math.max(...M.map(m=>m[1]))-mn)} cm de plus)${plaBias?", les plaques de la dernière colonne aussi (bout du mur contre la pierre ou du placo collé)":" ; les plaques gardent la même largeur sur toute la hauteur, car elles sont vissées sur une ossature d'aplomb et s'arrêtent contre le doublage d'aplomb du mur suivant"}.`); } } }
   checks.sort((a,b)=>a.ok-b.ok);
-  return {wall,adj,corniere,L,H,ops,studs,rails,ins,plates,checks,murMode,chevQty,chevs,appuis,Sm,Sp,W,pla,peint,pts,renf,les,memA,kb,dfit,dface,
+  return {biasD,plaBias,wall,adj,corniere,L,H,ops,studs,rails,ins,plates,checks,murMode,chevQty,chevs,appuis,Sm,Sp,W,pla,peint,pts,renf,les,memA,kb,dfit,dface,
     studPieces,studBins,railBins,railTotal,insBins,insArea,insPanels,plateCount,netArea,joints,
     cutStuds:studs.filter(s=>s.kind==="coupe").length, eclN, dep, depAuto};
 }
@@ -1658,8 +1668,9 @@ function cutList(r){
     const notes=[];
     if(p.w<W-1) notes.push(`largeur coupée à ${cm(p.w)} cm`);
     if(p.trimL>0) notes.push(`bord aminci coupé côté gauche (retirer ${cm(p.trimL)} cm)`);
-    if(p.trimR>0) notes.push(`bord aminci coupé côté droit (retirer ${cm(p.trimR)} cm)`);
+    if(p.trimR>0) notes.push(p.bias?`bord aminci coupé côté droit (retirer ${cm(Math.max(0,p.trimR-p.dB))} cm en bas, ${cm(Math.max(0,p.trimR-p.dT))} cm en haut)`:`bord aminci coupé côté droit (retirer ${cm(p.trimR)} cm)`);
     if(p.h<Sp-1) notes.push(`hauteur coupée à ${cm(p.h)} cm (plaque de ${cm(Sp)} cm)`);
+    if(p.bias) notes.push(`bord droit en biais pour suivre le mur : largeur ${cm(p.w+p.dB)} cm en bas, ${cm(p.w+p.dT)} cm en haut`);
     r.ops.forEach(o=>{
       const x0=Math.max(p.x,o.x), x1=Math.min(p.x+p.w,o.x1), y0=Math.max(p.y,o.y), y1=Math.min(p.y+p.h,o.y1);
       if(x1>x0+1 && y1>y0+1) notes.push(`encoche ${opName(o,o.i)} : ${cm(x1-x0)}×${cm(y1-y0)} cm, à ${cm(x0-p.x)} cm du bord gauche et ${cm(y0-p.y)} cm du bas`);
@@ -2335,6 +2346,7 @@ function renderPlan(r){
   parts.push(R(0,0,L,H,`style="fill:var(--wall);stroke:var(--ink)"`,`stroke-width="${fs*.08}"`));
 
   if(v==="all"||v==="iso") r.ins.forEach(p=>{
+    if(p.bias){ const x0=p.x+3, y0=p.y+3, y1=p.y+p.h-3; parts.push(`<polygon points="${x0},${Y(y0)} ${p.x+p.w+p.dB-3},${Y(y0)} ${p.x+p.w+p.dT-3},${Y(y1)} ${x0},${Y(y1)}" fill="url(#tx-fibre)" stroke="#7a5326" stroke-width="${fs*.06}" stroke-dasharray="${fs*.3} ${fs*.2}"/>`); return; }
     parts.push(R(p.x+3,p.y+3,p.w-6,p.h-6,`fill="url(#tx-fibre)" stroke="#7a5326"`,`stroke-width="${fs*.06}" ${p.cut?`stroke-dasharray="${fs*.3} ${fs*.2}"`:""}`));
   });
   if(v==="iso"&&r.murMode) r.ins.forEach(p=>{ if(p.w<fs*2.2||p.h<fs*1.6) return; const cx=p.x+p.w/2, cy=Y(p.y+p.h)+fs*1.25;
@@ -2356,8 +2368,9 @@ function renderPlan(r){
 
   if(v==="pla"||v==="all"){
     r.plates.filter(p=>p.layer===1).forEach(p=>{
+      if(v==="pla"&&p.bias) parts.push(`<polygon points="${p.x+4},${Y(p.y)} ${p.x+p.w+p.dB-4},${Y(p.y)} ${p.x+p.w+p.dT-4},${Y(p.y+p.h)} ${p.x+4},${Y(p.y+p.h)}" fill="url(#tx-plaque)" stroke="#9d9585" stroke-width="${fs*.07}"/>`);
       if(v==="pla"){
-        parts.push(R(p.x+4,p.y,p.w-8,p.h,`fill="url(#tx-plaque)" stroke="#9d9585"`,`stroke-width="${fs*.07}"`));
+        if(!p.bias) parts.push(R(p.x+4,p.y,p.w-8,p.h,`fill="url(#tx-plaque)" stroke="#9d9585"`,`stroke-width="${fs*.07}"`));
         if(p.cut) parts.push(R(p.x+4,p.y,p.w-8,p.h,`fill="url(#hat)"`,`opacity=".35"`));
         const cx=p.x+p.w/2, cy=Y(p.y+p.h)+fs*2.2;
         if(p.w>fs*3){
@@ -2518,7 +2531,7 @@ function cutListHtml(r,v){
     const P=cutPieces(r,"iso"), W=S.iso.W, Lg=S.iso.Lg;
     return `<section class="box"><h2>Liste de coupe de l'isolant</h2><p class="cap" style="margin:0 0 8px">${P.length} morceaux, panneaux de ${cm(W)} × ${cm(Lg)} cm. Position = coin bas gauche du morceau, depuis le début du mur et depuis le sol. Touchez une ligne pour la fiche.</p>`+
       tb(["N°","Position","Largeur","Hauteur","Coupe"],P.map((q,i)=>{ const ops=r.ops.filter(o=>q.x<o.x1&&q.x+q.w>o.x&&q.y<o.y1&&q.y+q.h>o.y);
-        const c=[q.w<W-1?`largeur ${cm(q.w)}`:"",q.h<Lg-1?`hauteur ${cm(q.h)}`:"",...ops.map(o=>`entaille ${opName(o,o.i)}`)].filter(Boolean).join(", ")||"entier";
+        const c=[q.bias?`en biais : ${cm(q.w+q.dB)} en bas, ${cm(q.w+q.dT)} en haut`:q.w<W-1?`largeur ${cm(q.w)}`:"",q.h<Lg-1?`hauteur ${cm(q.h)}`:"",...ops.map(o=>`entaille ${opName(o,o.i)}`)].filter(Boolean).join(", ")||"entier";
         return `<tr data-pcl="${i}" style="cursor:pointer"><td><b>I${q.n}</b></td><td>${cm(q.x)} / ${cm(q.y)} cm</td><td class="n"><b>${cm(q.w)}</b></td><td class="n"><b>${cm(q.h)}</b></td><td class="n">${c}</td></tr>`; }))+`</section>`; }
   if(v==="oss"){ const P=cutPieces(r,"oss");
     const rails=r.rails.map(x=>({k:x.kind,len:x.len||Math.abs((x.x1||0)-(x.x0||0)),x0:x.x0,y:x.y0}));
