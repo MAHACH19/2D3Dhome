@@ -703,17 +703,20 @@ const isCol=w=>!!(w&&(w.dbl==="colle"||w.noDbl));
 var WGAP=0; // ossature autoportante : vide entre la pierre et le dos des rails (mur irrégulier, pas de fixation au mur)
 const gapOf=w=>w&&w.dbl==="contre"?(w.ec??20):0, contreT=w=>gapOf(w)+S.oss.g+12.5*S.pla.couches;
 const autoMax=()=>{ const t={48:[2600,2950],70:[3150,3550],90:[3700,4150]}[S.oss.g]||[2600,2950]; return S.oss.e<=400?t[1]:t[0]; }; // ≈ Placostil, montants simples
-function wT(w){ return isCol(w)?COLLE_T:w&&w.dbl==="contre"?contreT(w):doublageT()-WGAP; } // épaisseur du doublage d'un mur
-function doublageT(){ return WGAP + ((WCFG?WCFG.iso:S.iso.on) && S.iso.pose==="mur" ? (S.iso.decol||0) : 0) + S.oss.g + 12.5*S.pla.couches; }
+function wT(w){ return isCol(w)?COLLE_T:w&&w.dbl==="contre"?contreT(w):doublageT(w)-WGAP; } // épaisseur du doublage d'un mur
+/* distance mur → dos des montants : réglage général (S.iso.decol) ou propre au mur (w.decol, en mm) */
+function decolBase(){ return Number(WCFG&&WCFG.decol!=null?WCFG.decol:S.iso.decol)||0; }
+function decolOf(w){ return w&&w.decol!=null&&w.decol!==""&&isFinite(+w.decol)?Math.max(0,+w.decol):decolBase(); }
+function doublageT(w){ return WGAP + ((WCFG?WCFG.iso:S.iso.on) && S.iso.pose==="mur" ? (w?decolOf(w):(Number(S.iso.decol)||0)) : 0) + S.oss.g + 12.5*S.pla.couches; }
 function roomWalls(wall){ return S.walls.filter(w=>(w.room||"")===(wall.room||"")); }
 function roomAdjust(wall){
-  const rw=roomWalls(wall), i=rw.indexOf(wall), T=doublageT();
+  const rw=roomWalls(wall), i=rw.indexOf(wall);
   let prev=null;
   if(rw.length>1){ if(i>0) prev=rw[i-1]; else if(rw[rw.length-1].angle!=="libre") prev=rw[rw.length-1]; }
   const start = prev ? prev.angle : "libre";
   const end = (rw.length>1 && (i<rw.length-1 || wall.angle!=="libre")) ? wall.angle : "libre";
   const d = prev && prev.angle!=="libre" ? -wT(prev)/Math.tan(angDeg(prev)*Math.PI/360) : 0;
-  return {start, end, dL:d, dx:d, T};
+  return {start, end, dL:d, dx:d, T:prev&&prev.angle!=="libre"?wT(prev):wT(wall)};
 }
 /* isolant continu dans les angles rentrants : la fibre du mur suivant vient contre celle du mur courant, l'ossature et les plaques s'arrêtent sur l'isolant */
 const fibOn=w=>!!w&&(WCFG?WCFG.iso:S.iso.on)&&S.iso.pose==="mur"&&!w.noIso&&!w.dbl&&!w.noDbl;
@@ -1053,9 +1056,10 @@ function renderQuick(){ const q=document.getElementById("quick"); if(!q) return;
     <span class="cap">${S.walls.length} mur(s) au total, ${roomNames().length} pièce(s)</span></div>
     ${`<div class="qcfg"><span class="cap">Sur ce mur :</span>${(()=>{ const cur=isCol(w)?"colle":w.dbl==="contre"?"contre":"oss", off="background:var(--card);color:var(--ink);border-color:var(--line)";
       return [["oss","Ossature + isolant"],["contre","Ossature autoportante"],["colle","Placo collé au mur brut"]].map(([k,t])=>`<button type="button" data-qdbl="${k}" aria-pressed="${cur===k}" style="${cur===k?"":off}">${t}</button>`).join("")
-      +(cur==="colle"?`<span class="cap">plots de mortier adhésif (MAP) sur la pierre, ${fr(COLLE_T/10,2)} cm d'épaisseur, sans ossature ni isolant</span>`:cur==="contre"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Écart à la pierre (cm)<input type="number" step="0.5" min="0" data-qgap value="${gapOf(w)/10}" style="width:70px"></label><span class="cap">rails ${S.oss.g} mm fixés au sol et au plafond seulement, rien dans la pierre, sans isolant : ${fr(contreT(w)/10,2)} cm d'épaisseur${w.H>autoMax()?` · ⚠ hauteur ${cm(w.H)} cm > ≈ ${cm(autoMax())} cm admis en autoportant (M${S.oss.g}, entraxe ${S.oss.e/10}) : montants doublés ou entraxe 40`:""}</span>`:""); })()}${!w.dbl&&!w.noDbl&&S.iso.on?`<button type="button" data-qcfg="noIso" aria-pressed="${!w.noIso}">${!w.noIso?"✓":"✕"} Isolant</button>`:""}${!w.dbl&&!w.noDbl&&S.mem.on?`<button type="button" data-qcfg="noMem" aria-pressed="${!w.noMem}">${!w.noMem?"✓":"✕"} Membrane</button>`:""}<span class="cap">les autres murs ne changent pas</span></div>`}`; }
-document.getElementById("quick").addEventListener("change",e=>{ if(e.target.matches("[data-qgap]")){ const v=parseFloat(e.target.value); if(isNaN(v)) return; S.walls[S.cur].ec=Math.max(0,Math.round(v*10)); save(); renderAll(); } });
+      +(cur==="colle"?`<span class="cap">plots de mortier adhésif (MAP) sur la pierre, ${fr(COLLE_T/10,2)} cm d'épaisseur, sans ossature ni isolant</span>`:cur==="contre"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Écart à la pierre (cm)<input type="number" step="0.5" min="0" data-qgap value="${gapOf(w)/10}" style="width:70px"></label><span class="cap">rails ${S.oss.g} mm fixés au sol et au plafond seulement, rien dans la pierre, sans isolant : ${fr(contreT(w)/10,2)} cm d'épaisseur${w.H>autoMax()?` · ⚠ hauteur ${cm(w.H)} cm > ≈ ${cm(autoMax())} cm admis en autoportant (M${S.oss.g}, entraxe ${S.oss.e/10}) : montants doublés ou entraxe 40`:""}</span>`:""); })()}${!isCol(w)&&!w.dbl&&!w.noDbl&&S.iso.on&&S.iso.pose==="mur"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Mur → dos des montants (cm)<input type="number" step="0.5" min="0" data-qdecol value="${decolOf(w)/10}" style="width:70px"></label>${w.decol!=null?`<button type="button" data-qdecol0 style="padding:4px 8px;font-size:12px">↺ ${fr(decolBase()/10,1)} cm comme les autres</button>`:`<span class="cap">(réglage commun)</span>`}`:""}${!w.dbl&&!w.noDbl&&S.iso.on?`<button type="button" data-qcfg="noIso" aria-pressed="${!w.noIso}">${!w.noIso?"✓":"✕"} Isolant</button>`:""}${!w.dbl&&!w.noDbl&&S.mem.on?`<button type="button" data-qcfg="noMem" aria-pressed="${!w.noMem}">${!w.noMem?"✓":"✕"} Membrane</button>`:""}<span class="cap">les autres murs ne changent pas</span></div>`}`; }
+document.getElementById("quick").addEventListener("change",e=>{ if(e.target.matches("[data-qdecol]")){ const v=parseFloat(String(e.target.value).replace(",",".")), w=S.walls[S.cur]; if(isNaN(v)) return; const mm=Math.max(0,Math.round(v*10)); if(mm===decolBase()) delete w.decol; else w.decol=mm; save(); renderAll(); return; } if(e.target.matches("[data-qgap]")){ const v=parseFloat(e.target.value); if(isNaN(v)) return; S.walls[S.cur].ec=Math.max(0,Math.round(v*10)); save(); renderAll(); } });
 document.getElementById("quick").addEventListener("click",e=>{ const q=e.target.closest("[data-qdbl]"); if(q){ const w=S.walls[S.cur]; delete w.noDbl; if(q.dataset.qdbl==="oss") delete w.dbl; else w.dbl=q.dataset.qdbl; save(); renderAll(); return; } });
+document.getElementById("quick").addEventListener("click",e=>{ if(e.target.closest("[data-qdecol0]")){ delete S.walls[S.cur].decol; save(); renderAll(); } });
 document.getElementById("quick").addEventListener("click",e=>{ const b=e.target.closest("[data-qcfg]"); if(!b) return; const w=S.walls[S.cur], k=b.dataset.qcfg; if(w[k]) delete w[k]; else w[k]=true; save(); renderAll(); });
 function renderSide(){ renderQuick();
   const w=S.walls[S.cur], {oss,iso,pla}=S;
@@ -2490,13 +2494,13 @@ document.getElementById("extra").addEventListener("click",e=>{ const t=e.target.
 /* ---------- Géométrie de la pièce, plafond et maquette 3D ---------- */
 function roomNames(){ return [...new Set(S.walls.map(x=>x.room||"Pièce 1"))]; }
 function roomGeom(room){
-  const rw=S.walls.filter(w=>(w.room||"")===room), T=doublageT()-WGAP, STN=300;
+  const rw=S.walls.filter(w=>(w.room||"")===room), T=withWallCfg(null,()=>doublageT()), STN=300;
   let px=0,py=0,dx=1,dy=0; const segs=[];
   rw.forEach(w=>{ const x1=px+dx*w.L, y1=py+dy*w.L;
     segs.push({w,i:S.walls.indexOf(w),x0:px,y0:py,x1,y1,dx,dy,nx:dy,ny:-dx}); px=x1; py=y1;
     [dx,dy]=turnDir(dx,dy,w); });
   const n=segs.length, closed=n>2 && rw[n-1].angle!=="libre", gap=Math.hypot(px,py);
-  const Ts=rw.map(w=>isCol(w)?COLLE_T:w.dbl==="contre"?contreT(w):T), of=(sg,off)=>Math.min(off,Ts[segs.indexOf(sg)]);
+  const Ts=rw.map(w=>isCol(w)?COLLE_T:w.dbl==="contre"?contreT(w):doublageT(w)-WGAP), of=(sg,off)=>Math.min(off,Ts[segs.indexOf(sg)]);
   const corner=(a,b,off)=>{ const oa=of(a,off), ob=of(b,off);
     const A=[a.x0+a.nx*oa,a.y0+a.ny*oa], B=[b.x0+b.nx*ob,b.y0+b.ny*ob], den=a.dx*b.dy-a.dy*b.dx;
     if(Math.abs(den)<1e-9) return [a.x1+a.nx*oa,a.y1+a.ny*oa];
@@ -2504,7 +2508,7 @@ function roomGeom(room){
   const ends=off=>segs.map((s,k)=>{ const o=of(s,off);
     const prev=k>0?segs[k-1]:(closed?segs[n-1]:null), next=k<n-1?segs[k+1]:(closed?segs[0]:null);
     return {a:prev?corner(prev,s,off):[s.x0+s.nx*o,s.y0+s.ny*o], b:next?corner(s,next,off):[s.x1+s.nx*o,s.y1+s.ny*o]}; });
-  const inner=ends(T), mid=ends(0), outer=ends(-STN);
+  const inner=ends(Math.max(T,...Ts)), mid=ends(0), outer=ends(-STN);
   const H=n?Math.min(...rw.map(w=>w.H)):2500;
   return {rw,segs,inner,mid,outer,closed,gap,T,Ts,STN,H,poly:closed?inner.map(e=>e.a):null,endsAt:ends};
 }
@@ -2665,7 +2669,7 @@ function renderRoom3D(){
         const pl=segsP.map(([a,b])=>`<path d="${pathOf([at(a,T+12,0),at(b,T+12,0),at(b,T+12,80),at(a,T+12,80)])}" fill="#f7f6f2" stroke="#b9b4aa" stroke-width="5"/>`).join("");
         if(!layered) face([[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]],{pick:s.i,op,fill:shade(F.peint.on||bcOnWall(w)?paintColor(w):tint,lit(s.nx,s.ny,0)),bc:bcOnWall(w),holes:holeP(T),extra:`<g stroke="#a7a398" stroke-width="7" opacity=".55">${lines.join("")}</g>${pl}${pts}`,sel});
         else {
-          const Ls=LAY.filter(l=>V.lay[l.k]!==false), n=Ls.length, base=[[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]].reduce((a,p)=>a+pr(...p)[2],0)/4;
+          const Ls=withWallCfg(w,()=>wallLayers()).filter(l=>V.lay[l.k]!==false), n=Ls.length, base=[[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]].reduce((a,p)=>a+pr(...p)[2],0)/4;
           Ls.forEach((l,j)=>{
             const ec=V.cut==="ecorche", hl=h, E1=g.endsAt(l.o1)[k], E0=g.endsAt(l.o0)[k], dd=base-(n-j)*0.6, last=j===n-1, xa=ec&&j>0?w.L*j/n:-1e9, P0=(E,off,z)=>xa>-1e8?at(xa,off,z):[...E.a,z];
             const ho=(off)=>holes.filter(H=>H.z0<hl&&H.b>xa+10).map(H=>{ const ha=Math.max(H.a,xa+5); return pathOf([at(ha,off,H.z0),at(ha,off,Math.min(H.z1,hl)),at(H.b,off,Math.min(H.z1,hl)),at(H.b,off,H.z0)]); }).join("");
@@ -2957,7 +2961,7 @@ function renderLogement(){
       parts.push(`<polygon points="${pp([O.a,O.b,M.b,M.a])}" fill="url(#tx-stone)" stroke="#6f675b" stroke-width="12"/>`);
       parts.push(`<polygon points="${pp([M.a,M.b,I.b,I.a])}" fill="#c4914f" stroke="#7a5326" stroke-width="8"/>`);
       s.w.openings.forEach(o=>{ const a=Math.max(0,o.x), b=Math.min(s.w.L,o.x+o.w), Q=(x,off)=>[s.x0+s.dx*x+s.nx*off, s.y0+s.dy*x+s.ny*off];
-        parts.push(`<polygon points="${pp([Q(a,-g.STN),Q(b,-g.STN),Q(b,g.T),Q(a,g.T)])}" fill="${o.type==="Porte"?"#fff":"#bfe0f5"}" stroke="#555" stroke-width="8"/>`); });
+        const tk=g.Ts?g.Ts[g.segs.indexOf(s)]:g.T; parts.push(`<polygon points="${pp([Q(a,-g.STN),Q(b,-g.STN),Q(b,tk),Q(a,tk)])}" fill="${o.type==="Porte"?"#fff":"#bfe0f5"}" stroke="#555" stroke-width="8"/>`); });
     });
     const P=g.poly||g.inner.flatMap(e=>[e.a,e.b]), cx=P.reduce((a,p)=>a+p[0],0)/P.length, cy=P.reduce((a,p)=>a+p[1],0)/P.length;
     const area=g.poly?Math.abs(polyArea(g.poly))/1e6:0;
@@ -3086,7 +3090,7 @@ function kitChecks(room){
   const K=kitCfg(room), ck=[], rw=S.walls.filter(w=>(w.room||"")===room), T=doublageT();
   rw.forEach(w=>{
     const its=K.items.filter(it=>it.wall===wid(w)).map(it=>({it,b:kitBox(it,K,w.H)})).filter(o=>o.b);
-    const a=roomAdjust(w), a0=Math.max(0,-a.dx), a1=w.L-(a.end==="rentrant"?T:0);
+    const a=roomAdjust(w), a0=Math.max(0,-a.dx), a1=w.L-(a.end==="rentrant"?wT(rw[(rw.indexOf(w)+1)%rw.length]):0);
     its.forEach(o=>{ if(o.it.x<a0-1||o.it.x+o.b.k.w>a1+1) ck.push({ok:false,t:`${w.name} : « ${o.b.k.n} » dépasse la longueur utile du mur (${cm(a0)} à ${cm(a1)} cm depuis le début du mur).`}); });
     for(let i=0;i<its.length;i++) for(let j=i+1;j<its.length;j++){ const A=its[i],B=its[j];
       if(A.it.x<B.it.x+B.b.k.w-1 && B.it.x<A.it.x+A.b.k.w-1 && A.b.z0<B.b.z1-1 && B.b.z0<A.b.z1-1) ck.push({ok:false,t:`${w.name} : « ${A.b.k.n} » et « ${B.b.k.n} » se chevauchent.`}); }
@@ -3604,7 +3608,7 @@ const plen=(P)=>P.reduce((a,p,i)=>i?a+Math.hypot(p[0]-P[i-1][0],p[1]-P[i-1][1],p
 function netRoom(room,g,X){
   const out={tubes:[],wb:[],boxes:[],bouches:[],caissons:[],traps:[],jb:null}; if(!g.segs.length) return out;
   X=X||{p:(x,y)=>[x,y]};
-  const T=g.T, pl=12.5*S.pla.couches, oc=Math.max(12,T-pl-S.oss.g/2), H=g.H;
+  let T=g.T; const pl=12.5*S.pla.couches, ocOf=t=>Math.max(12,t-pl-S.oss.g/2), H=g.H; let oc=ocOf(T);
   const P=g.poly||g.inner.flatMap(e=>[e.a,e.b]), C=P.reduce((a,p)=>[a[0]+p[0]/P.length,a[1]+p[1]/P.length],[0,0]);
   const W=(s,u,o,z)=>[s.x0+s.dx*u+s.nx*o, s.y0+s.dy*u+s.ny*o, z];
   var SI=-1; const tube=(k,pts,r,col,soft)=>out.tubes.push({k,pts,r,col,soft,si:SI});
@@ -3617,7 +3621,7 @@ function netRoom(room,g,X){
     const s0=g.segs[0], a=W(s0,Math.min(200,s0.w.L/2),oc,0); // liaison vers le tableau
     SI=0; tube("ictaT",[jb,[a[0],a[1],H+70],[a[0],a[1],H-30],[a[0],a[1],0],[a[0],a[1],-150]],12.5,NETC.ictaS); }
   SI=-1; const jbIn=(q)=>{ const jb=out.jb, d=Math.hypot(q[0]-jb[0],q[1]-jb[1])||1, k=Math.min(1,75/d); return [jb[0]+(q[0]-jb[0])*k,jb[1]+(q[1]-jb[1])*k,jb[2]]; };
-  g.segs.forEach((s,si)=>{ const w=s.w, hw=w.H; SI=si;
+  g.segs.forEach((s,si)=>{ const w=s.w, hw=w.H; SI=si; T=g.Ts?g.Ts[si]:g.T; oc=ocOf(T);
     (w.points||[]).forEach((p,pi)=>{ const d=PTS[p.type]||{};
       if(d.c==="elec"){ const r=(d.g||20)/2, a=W(s,p.x,oc,p.y+35), top=W(s,p.x,oc,hw+60);
         if(d.k==="BD"){ out.wb.push({s,a:[p.x-50,p.x+50,T-45,T,p.y-50,p.y+50],col:NETC.box,wago:true});
@@ -3679,7 +3683,7 @@ function v3Traps(scene,pick,room,traps,H){ const T3=THREE;
     [[0,sz/2],[0,-sz/2],[sz/2,0],[-sz/2,0]].forEach(([dx,dz],i)=>{ const b=new T3.Mesh(new T3.BoxGeometry(i<2?sz+0.03:0.015,0.008,i<2?0.015:sz),fr); b.position.set(t.p[0]/1000+dx,y,-t.p[1]/1000+dz); scene.add(b); });
     const pn=new T3.Mesh(new T3.BoxGeometry(sz-0.01,0.004,sz-0.01),v3Mat("#fbfbf9")); pn.position.set(t.p[0]/1000,y-0.002,-t.p[1]/1000);
     if(t.idx!==undefined){ pn.userData={kind:"lum",room,idx:t.idx}; pick.push(pn); } scene.add(pn); }); }
-function g0T(){ return doublageT(); }
+function g0T(s){ return s&&s.w?doublageT(s.w):doublageT(); }
 function v3Vmc(scene,pick,rooms){ const T3=THREE, V=S.v3, all=V.all;
   const B=[], Cs=[]; let auto=null;
   rooms.forEach(n=>{ const g=all?geomXf(roomGeom(n),n):roomGeom(n); if(!g.segs.length) return; const X=g.xf||{p:(x,y)=>[x,y]};
@@ -5035,7 +5039,7 @@ const POSE_COL={prep:"#8c8577",iso:"#c9a061",mem:"#3f8a33",rails:"#6f7d89",studs
 function poseKey(t){ t=t.toLowerCase(); return /prépar/.test(t)?"prep":/isolant|fibre/.test(t)?"iso":/membrane|vario/.test(t)?"mem":/rail|montant|ossature/.test(t)?"studs":/réseau|électri|plomb/.test(t)?"res":/plaque/.test(t)?"pla":/béton ciré/.test(t)?"bc":/bande|enduit|ratiss/.test(t)?"fin":/peint|primaire/.test(t)?"peint":/cuisine/.test(t)?"cuis":/création/.test(t)?"crea":""; }
 function poseLi(k,inner,n){ const c=POSE_COL[k]||"#555"; return `<li class="pd-pose" style="--pc:${c}"><span class="pd-num">${n}</span><div>${inner}</div></li>`; }
 
-function layerStrip(w,r){ const L=[["Mur en pierre",300,"#9b9283",1]]; const T=doublageT();
+function layerStrip(w,r){ const L=[["Mur en pierre",300,"#9b9283",1]]; const T=doublageT(w);
   if(r.isoOn) L.push([`Fibre de bois ${S.iso.ep} mm`,S.iso.ep,POSE_COL.iso]);
   if(r.memOn) L.push([`Membrane ${S.mem.n}`,6,POSE_COL.mem]);
   const air=Math.max(0,T-(r.isoOn?S.iso.ep:0)-S.oss.g-12.5*(S.pla.couches||1)); if(air>5) L.push([`Vide technique ${Math.round(air)} mm`,air,"#f4f1ea"]);
@@ -5131,10 +5135,10 @@ renderAll=withCC(renderAll); renderOut=withCC(renderOut); renderSide=withCC(rend
 /* ---------- Isolant / membrane réglables mur par mur ---------- */
 var WCFG=null;
 function withWallCfg(w,fn){
-  const outer=!WCFG; if(outer) WCFG={iso:S.iso.on,mem:S.mem.on};
-  const pi=S.iso.on, pm=S.mem.on;
+  const outer=!WCFG; if(outer) WCFG={iso:S.iso.on,mem:S.mem.on,decol:S.iso.decol};
+  const pi=S.iso.on, pm=S.mem.on, pd=S.iso.decol; S.iso.decol=decolOf(w);
   S.iso.on=WCFG.iso&&!(w&&(w.noIso||w.dbl||w.noDbl)); S.mem.on=WCFG.mem&&!(w&&(w.noMem||w.dbl||w.noDbl)); const pg=WGAP; WGAP=gapOf(w);
-  try{ return fn(); } finally{ S.iso.on=pi; S.mem.on=pm; WGAP=pg; if(outer) WCFG=null; }
+  try{ return fn(); } finally{ S.iso.on=pi; S.mem.on=pm; S.iso.decol=pd; WGAP=pg; if(outer) WCFG=null; }
 }
 { const c0=compute; compute=function(w){ const col=isCol(w), r=withWallCfg(col?{...w,noIso:true,noMem:true}:w,()=>c0(w)); r._w=w; if(col){ r.colle=true; r.studs=[]; r.rails=[]; r.chevs=[]; }
   if(w.dbl==="contre"&&r.checks&&!r._ac){ r._ac=1; const mx=autoMax(); r.checks.push(w.H>mx?{ok:false,t:`Ossature autoportante : ${cm(w.H)} cm de haut, au-delà d'≈ ${cm(mx)} cm pour des montants M${S.oss.g} simples à ${S.oss.e/10} cm. Montants doublés dos à dos, entraxe 40 cm ou montants plus larges.`,ref:"DTU 25.41 / Placo"}:{ok:true,t:`Ossature autoportante : ${cm(w.H)} cm de haut ≤ ≈ ${cm(mx)} cm admis pour M${S.oss.g} à ${S.oss.e/10} cm. Montants tenus uniquement par les rails haut et bas.`,ref:"DTU 25.41 / Placo"}); } r.isoOn=(WCFG?WCFG.iso:S.iso.on)&&!w.noIso; r.memOn=(WCFG?WCFG.mem:S.mem.on)&&!w.noMem; return r; }; }
