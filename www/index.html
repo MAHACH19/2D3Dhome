@@ -4373,14 +4373,14 @@ function renderOut(){
     const L=Math.ceil(m.raw*10)/10, Lb=S.scope==="wall"?Math.max(L,Math.ceil((roomL.get(m.des)||L)*10)/10):L, share=Lb?L/Lb:1;
     const best=potCombo(m.des,Lb), tag=S.scope==="wall"&&Lb>L+0.05?`achat groupé pour toute la pièce ${w.room||""} : ${fr(Lb,1)} L, ce mur en utilise ${fr(L,1)} L (${Math.round(share*100)} %)`:`${fr(L,1)} L nécessaires`;
     return best.n.map((n,i)=>({cat:m.cat,des:`${m.des} · pot ${fr(best.v[i],best.v[i]%1?2:0)} L`,det:!n?"non retenu : entrez son prix pour comparer":(m.det?m.det+" · ":"")+tag+` · ${best.n.map((k,j)=>k?k+" × "+fr(best.v[j],best.v[j]%1?2:0)+" L":"").filter(Boolean).join(" + ")} = ${fr(best.tot,1)} L`+(best.est?" (choix estimé : saisissez le prix de chaque pot pour l'optimiser)":""),q:n,u:"pot(s)",share,potL:best.v[i]})); });
-  const ORD=["Ossature","Isolant","Membrane","Plaques","Électricité","Plomberie","Finition","Peinture","Plafond","VMC","Sol","Béton ciré","Créations placo","Cuisine IKEA","Mes meubles","Divers"];
-  rows.sort((a,b)=>ORD.indexOf(a.cat)-ORD.indexOf(b.cat));
+  const ORD=["Isolant","Membrane","Ossature","Électricité","Plomberie","Plaques","Plâtrerie","Finition","Peinture","Plafond","VMC","Sol","Béton ciré","Créations placo","Rideaux et LED","Cuisine IKEA","Mes meubles","Divers"];
+  const oi=c=>{ const i=ORD.indexOf(c); return i<0?ORD.length:i; }; rows.sort((a,b)=>oi(a.cat)-oi(b.cat));
   rows.forEach(m=>{ if(m.pack){ const n=Math.ceil(m.q/m.pack); m.det=(m.det?m.det+" · ":"")+`soit ${n} ${m.packName}`; } });
   let total=0;
   const body=rows.map(m=>{
     const own=ownOf(m), p=priceOf(m), t=own?0:p*m.q*(m.share??1), nm=dname(m); total+=t;
     const img=encodeURIComponent(nm.replace(/ · .*$/,"").replace(/\(.*?\)/g,""));
-    return `<tr${own?' style="opacity:.55"':""}><td><input type="checkbox" aria-label="J'ai déjà ${esc(m.des)}" data-mown="${esc(m.des)}" ${own?"checked":""}></td><td class="cat">${m.cat}</td><td><textarea class="ren" rows="${Math.min(4,Math.ceil(nm.length/24))}" data-ren="${esc(m.des)}" placeholder="${esc(m.des)}" aria-label="Nom du produit (modifiable)" title="Touchez pour renommer le produit">${esc(nm)}</textarea><a href="https://www.google.com/search?tbm=isch&q=${img}" target="_blank" rel="noopener" style="color:var(--chalk);font-size:12px;white-space:nowrap">voir les photos</a>${nm!==m.des?`<small>calculé comme : ${esc(m.des)}</small>`:""}${m.det?`<small>${esc(m.det)}</small>`:""}</td>
+    return `<tr${own?' style="opacity:.55"':""}><td><input type="checkbox" aria-label="J'ai déjà ${esc(m.des)}" data-mown="${esc(m.des)}" ${own?"checked":""}></td><td class="cat">${m.cat}</td><td><textarea class="ren" rows="${Math.min(4,Math.ceil(nm.length/24))}" data-ren="${esc(m.des)}" placeholder="${esc(m.des)}" aria-label="Nom du produit (modifiable)" title="Touchez pour renommer le produit">${esc(nm)}</textarea><a href="https://www.google.com/search?tbm=isch&q=${img}" target="_blank" rel="noopener" style="color:var(--chalk);font-size:12px;white-space:nowrap">voir les photos</a><label class="cap" style="display:flex;gap:4px;align-items:center;margin-top:3px">Site<input list="storelist" data-mstore="${esc(m.des)}" value="${esc(storeOf(m))}" placeholder="nom du site ou du magasin" aria-label="Site ou magasin pour ${esc(nm)}" style="flex:1;min-width:0;width:auto;text-align:left;font-size:13px"></label>${nm!==m.des?`<small>calculé comme : ${esc(m.des)}</small>`:""}${m.det?`<small>${esc(m.det)}</small>`:""}</td>
       <td class="n">${fr(m.q,m.cat==="Divers"||(m.cat==="Sol"&&m.u==="m²")||(m.u==="L"&&!m.paint)?1:0)}</td><td>${m.u}</td>
       <td class="n"><input type="number" min="0" step="0.01" aria-label="Prix unitaire ${esc(m.des)}" data-price="${esc(m.des)}" value="${p||""}" placeholder="0"></td>
       <td class="n">${own?"déjà":t?fr(t,2)+" €"+(m.share!==undefined&&m.share<0.999?`<small>part du mur</small>`:""):"—"}</td></tr>`;
@@ -4388,7 +4388,7 @@ function renderOut(){
   document.getElementById("tbl").innerHTML=`<thead><tr><th title="Je possède déjà">J'ai</th><th>Lot</th><th>Désignation</th><th style="text-align:right">Qté</th><th>Unité</th><th style="text-align:right">Prix u. €</th><th style="text-align:right">Total</th></tr></thead>
     <tbody>${body}</tbody><tfoot><tr><td colspan="6">Total à acheter ${S.scope==="wall"?esc(w.name):S.scope==="room"?"pièce "+esc(w.room||"")+" ("+roomWalls(w).length+" murs"+(computeCeil(w.room||"").ok?" + plafond":"")+")":"tout le chantier ("+S.walls.length+" murs)"}</td><td class="n">${total?fr(total,2)+" €":"—"}</td></tr></tfoot>`;
   document.getElementById("tbl").dataset.rows=JSON.stringify(rows);
-  renderShop(rows);
+  storeList(); renderShop(rows);
   save();
 }
 const POT_SIZES=[3,10];
@@ -4613,6 +4613,7 @@ document.getElementById("tbl").addEventListener("input",e=>{ const el=e.target; 
 document.getElementById("tbl").addEventListener("change",e=>{
   const el=e.target;
   if(el.dataset.mown!==undefined){ S.owned=S.owned||{}; S.owned[el.dataset.mown]=el.checked; renderOut(); return; }
+  if(el.dataset.mstore!==undefined){ setStore(el.dataset.mstore,el.value); renderOut(); return; }
   if(el.dataset.ren!==undefined){ S.rename=S.rename||{}; const v=el.value.replace(/\s*\n\s*/g," ").trim(); if(!v||v===el.dataset.ren) delete S.rename[el.dataset.ren]; else S.rename[el.dataset.ren]=v; renderOut(); return; }
   if(el.dataset.price===undefined) return;
   S.prices[el.dataset.price]=el.value===""?"":(parseFloat(el.value)||0); renderOut();
@@ -4687,7 +4688,7 @@ resetBtn.addEventListener("click",()=>{
 });
 document.getElementById("copy").addEventListener("click",async e=>{
   const rows=JSON.parse(document.getElementById("tbl").dataset.rows||"[]");
-  const txt=["Lot\tDésignation\tQuantité\tUnité\tDéjà\tPrix unitaire\tTotal",...rows.map(m=>{const own=ownOf(m), p=priceOf(m);return [m.cat,dname(m),m.q,m.u,own?"oui":"",String(p).replace(".",","),own?"0":String(+(p*m.q).toFixed(2)).replace(".",",")].join("\t")})].join("\n");
+  const txt=["Lot\tDésignation\tSite / magasin\tQuantité\tUnité\tDéjà\tPrix unitaire\tTotal",...rows.map(m=>{const own=ownOf(m), p=priceOf(m);return [m.cat,dname(m),storeOf(m),m.q,m.u,own?"oui":"",String(p).replace(".",","),own?"0":String(+(p*m.q).toFixed(2)).replace(".",",")].join("\t")})].join("\n");
   const btn=e.currentTarget;
   try{ await navigator.clipboard.writeText(txt); btn.textContent="Copié"; }
   catch(err){ const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy"); btn.textContent="Copié";}catch(x){btn.textContent="Sélectionnez et copiez";} ta.remove(); }
@@ -4697,10 +4698,13 @@ document.getElementById("copy").addEventListener("click",async e=>{
 /* ---------- Liste de courses par magasin ---------- */
 const SHOP_STORES=["Brico Dépôt","Tecnomat","Mildecor","IKEA","Action","Vevor","Internet","Autre"];
 const STORE_CAT={"Finition":"Mildecor","Peinture":"Mildecor","Cuisine IKEA":"IKEA","Mes meubles":"Autre","Électricité":"Tecnomat","Plomberie":"Tecnomat","VMC":"Tecnomat","Sol":"Tecnomat"};
+function setStore(des,v){ S.store=S.store||{}; v=String(v||"").trim(); if(v) S.store[des]=v; else delete S.store[des]; save(); }
+function storeList(){ let dl=document.getElementById("storelist"); if(!dl){ dl=document.createElement("datalist"); dl.id="storelist"; document.body.appendChild(dl); }
+  const L=[...new Set([...SHOP_STORES,...Object.values(S.store||{}).filter(Boolean)])]; dl.innerHTML=L.map(o=>`<option value="${esc(o)}">`).join(""); }
 function storeOf(m){ const Z=S.store||{}, o=Z[m.des]||(m.grp?m.grp.map(d=>Z[d]).find(Boolean):""); return o||STORE_CAT[m.cat]||"Brico Dépôt"; }
 function shopGroups(rows){
   const g=new Map(); rows.filter(m=>m.q>0&&!ownOf(m)).forEach(m=>{ const st=storeOf(m); if(!g.has(st)) g.set(st,[]); g.get(st).push(m); });
-  return SHOP_STORES.filter(x=>g.has(x)).map(st=>{ const list=g.get(st); return {st,list,tot:list.reduce((a,m)=>a+priceOf(m)*m.q,0)}; });
+  return [...SHOP_STORES.filter(x=>g.has(x)),...[...g.keys()].filter(x=>!SHOP_STORES.includes(x))].map(st=>{ const list=g.get(st); return {st,list,tot:list.reduce((a,m)=>a+priceOf(m)*m.q,0)}; });
 }
 const qtyTxt=m=>`${fr(m.q,m.q%1?1:0)} ${m.u}`;
 function priceOf(m){ const v=S.prices[m.des]; if(m.grp&&v!==undefined&&v!==""&&v!==null) return Number(v)||0; return Number(v)||Number(m.pfb)||0; }
@@ -4709,14 +4713,14 @@ function dname(m){ const R=S.rename||{}, r=R[m.des]||(m.grp?m.grp.map(d=>R[d]).f
 function renderShop(rows){
   const el=document.getElementById("shoplist"); if(!el) return; const B=S.bought||{}, G=shopGroups(rows);
   const n=G.reduce((a,x)=>a+x.list.length,0), d=G.reduce((a,x)=>a+x.list.filter(m=>B[m.des]).length,0);
-  el.innerHTML=!n?`<p class="hint">Rien à acheter pour cette portée.</p>`:`<div class="cap">${d}/${n} articles achetés</div>`+G.map(x=>`<div class="shopg"><h3><span>${esc(x.st)}</span><span class="cap">${x.list.length} article(s)${x.tot?" · ≈ "+fr(x.tot,2)+" €":""}</span></h3>${x.list.map(m=>`<div class="shopr${B[m.des]?" done":""}"><input type="checkbox" style="width:22px;height:22px" aria-label="Acheté ${esc(m.des)}" data-bought="${esc(m.des)}" ${B[m.des]?"checked":""}><span><b>${esc(qtyTxt(m))}</b> — ${esc(dname(m))} <span class="cap">(${esc(m.cat)})</span></span><select aria-label="Magasin pour ${esc(m.des)}" data-store="${esc(m.des)}">${SHOP_STORES.map(o=>`<option${o===x.st?" selected":""}>${o}</option>`).join("")}</select></div>`).join("")}</div>`).join("");
+  el.innerHTML=!n?`<p class="hint">Rien à acheter pour cette portée.</p>`:`<div class="cap">${d}/${n} articles achetés</div>`+G.map(x=>`<div class="shopg"><h3><span>${esc(x.st)}</span><span class="cap">${x.list.length} article(s)${x.tot?" · ≈ "+fr(x.tot,2)+" €":""}</span></h3>${x.list.map(m=>`<div class="shopr${B[m.des]?" done":""}"><input type="checkbox" style="width:22px;height:22px" aria-label="Acheté ${esc(m.des)}" data-bought="${esc(m.des)}" ${B[m.des]?"checked":""}><span><b>${esc(qtyTxt(m))}</b> — ${esc(dname(m))} <span class="cap">(${esc(m.cat)})</span></span><input list="storelist" aria-label="Site ou magasin pour ${esc(dname(m))}" data-store="${esc(m.des)}" value="${esc(x.st)}" placeholder="site ou magasin" style="width:130px"></div>`).join("")}</div>`).join("");
 }
 function shopTitle(){ const w=S.walls[S.cur]; return "Liste de courses — "+(S.scope==="wall"?w.name:S.scope==="room"?"pièce "+(w.room||""):"tout le chantier"); }
 function shopText(){ const rows=JSON.parse(document.getElementById("tbl").dataset.rows||"[]"), B=S.bought||{};
   return shopTitle()+"\n"+shopGroups(rows).map(x=>`\n== ${x.st} ==\n`+x.list.map(m=>`${B[m.des]?"[x]":"[ ]"} ${qtyTxt(m)} — ${dname(m)}${m.grp?" ("+m.det.replace(/^regroupé : /,"")+")":""}`).join("\n")).join("\n"); }
 document.getElementById("shoplist").addEventListener("change",e=>{ const el=e.target;
   if(el.dataset.bought!==undefined){ S.bought=S.bought||{}; if(el.checked) S.bought[el.dataset.bought]=1; else delete S.bought[el.dataset.bought]; }
-  else if(el.dataset.store!==undefined){ S.store=S.store||{}; S.store[el.dataset.store]=el.value; }
+  else if(el.dataset.store!==undefined){ setStore(el.dataset.store,el.value); renderOut(); return; }
   else return; save(); renderShop(JSON.parse(document.getElementById("tbl").dataset.rows||"[]")); });
 document.getElementById("shop-reset").addEventListener("click",()=>{ S.bought={}; save(); renderShop(JSON.parse(document.getElementById("tbl").dataset.rows||"[]")); });
 document.getElementById("shop-share").addEventListener("click",async e=>{ const t=shopText(), btn=e.currentTarget;
