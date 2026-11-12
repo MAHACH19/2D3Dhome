@@ -723,7 +723,9 @@ function roomAdjust(wall){
 const fibOn=w=>!!w&&(WCFG?WCFG.iso:S.iso.on)&&S.iso.pose==="mur"&&!w.noIso&&!w.dbl&&!w.noDbl;
 function fibCorner(wall){ const rw=roomWalls(wall), i=rw.indexOf(wall), n=rw.length, ep=S.iso.ep||0; if(!fibOn(wall)||n<2) return {pre:0,cut:0};
   const prev=i>0?rw[i-1]:(rw[n-1].angle!=="libre"?rw[n-1]:null), next=(i<n-1||wall.angle!=="libre")?rw[(i+1)%n]:null;
-  return {pre:prev&&prev.angle==="rentrant"&&fibOn(prev)?Math.max(0,wT(prev)-ep):0, cut:next&&wall.angle==="rentrant"&&fibOn(next)?ep:0}; }
+  const pc=prev&&prev.angle==="rentrant"&&fibOn(prev), nc=next&&wall.angle==="rentrant"&&fibOn(next), cut=nc?ep:0;
+  // w.fibPass === "suivant" : à l'angle de fin, c'est la fibre du mur suivant qui va jusqu'à la pierre ; celle de ce mur s'arrête contre elle
+  return {pre:pc?Math.max(0,wT(prev)-(prev.fibPass==="suivant"?0:ep)):0, cut, post:nc&&wall.fibPass==="suivant"?cut-ep:cut, pc:!!pc, nc:!!nc, prev, next}; }
 function compute(wall){
   const adj = roomAdjust(wall), FC=fibCorner(wall); adj.fib=FC;
   if(adj.dL||FC.cut) wall = {...wall, L:wall.L+adj.dL-FC.cut, openings:wall.openings.map(o=>({...o,x:o.x+adj.dx})), points:(wall.points||[]).map(p=>({...p,x:p.x+adj.dx}))};
@@ -795,7 +797,7 @@ function compute(wall){
   if(adj.start==="rentrant") okk(`Départ contre le doublage du mur précédent : doublage de ${cm(L)} cm pour un mur brut de ${cm(L-adj.dL)} cm.`);
   if(adj.start==="sortant") okk(`Départ sur un angle sortant : doublage prolongé de ${cm(adj.T)} cm pour couvrir l'about du mur précédent.`);
   if(adj.end==="rentrant") okk("Angle rentrant avec le mur suivant : montant d'angle ajouté et bande à joint dans l'angle.","DTU 25.41");
-  if(FC.pre||FC.cut) okk(`Isolant continu dans les angles : on pose d'abord la fibre de tous les murs${FC.pre?`, ici elle démarre ${cm(FC.pre)} cm avant l'ossature, contre la fibre du mur précédent`:""}${FC.cut?`${FC.pre?" ;":","} au bout, la fibre va jusqu'à la pierre et l'ossature s'arrête ${cm(FC.cut)} cm avant, contre la fibre du mur suivant`:""}. Ossature et plaques ensuite, sans couper l'isolant.`,"Pont thermique d'angle");
+  if(FC.pre||FC.cut) okk(`Isolant continu dans les angles : on pose d'abord la fibre de tous les murs${FC.pre?(FC.prev&&FC.prev.fibPass==="suivant"?`, ici elle part de la pierre dans l'angle, ${cm(FC.pre)} cm avant l'ossature (la fibre du mur précédent s'arrête contre elle)`:`, ici elle démarre ${cm(FC.pre)} cm avant l'ossature, contre la fibre du mur précédent`):""}${FC.cut?`${FC.pre?" ;":","} au bout, ${FC.post<FC.cut?`la fibre s'arrête ${cm(FC.cut)} cm avant la pierre, contre celle du mur suivant qui va jusqu'à l'angle ; l'ossature s'arrête au même endroit`:`la fibre va jusqu'à la pierre et l'ossature s'arrête ${cm(FC.cut)} cm avant, contre la fibre du mur suivant`}`:""}. Ossature et plaques ensuite, sans couper l'isolant.`,"Pont thermique d'angle");
   if(adj.end==="sortant") okk("Angle sortant avec le mur suivant : montant d'angle et cornière de protection ajoutés.","DTU 25.41");
   const studBins = ffd(studPieces, Sm, 300);
   const railBins = ffd(rails.map(r=>r.len), oss.railLen||3000, 0);
@@ -808,7 +810,7 @@ function compute(wall){
   let chevQty=0, appuis=0; const chevs=[];
   if(iso.on && murMode){
     const W2=iso.W||600, Lg=iso.Lg||1200, A=W2*Lg; let col=0;
-    const xi0=-FC.pre, xi1=L+FC.cut;
+    const xi0=-FC.pre, xi1=L+(FC.post??FC.cut);
     for(let x=xi0; x<xi1-1; x+=W2, col++){
       const w=Math.min(W2,xi1-x); let y=0, first=true;
       while(H-y>5){
@@ -858,7 +860,7 @@ function compute(wall){
     if(e===400 && iso.W>=560) ko(`Entraxe 40 cm : les panneaux de ${cm(iso.W)} cm sont recoupés à la largeur de l'entre-axe, avec une chute à chaque panneau.`);
   }
   const insBins = iso.on ? ffd(insPieces, iso.Lg) : [];
-  const insArea = murMode ? ((L+FC.cut+FC.pre)*H - ops.reduce((a,o)=>a+Math.max(0,Math.min(o.x1,L)-Math.max(o.x,0))*Math.max(0,o.y1-Math.max(o.y,0)),0))/1e6 : ins.reduce((a,p)=>a+p.w*p.h,0)/1e6;
+  const insArea = murMode ? ((L+(FC.post??FC.cut)+FC.pre)*H - ops.reduce((a,o)=>a+Math.max(0,Math.min(o.x1,L)-Math.max(o.x,0))*Math.max(0,o.y1-Math.max(o.y,0)),0))/1e6 : ins.reduce((a,p)=>a+p.w*p.h,0)/1e6;
   const insPanels = Math.ceil(insBins.length*(1+(iso.perte||0)/100));
 
   // Plaques
@@ -1060,9 +1062,13 @@ function renderQuick(){ const q=document.getElementById("quick"); if(!q) return;
     <span class="cap">${S.walls.length} mur(s) au total, ${roomNames().length} pièce(s)</span></div>
     ${`<div class="qcfg"><span class="cap">Sur ce mur :</span>${(()=>{ const cur=isCol(w)?"colle":w.dbl==="contre"?"contre":"oss", off="background:var(--card);color:var(--ink);border-color:var(--line)";
       return [["oss","Ossature + isolant"],["contre","Ossature autoportante"],["colle","Placo collé au mur brut"]].map(([k,t])=>`<button type="button" data-qdbl="${k}" aria-pressed="${cur===k}" style="${cur===k?"":off}">${t}</button>`).join("")
-      +(cur==="colle"?`<span class="cap">plots de mortier adhésif (MAP) sur la pierre, ${fr(COLLE_T/10,2)} cm d'épaisseur, sans ossature ni isolant</span>`:cur==="contre"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Écart à la pierre (cm)<input type="number" step="0.5" min="0" data-qgap value="${gapOf(w)/10}" style="width:70px"></label><span class="cap">rails ${S.oss.g} mm fixés au sol et au plafond seulement, rien dans la pierre, sans isolant : ${fr(contreT(w)/10,2)} cm d'épaisseur${w.H>autoMax()?` · ⚠ hauteur ${cm(w.H)} cm > ≈ ${cm(autoMax())} cm admis en autoportant (M${S.oss.g}, entraxe ${S.oss.e/10}) : montants doublés ou entraxe 40`:""}</span>`:""); })()}${!isCol(w)&&!w.dbl&&!w.noDbl&&S.iso.on&&S.iso.pose==="mur"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Mur → dos des montants (cm)<input type="number" step="0.5" min="0" data-qdecol value="${decolOf(w)/10}" style="width:70px"></label>${w.decol!=null?`<button type="button" data-qdecol0 style="padding:4px 8px;font-size:12px">↺ ${fr(decolBase()/10,1)} cm comme les autres</button>`:`<span class="cap">(réglage commun)</span>`}`:""}${!w.dbl&&!w.noDbl&&S.iso.on?`<button type="button" data-qcfg="noIso" aria-pressed="${!w.noIso}">${!w.noIso?"✓":"✕"} Isolant</button>`:""}${!w.dbl&&!w.noDbl&&S.mem.on?`<button type="button" data-qcfg="noMem" aria-pressed="${!w.noMem}">${!w.noMem?"✓":"✕"} Membrane</button>`:""}<span class="cap">les autres murs ne changent pas</span></div>`}`; }
+      +(cur==="colle"?`<span class="cap">plots de mortier adhésif (MAP) sur la pierre, ${fr(COLLE_T/10,2)} cm d'épaisseur, sans ossature ni isolant</span>`:cur==="contre"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Écart à la pierre (cm)<input type="number" step="0.5" min="0" data-qgap value="${gapOf(w)/10}" style="width:70px"></label><span class="cap">rails ${S.oss.g} mm fixés au sol et au plafond seulement, rien dans la pierre, sans isolant : ${fr(contreT(w)/10,2)} cm d'épaisseur${w.H>autoMax()?` · ⚠ hauteur ${cm(w.H)} cm > ≈ ${cm(autoMax())} cm admis en autoportant (M${S.oss.g}, entraxe ${S.oss.e/10}) : montants doublés ou entraxe 40`:""}</span>`:""); })()}${!isCol(w)&&!w.dbl&&!w.noDbl&&S.iso.on&&S.iso.pose==="mur"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Mur → dos des montants (cm)<input type="number" step="0.5" min="0" data-qdecol value="${decolOf(w)/10}" style="width:70px"></label>${w.decol!=null?`<button type="button" data-qdecol0 style="padding:4px 8px;font-size:12px">↺ ${fr(decolBase()/10,1)} cm comme les autres</button>`:`<span class="cap">(réglage commun)</span>`}`:""}${(()=>{ if(!fibOn(w)||isCol(w)) return ""; const FC=fibCorner(w); if(!FC.pc&&!FC.nc) return ""; const r=compute(w), len=r.L+(FC.post??FC.cut)+FC.pre, sh=x=>esc((x.name||"").split(" — ").pop()), on="", off="background:var(--card);color:var(--ink);border-color:var(--line)";
+      const row=(lab,k,me)=>`<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%"><span class="cap">${lab}</span><button type="button" data-qfib="${k}" data-v="moi" aria-pressed="${me}" style="${me?on:off}">Ce mur va jusqu'à la pierre</button><button type="button" data-qfib="${k}" data-v="autre" aria-pressed="${!me}" style="${!me?on:off}">L'autre mur va jusqu'à la pierre</button></div>`;
+      return `<div style="width:100%;margin-top:4px"><b>Fibre de bois sur ce mur : ${cm(len)} cm</b> <span class="cap">(mur brut ${cm(w.L)} cm)</span></div>`+(FC.pc?row(`Angle de début, avec ${sh(FC.prev)} :`,"start",FC.prev.fibPass==="suivant"):"")+(FC.nc?row(`Angle de fin, avec ${sh(FC.next)} :`,"end",w.fibPass!=="suivant"):""); })()}${!w.dbl&&!w.noDbl&&S.iso.on?`<button type="button" data-qcfg="noIso" aria-pressed="${!w.noIso}">${!w.noIso?"✓":"✕"} Isolant</button>`:""}${!w.dbl&&!w.noDbl&&S.mem.on?`<button type="button" data-qcfg="noMem" aria-pressed="${!w.noMem}">${!w.noMem?"✓":"✕"} Membrane</button>`:""}<span class="cap">les autres murs ne changent pas</span></div>`}`; }
 document.getElementById("quick").addEventListener("change",e=>{ if(e.target.matches("[data-qdecol]")){ const v=parseFloat(String(e.target.value).replace(",",".")), w=S.walls[S.cur]; if(isNaN(v)) return; const mm=Math.max(0,Math.round(v*10)); if(mm===decolBase()) delete w.decol; else w.decol=mm; save(); renderAll(); return; } if(e.target.matches("[data-qgap]")){ const v=parseFloat(e.target.value); if(isNaN(v)) return; S.walls[S.cur].ec=Math.max(0,Math.round(v*10)); save(); renderAll(); } });
 document.getElementById("quick").addEventListener("click",e=>{ const q=e.target.closest("[data-qdbl]"); if(q){ const w=S.walls[S.cur]; delete w.noDbl; if(q.dataset.qdbl==="oss") delete w.dbl; else w.dbl=q.dataset.qdbl; save(); renderAll(); return; } });
+document.getElementById("quick").addEventListener("click",e=>{ const b=e.target.closest("[data-qfib]"); if(!b) return; const w=S.walls[S.cur], FC=fibCorner(w), me=b.dataset.v==="moi";
+  if(b.dataset.qfib==="end"){ if(me) delete w.fibPass; else w.fibPass="suivant"; } else if(FC.prev){ if(me) FC.prev.fibPass="suivant"; else delete FC.prev.fibPass; } save(); renderAll(); });
 document.getElementById("quick").addEventListener("click",e=>{ if(e.target.closest("[data-qdecol0]")){ delete S.walls[S.cur].decol; save(); renderAll(); } });
 document.getElementById("quick").addEventListener("click",e=>{ const b=e.target.closest("[data-qcfg]"); if(!b) return; const w=S.walls[S.cur], k=b.dataset.qcfg; if(w[k]) delete w[k]; else w[k]=true; save(); renderAll(); });
 function renderSide(){ renderQuick();
@@ -2443,7 +2449,7 @@ function renderPlan(r){
   });
 
   const fP=(v==="iso"||v==="all")&&r.adj.fib?r.adj.fib:{pre:0,cut:0};
-  if(fP.pre||fP.cut) parts.push(`<text x="${L/2}" y="${-padT*0.3}" text-anchor="middle" font-size="${fs*.7}" style="fill:var(--muted)">fibre continue dans les angles : ${fP.pre?`${cm(fP.pre)} cm avant le doublage`:""}${fP.pre&&fP.cut?" · ":""}${fP.cut?`${cm(fP.cut)} cm après, jusqu'à la pierre`:""}</text>`);
+  if(fP.pre||fP.cut) parts.push(`<text x="${L/2}" y="${-padT*0.3}" text-anchor="middle" font-size="${fs*.7}" style="fill:var(--muted)">fibre continue dans les angles : ${fP.pre?`${cm(fP.pre)} cm avant le doublage`:""}${fP.pre&&fP.post?" · ":""}${fP.post?`${cm(fP.post)} cm après, jusqu'à la pierre`:fP.cut?`${fP.pre?" · ":""}s'arrête contre la fibre du mur suivant`:""} · longueur de fibre ${cm(L+fP.pre+(fP.post??fP.cut))} cm</text>`);
   const vb=[-padL-fP.pre,-padT,L+padL+padR+fP.pre+fP.cut,H+padT+padB].join(" ");
   document.getElementById("plan").innerHTML=`<svg viewBox="${vb}" role="img" aria-label="Calepinage du mur ${esc(S.walls[S.cur].name)}">${parts.join("")}</svg>`;
 
