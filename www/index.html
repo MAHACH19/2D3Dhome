@@ -210,6 +210,9 @@ h3.grp{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.08e
 #scanhint small{display:block;color:var(--muted);font-size:12px}
 #scanhint.scr-off{display:none!important}
 #scanpanel{scroll-margin-top:96px}
+[data-qwall],[data-wall]{display:inline-flex;align-items:center;gap:6px}
+[data-qwall]::before,[data-wall]::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;background:#c3c8cc;box-shadow:inset 0 0 0 1px #0002}
+[data-qwall][aria-pressed="true"]::before,[data-wall][aria-pressed="true"]::before{background:#2fd35a;box-shadow:0 0 0 2px #2fd35a55,0 0 8px 2px #2fd35acc}
 .qcfg{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
 .qcfg button{padding:5px 12px;border-radius:16px;font-size:13px;font-weight:600}
 .qcfg button[aria-pressed="true"]{background:var(--mem);border-color:var(--mem);color:#fff}
@@ -1583,6 +1586,7 @@ function renderPiece(r){
     parts.push(`<polygon points="${Q(x0,y0)} ${Q(x1,y1)} ${Q(x1+nrx*STN,y1+nry*STN)} ${Q(x0+nrx*STN,y0+nry*STN)}" fill="url(#tx-stone)"/>`);
     parts.push(`<polygon points="${Q(x0,y0)} ${Q(x1,y1)} ${Q(x1+nlx*T,y1+nly*T)} ${Q(x0+nlx*T,y0+nly*T)}" fill="url(#tx-fibre)" stroke="${sel?"#1d63c4":"#7a5326"}" stroke-width="${sel?fs*.18:fs*.04}"/>`);
     parts.push(`<line x1="${(x0+nlx*T).toFixed(0)}" y1="${Yf(y0+nly*T).toFixed(0)}" x2="${(x1+nlx*T).toFixed(0)}" y2="${Yf(y1+nly*T).toFixed(0)}" stroke="#e9e8e3" stroke-width="${fs*.25}"/>`);
+    if(sel){ const mx=(x0+x1)/2+nlx*(T+fs*.9), my=Yf((y0+y1)/2+nly*(T+fs*.9)); parts.push(`<circle cx="${mx.toFixed(0)}" cy="${my.toFixed(0)}" r="${(fs*.75).toFixed(0)}" fill="#2fd35a" opacity=".3"/><circle cx="${mx.toFixed(0)}" cy="${my.toFixed(0)}" r="${(fs*.42).toFixed(0)}" fill="#2fd35a" stroke="#fff" stroke-width="${(fs*.08).toFixed(0)}"/>`); }
     w.openings.forEach((o,k)=>{
       const a=Math.max(0,o.x), b=Math.min(w.L,o.x+o.w);
       const P1=[x0+dx*a,y0+dy*a], P2=[x0+dx*b,y0+dy*b];
