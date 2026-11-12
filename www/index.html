@@ -721,8 +721,12 @@ function roomAdjust(wall){
   if(rw.length>1){ if(i>0) prev=rw[i-1]; else if(rw[rw.length-1].angle!=="libre") prev=rw[rw.length-1]; }
   const start = prev ? prev.angle : "libre";
   const end = (rw.length>1 && (i<rw.length-1 || wall.angle!=="libre")) ? wall.angle : "libre";
-  const d = prev && prev.angle!=="libre" ? -wT(prev)/Math.tan(angDeg(prev)*Math.PI/360) : 0;
-  return {start, end, dL:d, dx:d, T:prev&&prev.angle!=="libre"?wT(prev):wT(wall)};
+  // angle sortant avec un mur en placo collé : le placo collé continue de l'épaisseur du doublage voisin, l'ossature de l'autre mur vient buter derrière
+  const colWrap=(a,b)=>a&&b&&a.angle==="sortant"&&isCol(a)&&!isCol(b);
+  const next=rw.length>1&&(i<rw.length-1||wall.angle!=="libre")?rw[(i+1)%rw.length]:null;
+  const d = prev && prev.angle!=="libre" ? (colWrap(prev,wall)?0:-wT(prev)/Math.tan(angDeg(prev)*Math.PI/360)) : 0;
+  const dEnd = next&&next!==wall&&colWrap(wall,next) ? wT(next) : 0;
+  return {start, end, dL:d, dx:d, dEnd, T:prev&&prev.angle!=="libre"?wT(prev):wT(wall)};
 }
 /* isolant continu dans les angles rentrants : la fibre du mur suivant vient contre celle du mur courant, l'ossature et les plaques s'arrêtent sur l'isolant */
 const fibOn=w=>!!w&&(WCFG?WCFG.iso:S.iso.on)&&S.iso.pose==="mur"&&!w.noIso&&!w.dbl&&!w.noDbl;
@@ -737,7 +741,7 @@ function fibCorner(wall){ const rw=roomWalls(wall), i=rw.indexOf(wall), n=rw.len
   return {pb:pb&&wT(prev)>0, pre:pc?Math.max(0,wT(prev)-(prev.fibPass==="suivant"?0:ep)):pb?wT(prev):0, cut, post:nc&&wall.fibPass==="suivant"?cut-ep:cut, pc:!!pc, nc:!!nc, prev, next}; }
 function compute(wall){
   const adj = roomAdjust(wall), FC=fibCorner(wall); adj.fib=FC;
-  if(adj.dL||FC.cut) wall = {...wall, L:wall.L+adj.dL-FC.cut, openings:wall.openings.map(o=>({...o,x:o.x+adj.dx})), points:(wall.points||[]).map(p=>({...p,x:p.x+adj.dx}))};
+  if(adj.dL||FC.cut||adj.dEnd) wall = {...wall, L:wall.L+adj.dL-FC.cut+(adj.dEnd||0), openings:wall.openings.map(o=>({...o,x:o.x+adj.dx})), points:(wall.points||[]).map(p=>({...p,x:p.x+adj.dx}))};
   const {oss,iso,mem}=S, L=wall.L, H=wall.H, e=oss.e, checks=[];
   const ko=(t,ref="")=>checks.push({ok:false,t,ref}), okk=(t,ref="")=>checks.push({ok:true,t,ref});
   const wp = wall.plaN && PLA.find(p=>p.n===wall.plaN);
@@ -1131,7 +1135,7 @@ function renderSide(){ renderQuick();
       ${w.angle==="autre"?`<label class="f">Angle intérieur (°)<input type="number" min="30" max="330" step="1" data-b="w.deg" data-num value="${w.deg||135}"></label>`:""}
     </div>
     ${libreMid(w)?`<div class="warn" style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span>« Aucun » angle alors que ce mur est suivi de « ${esc((roomWalls(w)[roomWalls(w).indexOf(w)+1].name||"").split(" — ").pop())} » : le plan dessine un coin, mais les épaisseurs de doublage ne sont pas déduites à ce coin, et les deux doublages se chevauchent.</span><button type="button" class="pri" data-fixang="${S.walls.indexOf(w)}">Mettre « Rentrant »</button></div>`:""}
-    ${(()=>{ const a=roomAdjust(w), r=compute(w), X=r.isoOn&&r.murMode&&r.ins&&r.ins.length?r.ins.flatMap(p=>[p.x,p.x+p.w]):null; return Math.abs(r.L-w.L)>0.5||X?`<p class="hint" style="margin:0 0 8px">${isCol(w)?"Placo collé":"Ossature et plaques"} : ${cm(r.L)} cm${X?`, fibre de bois : ${cm(Math.max(...X)-Math.min(...X))} cm`:""} (mur brut ${cm(w.L)} cm${a.dL?`, ${a.dL<0?"moins":"plus"} ${cm(Math.abs(a.dL))} cm au début contre le doublage du mur précédent`:""}${r.adj.fib&&r.adj.fib.cut?`, moins ${cm(r.adj.fib.cut)} cm à la fin contre la fibre du mur suivant`:""}).</p>`:""; })()}
+    ${(()=>{ const a=roomAdjust(w), r=compute(w), X=r.isoOn&&r.murMode&&r.ins&&r.ins.length?r.ins.flatMap(p=>[p.x,p.x+p.w]):null; return Math.abs(r.L-w.L)>0.5||X?`<p class="hint" style="margin:0 0 8px">${isCol(w)?"Placo collé":"Ossature et plaques"} : ${cm(r.L)} cm${X?`, fibre de bois : ${cm(Math.max(...X)-Math.min(...X))} cm`:""} (mur brut ${cm(w.L)} cm${a.dL?`, ${a.dL<0?"moins":"plus"} ${cm(Math.abs(a.dL))} cm au début contre le doublage du mur précédent`:""}${r.adj.fib&&r.adj.fib.cut?`, moins ${cm(r.adj.fib.cut)} cm à la fin contre la fibre du mur suivant`:""}${a.dEnd?`, plus ${cm(a.dEnd)} cm au bout : le placo collé couvre le doublage du mur suivant à l'angle sortant`:""}).</p>`:""; })()}
     <div class="row">
       <label class="f">Longueur (cm)<input id="w-L" type="number" min="10" step="0.5" data-b="w.L" data-cm value="${w.L/10}"></label>
       <label class="f">Hauteur sous plafond (cm)<input id="w-H" type="number" min="10" step="0.5" data-b="w.H" data-cm value="${w.H/10}"></label>
@@ -3981,13 +3985,14 @@ function buildScene(){
             const mm=new T3.Mesh(gg,fab); scene.add(mm); });
           if(P.led){ const lm=v3Mat("#fff3d6",{emissive:new T3.Color("#ffd89a"),emissiveIntensity:V.nuit?1.6:.6}); add(v3Box(sg,x,x+P.L,jo-14,jo,hh-40,hh-28,lm)); if(V.nuit&&lights.length<10){ const q=new T3.PointLight("#ffd89a",.5,4,1.6); const m=v3Box(sg,x+P.L/2,x+P.L/2+1,T0+P.pf/2,T0+P.pf/2+1,hh-60,hh-59,M.white); m.geometry.computeBoundingSphere(); q.position.copy(m.geometry.boundingSphere.center); scene.add(q); lights.push(q); } } }
         if(c.t==="led"){ const kc=P.k<=2700?"#ffd29a":P.k>=4000?"#f4f8ff":"#ffe2b8", po={polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2};
-          const lm=v3Mat("#ffffff",{emissive:new T3.Color(kc),emissiveIntensity:V.nuit?2:1.1,roughness:.3,...po}), alu=v3Mat("#a3a9af",{metalness:.5,roughness:.35,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+          const lm=v3Mat("#ffffff",{emissive:new T3.Color(kc),emissiveIntensity:V.nuit?2:1.1,roughness:.3,...po}); lm.toneMapped=false; lm.color=new T3.Color("#ffffff"); lm.emissive=new T3.Color(kc); const edge=v3Mat("#b9bdc1",{roughness:.5,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}), // ruban plus clair que le mur (hors tonemapping) + fin liseré gris pour qu'on le voie de jour sur un mur blanc
+            ledW=(a,b,za,zb,vert)=>{ add(vert?v3Box(sg,a-3,b+3,T0,T0+2,za,zb,edge):v3Box(sg,a,b,T0,T0+2,za-3,zb+3,edge)); const q=v3Box(sg,a,b,T0,T0+4,za,zb,lm); add(q); return q; }, alu=v3Mat("#a3a9af",{metalness:.5,roughness:.35,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
           const halo=(ca,cb,za,zb,vert)=>{ const pad=V.nuit?260:150, w0=vert?(cb-ca)+2*pad:(cb-ca), h0=vert?(zb-za):(zb-za)+2*pad, gg=new T3.PlaneGeometry(w0/1000,h0/1000); gg.translate((ca+cb)/2000,(za+zb)/2000,(T0+2.5)/1000); gg.applyMatrix4(wallMatrix(sg,0));
             const hm=new T3.MeshBasicMaterial({map:ledGlow(vert,kc),transparent:true,opacity:V.nuit?.9:.45,depthWrite:false,blending:T3.AdditiveBlending,side:T3.DoubleSide}); scene.add(new T3.Mesh(gg,hm)); };
           let m=null;
-          if(P.pos===1) ledSegs(ww,P,x,hh).forEach(([a,b])=>{ m=v3Box(sg,x,x+40,T0,T0+1.5,a,b,lm); add(m); });
+          if(P.pos===1) ledSegs(ww,P,x,hh).forEach(([a,b])=>{ m=ledW(x,x+40,a,b,true); });
           else if(P.pos===2){ m=v3Box(sg,x,x+P.L,T0+P.y,T0+P.y+40,hh-1.5,hh,lm); add(m); }
-          else ledSegs(ww,P,x,hh).forEach(([a,b])=>{ m=v3Box(sg,a,b,T0,T0+1.5,P.y,P.y+40,lm); add(m); });
+          else ledSegs(ww,P,x,hh).forEach(([a,b])=>{ m=ledW(a,b,P.y,P.y+40,false); });
           if(m&&V.nuit&&lights.length<10){ m.geometry.computeBoundingSphere(); const q=new T3.PointLight(kc,.45,3.5,1.6), cpos=m.geometry.boundingSphere.center.clone(); const nn=new T3.Vector3(sg.nx,0,-sg.ny).multiplyScalar(.25); q.position.copy(cpos.add(nn)); scene.add(q); lights.push(q); } }
         if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; add(v3Box(sg,x,x+40,T0,T0+P.pf,y0,y0+P.h,pm)); add(v3Box(sg,x+P.L-40,x+P.L,T0,T0+P.pf,y0,y0+P.h,pm)); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; add(v3Box(sg,x,x+P.L,T0,T0+P.pf,Math.max(0,yy-35),Math.max(35,yy+35),pm)); } }
       });
