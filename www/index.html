@@ -874,8 +874,9 @@ function compute(wall){
 
   // Plaques
   const plens=[...pla.lens].filter(v=>v>0).sort((a,b)=>a-b); if(!plens.length) plens.push(2500);
-  const Sp = plens.find(l=>l>=need) || plens[plens.length-1];
-  if(need>Sp) ko(`Hauteur supérieure à la plus grande plaque (${cm(Sp)} cm) : joints horizontaux décalés d'une colonne à l'autre.`);
+  const pNeed=H-10; // plaques surélevées de 1 cm au-dessus du sol (cale), jusqu'au plafond
+  const Sp = plens.find(l=>l>=pNeed) || plens[plens.length-1];
+  if(pNeed>Sp) ko(`Hauteur supérieure à la plus grande plaque (${cm(Sp)} cm) : joints horizontaux décalés d'une colonne à l'autre.`);
   const W=pla.W||1200, plates=[];
   if(W!==e*Math.round(W/e)) ko(`La largeur de plaque (${cm(W)} cm) n'est pas un multiple de l'entraxe : les bords de plaques ne tombent pas tous sur un montant.`);
   for(let layer=1; layer<=pla.couches; layer++){
@@ -884,10 +885,10 @@ function compute(wall){
       const x0=Math.max(0,c), x1=Math.min(L,c+W); if(x1-x0<5) continue;
       const trimL=x0===0?0-c:0, trimR=x1>=L-0.5?c+W-L:0;
       if(layer===1&&ROG&&x1>=L-0.5&&trimR<ROG-1&&trimR>=0) ko(`Bout de mur à droite : la dernière plaque ne perd que ${cm(trimR)} cm, son bord aminci n'est pas entièrement retiré. Changez le décalage du départ des plaques de ${cm(e/2)} cm, ou coupez quand même ${cm(ROG)} cm et comblez au mortier adhésif.`,"Bord aminci");
-      let y=10, rem=need, first=true;
+      let y=10, rem=pNeed, first=true;
       while(rem>0.5){
         let len=Math.min(Sp,rem);
-        if(first && col%2===1 && need>Sp){ let r=need%Sp||Sp; if(r<400) r=Math.min(Sp,r+Sp/2); len=r; }
+        if(first && col%2===1 && pNeed>Sp){ let r=pNeed%Sp||Sp; if(r<400) r=Math.min(Sp,r+Sp/2); len=r; }
         const p={layer,x:x0,y,w:x1-x0,h:len,trimL,trimR};
         const inside=ops.some(o=>p.x>=o.x-1&&p.x+p.w<=o.x1+1&&p.y>=o.y-1&&p.y+p.h<=o.y1+1);
         if(!inside){
