@@ -714,6 +714,7 @@ function decolBase(){ return Number(WCFG&&WCFG.decol!=null?WCFG.decol:S.iso.deco
 function decolOf(w){ return w&&w.decol!=null&&w.decol!==""&&isFinite(+w.decol)?Math.max(0,+w.decol):decolBase(); }
 function doublageT(w){ return WGAP + ((WCFG?WCFG.iso:S.iso.on) && S.iso.pose==="mur" ? (w?decolOf(w):(Number(S.iso.decol)||0)) : 0) + S.oss.g + 12.5*S.pla.couches; }
 function roomWalls(wall){ return S.walls.filter(w=>(w.room||"")===(wall.room||"")); }
+function libreMid(w){ const rw=roomWalls(w), i=rw.indexOf(w); return w.angle==="libre"&&i>=0&&i<rw.length-1; }
 function roomAdjust(wall){
   const rw=roomWalls(wall), i=rw.indexOf(wall);
   let prev=null;
@@ -725,11 +726,15 @@ function roomAdjust(wall){
 }
 /* isolant continu dans les angles rentrants : la fibre du mur suivant vient contre celle du mur courant, l'ossature et les plaques s'arrêtent sur l'isolant */
 const fibOn=w=>!!w&&(WCFG?WCFG.iso:S.iso.on)&&S.iso.pose==="mur"&&!w.noIso&&!w.dbl&&!w.noDbl;
-function fibCorner(wall){ const rw=roomWalls(wall), i=rw.indexOf(wall), n=rw.length, ep=S.iso.ep||0; if(!fibOn(wall)||n<2) return {pre:0,cut:0};
+function fibCorner(wall){ const rw=roomWalls(wall), i=rw.indexOf(wall), n=rw.length, ep=S.iso.ep||0; if(n<2) return {pre:0,cut:0};
+  if(!fibOn(wall)){ // mur sans fibre (doublage autoportant, collé…) : il s'arrête contre la fibre du mur suivant, qui va jusqu'à la pierre
+    const next=(i<n-1||wall.angle!=="libre")?rw[(i+1)%n]:null, nc2=!!next&&next!==wall&&wall.angle==="rentrant"&&fibOn(next);
+    return {pre:0,cut:nc2?ep:0,post:nc2?ep:0,pc:false,nc:false,next,nf:true}; }
   const prev=i>0?rw[i-1]:(rw[n-1].angle!=="libre"?rw[n-1]:null), next=(i<n-1||wall.angle!=="libre")?rw[(i+1)%n]:null;
   const pc=prev&&prev.angle==="rentrant"&&fibOn(prev), nc=next&&wall.angle==="rentrant"&&fibOn(next), cut=nc?ep:0;
   // w.fibPass === "suivant" : à l'angle de fin, c'est la fibre du mur suivant qui va jusqu'à la pierre ; celle de ce mur s'arrête contre elle
-  return {pre:pc?Math.max(0,wT(prev)-(prev.fibPass==="suivant"?0:ep)):0, cut, post:nc&&wall.fibPass==="suivant"?cut-ep:cut, pc:!!pc, nc:!!nc, prev, next}; }
+  const pb=!pc&&!!prev&&prev!==wall&&prev.angle==="rentrant"; // mur précédent sans fibre : son doublage s'arrête contre notre fibre, qui va jusqu'à la pierre
+  return {pb:pb&&wT(prev)>0, pre:pc?Math.max(0,wT(prev)-(prev.fibPass==="suivant"?0:ep)):pb?wT(prev):0, cut, post:nc&&wall.fibPass==="suivant"?cut-ep:cut, pc:!!pc, nc:!!nc, prev, next}; }
 function compute(wall){
   const adj = roomAdjust(wall), FC=fibCorner(wall); adj.fib=FC;
   if(adj.dL||FC.cut) wall = {...wall, L:wall.L+adj.dL-FC.cut, openings:wall.openings.map(o=>({...o,x:o.x+adj.dx})), points:(wall.points||[]).map(p=>({...p,x:p.x+adj.dx}))};
@@ -810,7 +815,8 @@ function compute(wall){
   if(adj.start==="rentrant") okk(`Départ contre le doublage du mur précédent : doublage de ${cm(L)} cm pour un mur brut de ${cm(L-adj.dL)} cm.`);
   if(adj.start==="sortant") okk(`Départ sur un angle sortant : doublage prolongé de ${cm(adj.T)} cm pour couvrir l'about du mur précédent.`);
   if(adj.end==="rentrant") okk("Angle rentrant avec le mur suivant : montant d'angle ajouté et bande à joint dans l'angle.","DTU 25.41");
-  if(FC.pre||FC.cut) okk(`Isolant continu dans les angles : on pose d'abord la fibre de tous les murs${FC.pre?(FC.prev&&FC.prev.fibPass==="suivant"?`, ici elle part de la pierre dans l'angle, ${cm(FC.pre)} cm avant l'ossature (la fibre du mur précédent s'arrête contre elle)`:`, ici elle démarre ${cm(FC.pre)} cm avant l'ossature, contre la fibre du mur précédent`):""}${FC.cut?`${FC.pre?" ;":","} au bout, ${FC.post<FC.cut?`la fibre s'arrête ${cm(FC.cut)} cm avant la pierre, contre celle du mur suivant qui va jusqu'à l'angle ; l'ossature s'arrête au même endroit`:`la fibre va jusqu'à la pierre et l'ossature s'arrête ${cm(FC.cut)} cm avant, contre la fibre du mur suivant`}`:""}. Ossature et plaques ensuite, sans couper l'isolant.`,"Pont thermique d'angle");
+  if(FC.nf&&FC.cut) okk(`Angle avec ${esc((FC.next.name||"").split(" — ").pop())} : ce mur n'a pas de fibre, son doublage s'arrête ${cm(FC.cut)} cm avant la pierre, contre la fibre du mur suivant qui va jusqu'à l'angle.`,"Pont thermique d'angle");
+  else if(FC.pre||FC.cut) okk(`Isolant continu dans les angles : on pose d'abord la fibre de tous les murs${FC.pre?(FC.pb?`, ici elle part de la pierre dans l'angle, ${cm(FC.pre)} cm avant l'ossature (le doublage du mur précédent, sans fibre, s'arrête contre elle)`:FC.prev&&FC.prev.fibPass==="suivant"?`, ici elle part de la pierre dans l'angle, ${cm(FC.pre)} cm avant l'ossature (la fibre du mur précédent s'arrête contre elle)`:`, ici elle démarre ${cm(FC.pre)} cm avant l'ossature, contre la fibre du mur précédent`):""}${FC.cut?`${FC.pre?" ;":","} au bout, ${FC.post<FC.cut?`la fibre s'arrête ${cm(FC.cut)} cm avant la pierre, contre celle du mur suivant qui va jusqu'à l'angle ; l'ossature s'arrête au même endroit`:`la fibre va jusqu'à la pierre et l'ossature s'arrête ${cm(FC.cut)} cm avant, contre la fibre du mur suivant`}`:""}. Ossature et plaques ensuite, sans couper l'isolant.`,"Pont thermique d'angle");
   if(adj.end==="sortant") okk("Angle sortant avec le mur suivant : montant d'angle et cornière de protection ajoutés.","DTU 25.41");
   const studBins = ffd(studPieces, Sm, ECL);
   const railBins = ffd(rails.map(r=>r.len), oss.railLen||3000, 0);
@@ -1124,7 +1130,8 @@ function renderSide(){ renderQuick();
         <option value="libre"${w.angle==="libre"?" selected":""}>Aucun (mur seul ou fin)</option></select></label>
       ${w.angle==="autre"?`<label class="f">Angle intérieur (°)<input type="number" min="30" max="330" step="1" data-b="w.deg" data-num value="${w.deg||135}"></label>`:""}
     </div>
-    ${(()=>{ const a=roomAdjust(w); return a.dL?`<p class="hint" style="margin:0 0 8px">Longueur de doublage calculée : ${cm(w.L+a.dL)} cm (mur brut ${cm(w.L)} cm, ${a.dL<0?"moins":"plus"} l'épaisseur du doublage voisin de ${cm(a.T)} cm).</p>`:""; })()}
+    ${libreMid(w)?`<div class="warn" style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span>« Aucun » angle alors que ce mur est suivi de « ${esc((roomWalls(w)[roomWalls(w).indexOf(w)+1].name||"").split(" — ").pop())} » : le plan dessine un coin, mais les épaisseurs de doublage ne sont pas déduites à ce coin, et les deux doublages se chevauchent.</span><button type="button" class="pri" data-fixang="${S.walls.indexOf(w)}">Mettre « Rentrant »</button></div>`:""}
+    ${(()=>{ const a=roomAdjust(w), r=compute(w), X=r.isoOn&&r.murMode&&r.ins&&r.ins.length?r.ins.flatMap(p=>[p.x,p.x+p.w]):null; return Math.abs(r.L-w.L)>0.5||X?`<p class="hint" style="margin:0 0 8px">${isCol(w)?"Placo collé":"Ossature et plaques"} : ${cm(r.L)} cm${X?`, fibre de bois : ${cm(Math.max(...X)-Math.min(...X))} cm`:""} (mur brut ${cm(w.L)} cm${a.dL?`, ${a.dL<0?"moins":"plus"} ${cm(Math.abs(a.dL))} cm au début contre le doublage du mur précédent`:""}${r.adj.fib&&r.adj.fib.cut?`, moins ${cm(r.adj.fib.cut)} cm à la fin contre la fibre du mur suivant`:""}).</p>`:""; })()}
     <div class="row">
       <label class="f">Longueur (cm)<input id="w-L" type="number" min="10" step="0.5" data-b="w.L" data-cm value="${w.L/10}"></label>
       <label class="f">Hauteur sous plafond (cm)<input id="w-H" type="number" min="10" step="0.5" data-b="w.H" data-cm value="${w.H/10}"></label>
@@ -1607,9 +1614,14 @@ function renderPiece(r){
     const {x0,y0,x1,y1,dx,dy,w}=sg, nlx=dy, nly=-dx, nrx=-dy, nry=dx, sel=sg.i===S.cur;
     parts.push(`<g data-pick="${sg.i}" style="cursor:pointer">`);
     parts.push(`<polygon points="${Q(x0,y0)} ${Q(x1,y1)} ${Q(x1+nrx*STN,y1+nry*STN)} ${Q(x0+nrx*STN,y0+nry*STN)}" fill="url(#tx-stone)"/>`);
-    parts.push(`<polygon points="${Q(x0,y0)} ${Q(x1,y1)} ${Q(x1+nlx*T,y1+nly*T)} ${Q(x0+nlx*T,y0+nly*T)}" fill="url(#tx-fibre)" stroke="${sel?"#1d63c4":"#7a5326"}" stroke-width="${sel?fs*.18:fs*.04}"/>`);
-    parts.push(`<line x1="${(x0+nlx*T).toFixed(0)}" y1="${Yf(y0+nly*T).toFixed(0)}" x2="${(x1+nlx*T).toFixed(0)}" y2="${Yf(y1+nly*T).toFixed(0)}" stroke="#e9e8e3" stroke-width="${fs*.25}"/>`);
-    if(sel){ const mx=(x0+x1)/2+nlx*(T+fs*.9), my=Yf((y0+y1)/2+nly*(T+fs*.9)); parts.push(`<circle cx="${mx.toFixed(0)}" cy="${my.toFixed(0)}" r="${(fs*.75).toFixed(0)}" fill="#2fd35a" opacity=".3"/><circle cx="${mx.toFixed(0)}" cy="${my.toFixed(0)}" r="${(fs*.42).toFixed(0)}" fill="#2fd35a" stroke="#fff" stroke-width="${(fs*.08).toFixed(0)}"/>`); }
+    // couches réelles de ce mur, bout à bout aux angles comme sur le chantier (mêmes longueurs que les plans du mur)
+    { const r=compute(w), d=r.adj.dx||0, PQ=(x,o)=>Q(x0+dx*x+nlx*o, y0+dy*x+nly*o), band=(a,b,o0,o1,f,ex="")=>{ if(b-a>1&&o1-o0>0.5) parts.push(`<polygon points="${PQ(a,o0)} ${PQ(b,o0)} ${PQ(b,o1)} ${PQ(a,o1)}" fill="${f}" ${ex}/>`); };
+      const pl=isCol(w)?12.5:12.5*S.pla.couches, oP=T-pl, oF=isCol(w)?0:Math.max(0,oP-S.oss.g), a=-d, b=r.L-d;
+      if(r.isoOn&&r.murMode&&r.ins&&r.ins.length){ const X=r.ins.flatMap(p=>[p.x,p.x+p.w]); band(Math.min(...X)-d,Math.max(...X)-d,0,S.iso.ep||0,"url(#tx-fibre)",`stroke="#7a5326" stroke-width="${fs*.03}"`); }
+      if(!isCol(w)) band(a,b,oF,oP,"#c9ced3",`stroke="#6b737a" stroke-width="${fs*.03}"`);
+      band(a,b,oP,T,"#f4f3ee",`stroke="${sel?"#1d63c4":"#9d9585"}" stroke-width="${sel?fs*.14:fs*.04}"`);
+      sg.r=r; sg.fa=a; sg.fb=b; }
+    if(sel){ const mx=(x0+x1)/2-nlx*STN/2, my=Yf((y0+y1)/2-nly*STN/2); parts.push(`<circle cx="${mx.toFixed(0)}" cy="${my.toFixed(0)}" r="${(fs*.75).toFixed(0)}" fill="#2fd35a" opacity=".3"/><circle cx="${mx.toFixed(0)}" cy="${my.toFixed(0)}" r="${(fs*.42).toFixed(0)}" fill="#2fd35a" stroke="#fff" stroke-width="${(fs*.08).toFixed(0)}"/>`); }
     w.openings.forEach((o,k)=>{
       const a=Math.max(0,o.x), b=Math.min(w.L,o.x+o.w);
       const P1=[x0+dx*a,y0+dy*a], P2=[x0+dx*b,y0+dy*b];
@@ -1620,10 +1632,13 @@ function renderPiece(r){
     { const K=kitCfg(w.room||""); if(K.on) K.items.filter(it=>it.wall===wid(w)).forEach(it=>{ const b=kitBox(it,K,w.H); if(!b) return; const a=it.x, e=it.x+b.k.w, d0=T, d1=T+b.d;
         const PQ=(x,o)=>Q(x0+dx*x+nlx*o, y0+dy*x+nly*o), fc=b.k.c||(FACADES.find(f=>f.n===K.facade)||FACADES[0]).c;
         parts.push(`<polygon points="${PQ(a,d0)} ${PQ(e,d0)} ${PQ(e,d1)} ${PQ(a,d1)}" fill="${fc}" fill-opacity="${b.k.t==="haut"?0.35:0.9}" stroke="#0058a3" stroke-width="${fs*.05}" ${b.k.t==="haut"?`stroke-dasharray="${fs*.3} ${fs*.2}"`:""}/>`); }); }
-    const mx=(x0+x1)/2+nlx*(T+fs*2.2), my=(y0+y1)/2+nly*(T+fs*2.2);
-    const short=(w.name||"").split(" — ").pop();
-    parts.push(`<text x="${mx}" y="${Yf(my)}" text-anchor="middle" font-size="${fs*.9}" font-weight="${sel?700:500}" style="fill:${sel?"var(--chalk)":"var(--ink)"}">${esc(short)}</text>`);
-    parts.push(`<text x="${mx}" y="${Yf(my)+fs*1.1}" text-anchor="middle" font-size="${fs*.75}" style="fill:var(--muted)">${cm(w.L)} cm brut</text>`);
+    { const r=sg.r, X=r.isoOn&&r.murMode&&r.ins&&r.ins.length?r.ins.flatMap(p=>[p.x,p.x+p.w]):null, short=(w.name||"").split(" — ").pop();
+      const dims=`brut ${cm(w.L)} · ${isCol(w)?"collé":"ossature"} ${cm(r.L)}${X?` · fibre ${cm(Math.max(...X)-Math.min(...X))}`:""} cm`;
+      // textes parallèles au mur, côté pièce, taille limitée à la longueur du mur pour ne pas déborder sur les voisins
+      let ang=Math.atan2(-dy,dx)*180/Math.PI; if(ang>90.5||ang<-89.5) ang+=180; const f2=Math.min(fs*.5,w.L*0.85/(Math.max(dims.length,short.length)*0.6));
+      const at=o=>[(x0+x1)/2+nlx*(T+o),Yf((y0+y1)/2+nly*(T+o))], A=at(f2*1.1), B=at(f2*2.3);
+      parts.push(`<text x="${A[0].toFixed(0)}" y="${A[1].toFixed(0)}" transform="rotate(${ang.toFixed(1)} ${A[0].toFixed(0)} ${A[1].toFixed(0)})" text-anchor="middle" dominant-baseline="middle" font-size="${(f2*1.1).toFixed(0)}" font-weight="${sel?700:600}" style="fill:${sel?"var(--chalk)":"var(--ink)"}">${esc(short)}</text>`);
+      parts.push(`<text x="${B[0].toFixed(0)}" y="${B[1].toFixed(0)}" transform="rotate(${ang.toFixed(1)} ${B[0].toFixed(0)} ${B[1].toFixed(0)})" text-anchor="middle" dominant-baseline="middle" font-size="${f2.toFixed(0)}" style="fill:var(--muted)">${dims}</text>`); }
     parts.push(`</g>`);
     if(w.angle!=="libre" || sg!==segs[segs.length-1]){
       const c = w.angle==="sortant"?"#b4541a":w.angle==="autre"?"#7a3fb0":"#1d63c4";
@@ -1635,10 +1650,11 @@ function renderPiece(r){
   document.getElementById("plan").innerHTML=`<svg viewBox="${vb}" role="img" aria-label="Plan de la pièce ${esc(cw.room||"")}">${parts.join("")}</svg>`;
   const comps=rw.map(w=>compute(w)), area=comps.reduce((a,c)=>a+c.netArea,0);
   const nR=rw.filter((w,i)=>w.angle==="rentrant"&&(i<rw.length-1||closed)).length, nS=rw.filter((w,i)=>w.angle==="sortant"&&(i<rw.length-1||closed)).length;
-  document.getElementById("legend").innerHTML=`<span><i style="background:#1d63c4;border-radius:50%"></i>Angle rentrant</span><span><i style="background:#b4541a;border-radius:50%"></i>Angle sortant</span><span><i style="background:#c4914f"></i>Doublage (${cm(T)} cm)</span><span>Touchez un mur sur le plan pour le modifier.</span>`;
+  document.getElementById("legend").innerHTML=`<span><i style="background:#1d63c4;border-radius:50%"></i>Angle rentrant</span><span><i style="background:#b4541a;border-radius:50%"></i>Angle sortant</span><span><i style="background:#c4914f"></i>Fibre de bois</span><span><i style="background:#c9ced3"></i>Ossature</span><span><i style="background:#f4f3ee;border:1px solid #9d9585"></i>Plaques</span><span>Touchez un mur sur le plan pour le modifier.</span>`;
   document.getElementById("extra").innerHTML=`<section class="box"><h2>Pièce : ${esc(cw.room||"sans nom")}</h2>
     <div class="stats"><div class="stat"><b>${rw.length}</b><span>Murs</span></div><div class="stat"><b>${fr(rw.reduce((a,w)=>a+w.L,0)/1000,2)} m</b><span>Périmètre brut</span></div>
     <div class="stat"><b>${fr(area,2)} m²</b><span>Murs nets à doubler</span></div><div class="stat"><b>${nR}</b><span>Angles rentrants</span></div><div class="stat"><b>${nS}</b><span>Angles sortants</span></div></div>
+    ${rw.filter(libreMid).map(x=>`<div class="warn" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span>« ${esc((x.name||"").split(" — ").pop())} » a « Aucun » angle avec le mur suivant : le coin est dessiné mais les doublages s'y chevauchent et les longueurs sont fausses.</span><button type="button" class="pri" data-fixang="${S.walls.indexOf(x)}">Mettre « Rentrant »</button></div>`).join("")}
     ${closed && gap>50 ? `<p class="warn" style="margin-top:10px">Le plan ne se referme pas : il manque ${cm(gap)} cm. Vérifiez les longueurs et les angles des murs de cette pièce.</p>` : closed ? `<p class="cap" style="margin:10px 0 0">Le plan se referme : les longueurs des murs sont cohérentes.</p>` : `<p class="cap" style="margin:10px 0 0">Les murs sont dessinés dans l'ordre de la liste, en tournant à chaque angle. Choisissez « Rentrant » sur le dernier mur pour fermer la pièce.</p>`}
     </section>`;
 }
@@ -2329,7 +2345,7 @@ function renderPlan(r){
   if(S.view==="plafond"){ renderCeil(); return; }
   const {L,H}=r, v=S.view, big=Math.max(L,H), fs=Math.max(38,big/48);
   const fibTot=(v==="iso"||v==="all")&&r.isoOn&&r.murMode&&r.ins&&r.ins.length;
-  const padL=fs*5.4, padR=fs*1.5, padT=fs*1.6, padB=fs*((v==="oss"||v==="all")?9.2:6.5)+(fibTot?fs*2.6:0);
+  const padL=fs*5.4, padR=fs*1.5, padT=fs*1.6, padB=fs*((v==="oss"||v==="all")?10.4:6.5)+(fibTot?fs*2.6:0);
   const Y=y=>H-y;
   const parts=[];
   const R=(x,y,w,h,cls,extra="")=>`<rect x="${x}" y="${Y(y+h)}" width="${w}" height="${h}" ${cls} ${extra}/>`;
@@ -2447,7 +2463,7 @@ function renderPlan(r){
   });
 
   // Chaîne de cotes
-  const dimY = H + fs*1.6, totY = H + fs*4.4 + ((v==="oss"||v==="all")?fs*2.6:0);
+  const dimY = H + fs*1.6, totY = H + fs*4.4 + ((v==="oss"||v==="all")?fs*3.8:0);
   let ticks;
   if(v==="res") ticks=[0,L,...r.pts.map(p=>p.x)];
   else if(v==="iso" && r.murMode) ticks=[0,L,...r.ins.flatMap(p=>[p.x,p.x+p.w])];
@@ -2809,7 +2825,7 @@ function renderRoom3D(){
         if(k.t==="haut" && vis(0,0,-1)) face([P(x0,d0,z0),P(x1,d0,z0),P(x1,d1,z0),P(x0,d1,z0)],{op,fill:shade(fc,0.75),stroke:"#00000044"});
       });
       // créations en placo (coffrages, banquettes, étagères, rubans LED…)
-      creas(room).filter(c=>c.wall===wid(w)).forEach(c=>{ const sp=creaSpan(w), hh=w.H, P={...c}, x=sp.a+Math.max(0,Math.min(P.x||0,sp.len-20)); { const kk=c.t==="coffv"?"l":c.t==="niche"?"w":"L"; if(c.t==="led"&&+c.pos===1){ P.y=Math.max(0,Math.min(P.y||0,hh-20)); P.L=Math.max(20,Math.min(P.L,hh-P.y)); } else P[kk]=Math.max(20,Math.min(P[kk],sp.a+sp.len-x)); }
+      creas(room).filter(c=>c.wall===wid(w)).forEach(c=>{ const sp=creaSpan(w), hh=w.H, P=creaFit(c,room), x=sp.a+(P.x||0);
         if(front && V.front==="cut") return;
         const wd=[[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]].reduce((a,p)=>a+pr(...p)[2],0)/4, n0=faces.length;
         const box=(x0,x1,d0,d1,z0,z1,fc,stk)=>{ const Q=(a,d,z)=>at(a,d,z), st=stk||"#00000033";
@@ -3950,7 +3966,7 @@ function buildScene(){
         if(t==="vmc"||t==="vmcins"){ mk(new T3.CylinderGeometry(0.075,0.075,0.02,24),M.white,0.01); mk(new T3.TorusGeometry(0.05,0.006,6,24).rotateX(Math.PI/2),v3Mat("#c9c9c9"),0.022); }
         if((t==="spot"||t==="plaf"||t==="susp"||t==="regl") && lights.length<8){ const pl=new T3.PointLight("#ffe7b8",V.nuit?(t==="spot"?0.55:0.9):0.18,6,1.6); pl.position.copy(pos); pl.position.y-=lm?lowY*0.9:t==="susp"?1.0:0.15; scene.add(pl); lights.push(pl); } });
       // créations en placo
-      creas(room).forEach(c=>{ const sg=g.segs.find(q=>wid(q.w)===c.wall)||g.segs[0]; if(!sg) return; const ww=sg.w, sp=creaSpan(ww), T0=g.Ts?g.Ts[g.segs.indexOf(sg)]:g.T, hh=Math.min(ww.H,g.H), pm=v3Mat("#efebe3",{roughness:.8}), P={...c}, x=sp.a+Math.max(0,Math.min(P.x||0,sp.len-20)); { const k=c.t==="coffv"?"l":c.t==="niche"?"w":"L"; if(c.t==="led"&&+c.pos===1){ P.y=Math.max(0,Math.min(P.y||0,hh-20)); P.L=Math.max(20,Math.min(P.L,hh-P.y)); } else P[k]=Math.max(20,Math.min(P[k],sp.a+sp.len-x)); }
+      creas(room).forEach(c=>{ const sg=g.segs.find(q=>wid(q.w)===c.wall)||g.segs[0]; if(!sg) return; const ww=sg.w, sp=creaSpan(ww), T0=g.Ts?g.Ts[g.segs.indexOf(sg)]:g.T, hh=Math.min(ww.H,g.H), pm=v3Mat("#efebe3",{roughness:.8}), P=creaFit(c,room), x=sp.a+(P.x||0); if(c.t==="led"&&+c.pos===1){ P.y=Math.max(0,Math.min(P.y||0,hh-20)); P.L=Math.max(20,Math.min(P.L,hh-P.y)); }
         const add=m=>{ if(m){ scene.add(m); } };
         if(c.t==="coffh") add(v3Box(sg,x,x+P.L,T0,T0+P.l,hh-P.h,hh,pm));
         if(c.t==="coffv") add(v3Box(sg,x,x+P.l,T0,T0+P.pf,0,hh,pm));
@@ -4661,6 +4677,7 @@ side.addEventListener("click",e=>{
 document.getElementById("plan").addEventListener("change",e=>{ const el=e.target; if(!el.dataset||el.dataset.chk===undefined) return; const c=chantierState(S.walls[S.cur]); if(el.checked) c[el.dataset.chk]={d:new Date().toLocaleDateString("fr-FR")}; else delete c[el.dataset.chk]; save(); renderOut(); });
 document.getElementById("plan").addEventListener("click",e=>{ const q=e.target.closest("[data-qwall]"); if(q&&S.view==="chantier"){ S.cur=+q.dataset.qwall; save(); renderAll(); return; } });
 document.getElementById("plan").addEventListener("click",e=>{ if(e.currentTarget.dataset.dragged) return; const g=e.target.closest("[data-pick]"); if(g){ S.cur=+g.dataset.pick; renderAll(); } });
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-fixang]"); if(!b) return; const w=S.walls[+b.dataset.fixang]; if(!w) return; w.angle="rentrant"; save(); renderAll(); });
 document.getElementById("extra").addEventListener("click",e=>{ if(!e.target.closest("[data-isoon]")) return; S.iso.on=true; S.iso.pose="mur"; S.mem.on=true; save(); renderAll(); if(S.view==="visite"&&typeof v3Rebuild==="function"){ v3Rebuild(); } });
 document.getElementById("extra").addEventListener("click",e=>{ const b=e.target.closest("[data-v3]"); if(b&&S.view==="visite"&&V3.r&&!(V3.wrap&&V3.wrap.contains(b))) v3Cmd(b.dataset.v3); });
 document.getElementById("extra").addEventListener("click",e=>{ const b=e.target.closest("[data-step]"); if(b){ S.finStep=+b.dataset.step; renderOut(); } });
@@ -4900,7 +4917,21 @@ function ledSegs(w,P,x,hh){ const vert=+P.pos===1, ops=(w.openings||[]).filter(o
   ops.forEach(o=>{ const g=20; let a,b; if(vert){ if(x+40<o.x-g||x>o.x+o.w+g) return; a=o.y-g; b=o.y+o.h+g; } else { if(P.y+40<o.y-g||P.y>o.y+o.h+g) return; a=o.x-g; b=o.x+o.w+g; }
     S0=S0.flatMap(([u,v])=>{ const A=Math.max(u,a), B=Math.min(v,b); return B<=A?[[u,v]]:[[u,A],[B,v]].filter(([p,q])=>q-p>30); }); });
   return S0; }
-function creaFit(c,room){ const w=creaWall(c,room); if(!w) return c; const sp=creaSpan(w), k=c.t==="coffv"?"l":c.t==="niche"?"w":"L", x=Math.max(0,Math.min(c.x||0,sp.len-20)); if(c.t==="led"&&+c.pos===1){ const y=Math.max(0,Math.min(c.y||0,w.H-20)); return {...c,x,y,L:Math.max(20,Math.min(c.L,Math.round(w.H-y)))}; } return {...c,x,[k]:Math.max(20,Math.min(c[k],Math.round(sp.len-x)))}; }
+/* ruban LED au plafond : il peut dépasser la longueur du mur (angle sortant) tant qu'il reste sous le plafond de la pièce, et ses bouts se raccordent aux autres rubans du plafond (écart ≤ 20 cm) */
+function ceilLed(c,room,noSnap){ const w=creaWall(c,room); if(!w) return null; const g=roomGeom(room), k=g.segs.findIndex(q=>q.w===w); if(k<0) return null;
+  const s=g.segs[k], e=g.inner[k], d=[s.dx,s.dy], y=Math.max(0,+c.y||0), O=[e.a[0]+s.nx*y,e.a[1]+s.ny*y], sp=creaSpan(w);
+  let x=Math.max(-5000,+c.x||0), L=Math.max(20,+c.L||0), lo=0, hi=sp.len;
+  if(g.poly){ const ts=[]; g.poly.forEach((P,i)=>{ const Q=g.poly[(i+1)%g.poly.length], ex=Q[0]-P[0], ey=Q[1]-P[1], den=d[0]*ey-d[1]*ex; if(Math.abs(den)<1e-6) return;
+      const t=((P[0]-O[0])*ey-(P[1]-O[1])*ex)/den, u=((P[0]-O[0])*d[1]-(P[1]-O[1])*d[0])/den; if(u>=-1e-6&&u<=1+1e-6) ts.push(t); });
+    ts.sort((a,b)=>a-b); const ref=Math.max(1,Math.min(x+1,sp.len-1)); let a=-Infinity, b=Infinity; ts.forEach(t=>{ if(t<=ref) a=Math.max(a,t); else b=Math.min(b,t); }); if(isFinite(a)&&isFinite(b)){ lo=a; hi=b; } }
+  x=Math.max(lo,Math.min(x,hi-20)); L=Math.max(20,Math.min(L,hi-x));
+  const snap=[];
+  if(!noSnap) creas(room).forEach(q=>{ if(q===c||q.t!=="led"||+q.pos!==2) return; const Q=ceilLed(q,room,true); if(!Q) return; const den=d[0]*Q.d[1]-d[1]*Q.d[0]; if(Math.abs(den)<0.5) return;
+    const t=((Q.O[0]+Q.d[0]*Q.x-O[0])*Q.d[1]-(Q.O[1]+Q.d[1]*Q.x-O[1])*Q.d[0])/den, u=((Q.O[0]+Q.d[0]*Q.x-O[0])*d[1]-(Q.O[1]+Q.d[1]*Q.x-O[1])*d[0])/den; if(u<-200||u>Q.L+200||t<lo-1||t>hi+1) return;
+    if(Math.abs(t-x)<=200&&Math.abs(t-x)>0.5){ const e1=x+L; x=t; L=Math.max(20,e1-x); snap.push(q); }
+    else if(Math.abs(t-(x+L))<=200&&Math.abs(t-(x+L))>0.5){ L=Math.max(20,t-x); snap.push(q); } });
+  return {x:Math.round(x),L:Math.round(L),O,d,lo,hi,snap}; }
+function creaFit(c,room){ const w=creaWall(c,room); if(!w) return c; if(c.t==="led"&&+c.pos===2){ const Z=ceilLed(c,room); if(Z) return {...c,x:Z.x,L:Z.L,snap:Z.snap.length}; } const sp=creaSpan(w), k=c.t==="coffv"?"l":c.t==="niche"?"w":"L", x=Math.max(0,Math.min(c.x||0,sp.len-20)); if(c.t==="led"&&+c.pos===1){ const y=Math.max(0,Math.min(c.y||0,w.H-20)); return {...c,x,y,L:Math.max(20,Math.min(c.L,Math.round(w.H-y)))}; } return {...c,x,[k]:Math.max(20,Math.min(c[k],Math.round(sp.len-x)))}; }
 function creaLen(c){ return c.t==="coffv"?c.l:c.t==="niche"?c.w:c.L; }
 function creaWall(c,room){ const rw=S.walls.filter(w=>(w.room||"")===room); return rw.find(w=>wid(w)===c.wall)||rw[0]; }
 function creaCalc(c,room){
@@ -4997,7 +5028,9 @@ function creaPanel(w){ const room=w.room||"", C=creas(room), rw=S.walls.filter(x
     <p class="hint">Cotes en cm, mesurées sur le mur fini : depuis l'angle intérieur gauche, devant les plaques (la longueur finie est plus courte que la longueur brute du mur, à cause du doublage dans les angles). Ossature en ${S.oss.g} mm, plaques ${esc(S.pla.n)}. Les quantités s'ajoutent au métré de la pièce (lot « Créations placo »).</p></section>`; }
 document.getElementById("side").addEventListener("click",e=>{ const lp=e.target.closest("[data-crloop]"); if(!lp) return; const w=S.walls[S.cur], room=w.room||"", C=creas(room), c=C[+lp.dataset.crloop]; if(!c) return;
   const pos=+c.pos, y=+c.y||0, rw=S.walls.filter(x=>(x.room||"")===room), keep=C.filter(q=>!(q.t==="led"&&+q.pos===pos&&q!==c));
-  const add=rw.map(ww=>{ const sp=creaSpan(ww), off=pos===2?Math.min(y,sp.len/2-100):0, L=Math.round(sp.len-2*off); return L>=200?{t:"led",wall:wid(ww),pos,x:Math.round(off),y,L,k:c.k||3000}:null; }).filter(Boolean);
+  // au plafond, chaque bout est reculé selon l'angle (y en angle droit, −y en angle sortant : le ruban dépasse le coin), pour que les rubans se rejoignent
+  const n=rw.length, closed=roomGeom(room).closed, ins=a=>pos===2?y/Math.tan(angDeg(a)*Math.PI/360):0;
+  const add=rw.map((ww,i)=>{ const sp=creaSpan(ww), a=(i>0||closed)?ins(rw[(i+n-1)%n]):0, b=(i<n-1||closed)?ins(ww):0, L=Math.round(sp.len-a-b); return L>=200?{t:"led",wall:wid(ww),pos,x:Math.round(a),y,L,k:c.k||3000}:null; }).filter(Boolean);
   C.length=0; C.push(...keep.filter(q=>q!==c),...add); save(); renderAll(); });
 document.getElementById("side").addEventListener("change",e=>{ const el=e.target.closest("[data-crsep]"); if(!el) return; const C=creas(S.walls[S.cur].room||""), c=C[+el.dataset.crsep]; if(c){ if(el.checked) c.sep=true; else delete c.sep; save(); renderAll(); } });
 document.getElementById("side").addEventListener("click",e=>{ const a=e.target.closest("[data-cradd]"), d=e.target.closest("[data-crdel]"); if(!a&&!d) return; const w=S.walls[S.cur], C=creas(w.room||"");
