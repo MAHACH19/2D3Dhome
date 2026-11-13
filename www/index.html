@@ -726,7 +726,7 @@ function roomAdjust(wall){
   const next=rw.length>1&&(i<rw.length-1||wall.angle!=="libre")?rw[(i+1)%rw.length]:null;
   const d = prev && prev.angle!=="libre" ? (colWrap(prev,wall)?0:-wT(prev)/Math.tan(angDeg(prev)*Math.PI/360)) : 0;
   const dEnd = next&&next!==wall&&colWrap(wall,next) ? wT(next) : 0;
-  return {start, end, dL:d, dx:d, dEnd, T:prev&&prev.angle!=="libre"?wT(prev):wT(wall)};
+  return {start, end, dL:d, dx:d, dEnd, colStart:!!(prev&&colWrap(prev,wall)), T:prev&&prev.angle!=="libre"?wT(prev):wT(wall)};
 }
 /* isolant continu dans les angles rentrants : la fibre du mur suivant vient contre celle du mur courant, l'ossature et les plaques s'arrêtent sur l'isolant */
 const fibOn=w=>!!w&&(WCFG?WCFG.iso:S.iso.on)&&S.iso.pose==="mur"&&!w.noIso&&!w.dbl&&!w.noDbl;
@@ -3848,12 +3848,13 @@ function buildScene(){
       const tag={kind:"wall",i:s.i};
       const Ls=wallLayers().filter(l=>lay[l.k]!==false), n=Ls.length;
       const layered=cut==="ecorche"||LAY.some(l=>lay[l.k]===false)||V.couches;
-      if(isCol(w)){ const [a1,b1]=ext2(-g.STN,0), [a2,b2]=ext2(g.T-12.5,g.T), pc=paintColor(w); // placo collé au MAP sur la pierre
+      const RA=roomAdjust(w); // angle sortant avec placo collé : le collé dépasse l'angle, l'ossature voisine démarre à l'angle de la pierre
+      if(isCol(w)){ const [a1,b1]=ext2(-g.STN,0); let [a2,b2]=ext2(g.T-12.5,g.T); if(RA.dEnd) b2=Math.max(b2,w.L+RA.dEnd); const pc=paintColor(w); // placo collé au MAP sur la pierre
         if(cut==="ecorche"||V.couches){ const [pa,pb]=ext(10), mp=v3Mat("#d9d4c9",{roughness:.9}); for(let x=pa+150;x<pb-100;x+=350) for(let z=250;z<h-100;z+=400){ if(holes.some(q=>x>q.a-60&&x<q.b+60&&z>q.c-60&&z<q.d+60)) continue; scene.add(v3Box(s,x-45,x+45,0,10,z-45,z+45,mp)); } }
         if(!(w.tile&&w.tile.on)&&!(typeof bcOnWall==="function"&&bcOnWall(w))) v3Joints(scene,s,w,g.T,h,a2,b2,holes);
         [v3Slab(s,a1,b1,-g.STN,0,0,h,holes,[M.stone,M.cap]), (cut==="ecorche"||V.couches)?v3Slab(s,a2+(b2-a2)*0.45,b2,g.T-12.5,g.T,0,h,holes,[M.pla,M.pla]):v3Slab(s,a2,b2,g.T-12.5,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } }); }
       else if(!layered){
-        const [a1,b1]=ext2(-g.STN,0), [a2,b2]=ext2(0,g.T), pc=paintColor(w);
+        const [a1,b1]=ext2(-g.STN,0); let [a2,b2]=ext2(0,g.T); if(RA.colStart) a2=Math.max(a2,0); const pc=paintColor(w);
         if(V.res){ const pl=12.5*S.pla.couches, oM=Math.max(2,g.T-pl-S.oss.g), [a3,b3]=ext(oM/2), mm=S.mem.on?null:v3Slab(s,a3,b3,0,oM,0,h,holes,[M.fibre,M.cap]); if(mm){ mm.userData=tag; scene.add(mm); } if(S.mem.on){ const f=v3Slab(s,a3,b3,0,oM-3,0,h,holes,[M.fibre,M.cap]); if(f) scene.add(f); v3MemLes(scene,pick,s,w,a3,b3,oM-3,oM,h,holes,M.memO,M.cap,tag); } v3Tapes(scene,s,w,oM,h,M.tape);
           const r=compute(w), dxs=r.adj.dx||0; r.studs.forEach(st=>{ const xa=st.x-dxs; if(st.y1>st.y0) scene.add(v3Box(s,xa,xa+FL,oM,g.T-pl,st.y0,st.y1,M.metal)); });
           r.rails.forEach(rl=>{ scene.add(v3Box(s,Math.max(a2,rl.x0-dxs),Math.min(b2,rl.x1-dxs),oM,g.T-pl,rl.y0,rl.y1,M.metal)); }); }
