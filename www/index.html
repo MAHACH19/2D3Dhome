@@ -3817,6 +3817,8 @@ function mesDraw(){ if(!V3.scene){ return; } if(MES.g){ MES.g.traverse(o=>{ if(o
     g.add(mesLabel([mesFmt(L*1000),sub],a.clone().add(b).multiplyScalar(.5))); });
   MES.pts.forEach(dot); V3.scene.add(g); MES.g=g; V3.dirty=true;
   mesHint(!MES.on?null:MES.pts.length?"Touchez le 2e point":MES.list.length?"Touchez un 1er point pour une nouvelle mesure":"📏 Touchez le 1er point à mesurer"); }
+/* Grand angle 0,6× : ≈ 118° de champ horizontal comme l'ultra grand-angle d'un téléphone (champ vertical plafonné à 135°) */
+function v3UwFov(a){ return Math.min(135,2*Math.atan(Math.tan(59*Math.PI/180)/Math.max(.3,a))*180/Math.PI); }
 function v3Mat(color,o){ return new THREE.MeshStandardMaterial(Object.assign({color:new THREE.Color(color),roughness:.85,metalness:0,side:THREE.DoubleSide},o||{})); }
 function wallMatrix(s,o0){ const m=new THREE.Matrix4(); m.set(s.dx,0,s.nx,(s.x0+s.nx*o0)/1000, 0,1,0,0, -s.dy,0,-s.ny,-(s.y0+s.ny*o0)/1000, 0,0,0,1); return m; }
 const LAYSHORT={pierre:"Pierre",fibre:"Fibre de bois",mem:"Membrane Vario",oss:"Ossature",pla:"Plaque",end:"Enduit",peint:"Peinture"};
@@ -4238,7 +4240,7 @@ function renderVisite(){
   document.getElementById("extra").innerHTML=v3Extra(); }
 function v3Bar(){ const V=S.v3, b=(k,l,on)=>`<button type="button" data-v3="${k}" aria-pressed="${!!on}" style="padding:5px 10px;font-size:13px;background:${on?"var(--chalk)":"#ffffffdd"};color:${on?"#fff":"#222"};border:1px solid #0002;border-radius:5px">${l}</button>`;
   const el=document.getElementById("v3bar"); if(!el) return;
-  el.innerHTML=b("visite","🚶 Visite",V.mode==="visite")+b("maquette","Maquette",V.mode!=="visite")+b("couches","Couches",V.cut==="ecorche"||V.couches)+b("ceil","Plafond",V.ceil)+b("res","🔧 Réseaux",V.res)+b("real","✨ Réaliste",V.real)+b("nuit","Nuit",V.nuit)+b("joints","Joints placo",V.joints!==false)+b("all","Logement",V.all)+b("mes","📏 Mesure",MES.on)+(MES.list.length||MES.pts.length?b("mesclr","✕ Effacer mesures",false):"")+b("vr","🥽 VR",!!VR.on)+b("fs","⛶ Plein écran",false); }
+  el.innerHTML=b("visite","🚶 Visite",V.mode==="visite")+b("maquette","Maquette",V.mode!=="visite")+b("couches","Couches",V.cut==="ecorche"||V.couches)+b("ceil","Plafond",V.ceil)+b("res","🔧 Réseaux",V.res)+b("real","✨ Réaliste",V.real)+b("nuit","Nuit",V.nuit)+b("joints","Joints placo",V.joints!==false)+b("all","Logement",V.all)+(V.mode==="visite"?b("uw","📐 Grand angle 0,6×",!!V3.uw):"")+b("mes","📏 Mesure",MES.on)+(MES.list.length||MES.pts.length?b("mesclr","✕ Effacer mesures",false):"")+b("vr","🥽 VR",!!VR.on)+b("fs","⛶ Plein écran",false); }
 function v3Extra(){ const V=S.v3, LAY=wallLayers(), lay=S.r3.lay||{};
   return `<section class="box"><h2>Visite 3D</h2>
     <div class="btns" style="margin-bottom:6px;align-items:center"><span class="cap" style="margin-right:4px">Voir jusqu'à :</span>${LAY.filter(l=>l.k!=="end").map(l=>`<button type="button" data-v3="upto:${l.k}" aria-pressed="${!!V.couches&&V.cut!=="ecorche"&&lay[l.k]!==false&&LAY.slice(LAY.indexOf(l)+1).every(q=>lay[q.k]===false)}">${LAYSHORT[l.k]||l.n}</button>`).join("")}</div>
@@ -4264,7 +4266,7 @@ function v3Rebuild(){ if(!V3.r) return; { const R=V3.r, real=!!S.v3.real; R.tone
 function v3Cam(){ const V=S.v3, cam=V3.cam, wrap=V3.wrap, W=wrap.clientWidth, H=wrap.clientHeight;
   if(V3.r.domElement.width!==Math.round(W*V3.r.getPixelRatio())||V3.r.domElement.height!==Math.round(H*V3.r.getPixelRatio())){ V3.r.setSize(W,H,false); }
   cam.aspect=W/H; cam.updateProjectionMatrix();
-  if(V.mode==="visite"){ cam.fov=V3.fov||70; cam.updateProjectionMatrix(); const f=V3.fp; cam.position.set(f.x/1000,1.6,-f.y/1000);
+  if(V.mode==="visite"){ cam.fov=V3.uw?v3UwFov(cam.aspect):(V3.fov||70); cam.updateProjectionMatrix(); const f=V3.fp; cam.position.set(f.x/1000,1.6,-f.y/1000);
     if(!(VR.on&&VR.on!=="xr"&&vrApply(cam))) cam.lookAt(cam.position.x+Math.cos(f.pitch)*Math.sin(f.yaw), 1.6+Math.sin(f.pitch), cam.position.z-Math.cos(f.pitch)*Math.cos(f.yaw)); }
   else { cam.fov=50; cam.updateProjectionMatrix(); const o=V3.orb, tx=o.t[0]/1000, tz=-o.t[1]/1000;
     cam.position.set(tx+o.r*Math.sin(o.ph)*Math.sin(o.th), o.r*Math.cos(o.ph)+0.5, tz+o.r*Math.sin(o.ph)*Math.cos(o.th)); cam.lookAt(tx,1.0,tz); }
@@ -4340,8 +4342,8 @@ function v3Events(){
     if(pts.size>=2&&drag){ drag.pinch=true; drag.moved=true; drag.obj=null; drag.d0=0; return; }
     drag={x:e.clientX,y:e.clientY,moved:false,obj:movable?ud:null,orb:{...V3.orb},fp:{...V3.fp},d0:0}; });
   el.addEventListener("pointermove",e=>{ if(!drag) return; pts.set(e.pointerId,[e.clientX,e.clientY]); const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(Math.abs(dx)+Math.abs(dy)>5) drag.moved=true; if(!drag.moved) return;
-    if(pts.size>=2){ const [a,b]=[...pts.values()], d=Math.max(1,Math.hypot(a[0]-b[0],a[1]-b[1])); if(!drag.d0){ drag.d0=d; drag.fov=V3.fov||70; drag.orb={...V3.orb}; } drag.pinch=true;
-      if(S.v3.mode==="visite") V3.fov=Math.max(20,Math.min(100,drag.fov*drag.d0/d)); else V3.orb.r=Math.max(1.5,Math.min(40,drag.orb.r*drag.d0/d)); V3.dirty=true; return; }
+    if(pts.size>=2){ const [a,b]=[...pts.values()], d=Math.max(1,Math.hypot(a[0]-b[0],a[1]-b[1])); if(!drag.d0){ drag.d0=d; drag.fov=V3.cam.fov||70; V3.uw=false; drag.orb={...V3.orb}; } drag.pinch=true;
+      if(S.v3.mode==="visite") V3.fov=Math.max(20,Math.min(135,drag.fov*drag.d0/d)); else V3.orb.r=Math.max(1.5,Math.min(90,drag.orb.r*drag.d0/d)); V3.dirty=true; return; }
     if(drag.pinch) return;
     if(drag.obj){ ray.setFromCamera(ndc(e),V3.cam); const pl=new THREE.Plane(new THREE.Vector3(0,1,0),0), pt=new THREE.Vector3(); if(!ray.ray.intersectPlane(pl,pt)) return; v3MoveSel(pt.x*1000,-pt.z*1000); return; }
     if(VR.on&&VR.o){ if(drag.off0===undefined) drag.off0=VR.off; VR.off=drag.off0+dx*0.005; V3.dirty=true; return; }
@@ -4352,7 +4354,7 @@ function v3Events(){
   el.addEventListener("pointerup",e=>{ VR.walk=false; pts.delete(e.pointerId); if(!drag) return; if(drag.pinch){ if(!pts.size) drag=null; return; } const d=drag; drag=null;
     if(d.obj){ save(); renderSide(); v3Rebuild(); return; }
     if(!d.moved){ if(MES.on){ mesTap(e); return; } const h=hitObj(e); v3Select(h?h.object.userData:null); } });
-  el.addEventListener("wheel",e=>{ e.preventDefault(); if(S.v3.mode==="visite"){ const f=V3.fp, st=e.deltaY<0?250:-250, nx=f.x+Math.sin(f.yaw)*st, ny=f.y+Math.cos(f.yaw)*st; if(insideAny(nx,ny)){ f.x=nx; f.y=ny; } } else V3.orb.r=Math.max(1.5,Math.min(40,V3.orb.r*(e.deltaY<0?0.9:1.1))); V3.dirty=true; },{passive:false});
+  el.addEventListener("wheel",e=>{ e.preventDefault(); if(S.v3.mode==="visite"){ const f=V3.fp, st=e.deltaY<0?250:-250, nx=f.x+Math.sin(f.yaw)*st, ny=f.y+Math.cos(f.yaw)*st; if(insideAny(nx,ny)){ f.x=nx; f.y=ny; } } else V3.orb.r=Math.max(1.5,Math.min(90,V3.orb.r*(e.deltaY<0?0.9:1.1))); V3.dirty=true; },{passive:false});
   if(V3.winBound) { /* déjà branché */ } else { V3.winBound=1;
   window.addEventListener("keydown",e=>{ if(S.view!=="visite"||/INPUT|SELECT|TEXTAREA/.test((e.target||{}).tagName||"")) return; V3.keys[e.key.length===1?e.key.toLowerCase():e.key]=true; if(e.key.startsWith("Arrow")) e.preventDefault(); });
   window.addEventListener("keyup",e=>{ V3.keys[e.key.length===1?e.key.toLowerCase():e.key]=false; });
@@ -4372,6 +4374,7 @@ function v3Cmd(k){ const V=S.v3;
   if(k==="couches"){ if(V.cut==="ecorche"||V.couches){ V.cut=""; V.couches=false; } else { V.cut="ecorche"; v3FaceWall(); } }
   if(k.startsWith("upto:")){ const L=wallLayers(), i=L.findIndex(l=>l.k===k.slice(5)); S.r3.lay={}; L.forEach((l,j)=>{ if(j>i) S.r3.lay[l.k]=false; }); V.cut=""; V.couches=true; v3FaceWall(); }
   if(k==="cutfini"){ V.cut=""; V.couches=false; S.r3.lay={}; } if(k==="cutlay"){ V.cut=""; V.couches=true; } if(k==="cutecorche"){ V.cut="ecorche"; v3FaceWall(); }
+  if(k==="uw"){ V3.uw=!V3.uw; if(!V3.uw) V3.fov=70; V3.dirty=true; v3Bar(); return; }
   if(k==="mes"){ MES.on=!MES.on; MES.pts=[]; mesDraw(); v3Bar(); return; } if(k==="mesclr"){ MES.list=[]; MES.pts=[]; mesDraw(); v3Bar(); return; }
   if(k==="vr"){ if(VR.on) vrStop(); else vrMenu(); return; }
   if(k==="fs"){ const w=V3.wrap; if(document.fullscreenElement) document.exitFullscreen(); else if(w.requestFullscreen) w.requestFullscreen().then(()=>{ V3.dirty=true; }).catch(()=>{}); return; }
