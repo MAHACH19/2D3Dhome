@@ -782,6 +782,18 @@ function compute(wall){
     segs.filter(s=>s[1]-s[0]>=100).forEach(s=>studs.push({x,y0:s[0],y1:s[1],kind:"coupe"}));
   });
   studs.sort((a,b)=>a.x-b.x||a.y0-b.y0);
+  // NF DTU 25.41 : chaque bord vertical de plaque vissé sur un montant, et pas plus de « e » entre deux appuis sous une plaque -> montants de renfort ajoutés si besoin
+  let renfS=0; { const segAt=x=>{ let sg=[[0,H]]; ops.filter(o=>x+FL>o.x&&x<o.x1).forEach(o=>{ sg=subtract(sg,o.y>0?o.y-RT:0,Math.min(H,o.y1+RT)); }); return sg.filter(q=>q[1]-q[0]>=100); };
+    const addAt=c=>{ const x=Math.max(0,Math.min(L-FL,c-FL/2)); if(studs.some(t=>Math.abs(t.x-x)<FL)) return false; const sg=segAt(x); sg.forEach(q=>studs.push({x,y0:q[0],y1:q[1],kind:q[0]<=0&&q[1]>=H?"courant":"coupe",renf:true})); if(sg.length) renfS++; return sg.length>0; };
+    jointsOf(dep).forEach(j=>{ if(j>FL&&j<L-FL) addAt(j); });
+    for(let pass=0;pass<3;pass++){ let added=false;
+      for(let y=50;y<H;y+=100){ if(ops.some(o=>Math.abs(y-o.y)<RT+15||Math.abs(y-o.y1)<RT+15)) continue;
+        let segs=[[0,L]]; ops.filter(o=>y>o.y&&y<o.y1).forEach(o=>{ segs=subtract(segs,o.x,o.x1); });
+        const sup=studs.filter(t=>t.y0<=y&&t.y1>=y).map(t=>t.x+FL/2).sort((a,b)=>a-b);
+        segs.forEach(([a,c])=>{ const pts=[a,...sup.filter(x=>x>a&&x<c),c]; for(let i=1;i<pts.length;i++) if(pts[i]-pts[i-1]>e+15&&addAt((pts[i]+pts[i-1])/2)) added=true; }); }
+      if(!added) break; } studs.sort((a,b)=>a.x-b.x||a.y0-b.y0); }
+  if(renfS) ko(`${renfS} montant(s) de renfort ajouté(s) : sans eux, un bord de plaque ou une portée de plus de ${cm(e)} cm n'était pas vissé sur un montant.`,"NF DTU 25.41");
+  else okk(`Chaque plaque est vissée sur un montant à ses deux bords, et sur un montant tous les ${cm(e)} cm au plus (au-dessus et au-dessous des ouvertures aussi).`,"NF DTU 25.41");
 
   // Rails
   const rails=[{x0:0,x1:L,y0:H-RT,y1:H,kind:"haut",len:L}];
