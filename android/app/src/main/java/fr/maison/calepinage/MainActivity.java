@@ -145,6 +145,28 @@ public class MainActivity extends BridgeActivity {
             }
         }
         @JavascriptInterface
+        public String saveImage(String name, String b64) {
+            try {
+                byte[] bytes = android.util.Base64.decode(b64, android.util.Base64.DEFAULT);
+                if (Build.VERSION.SDK_INT >= 29) {
+                    ContentValues v = new ContentValues();
+                    v.put(MediaStore.Images.Media.DISPLAY_NAME, name);
+                    v.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                    v.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Calepinage");
+                    Uri u = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
+                    try (OutputStream o = getContentResolver().openOutputStream(u)) { o.write(bytes); }
+                } else {
+                    File d = new File(getExternalFilesDir(null), name);
+                    try (FileOutputStream o = new FileOutputStream(d)) { o.write(bytes); }
+                }
+                toast("Photo enregistrée dans la Galerie (Images/Calepinage)");
+                return "ok";
+            } catch (Exception e) {
+                toast("Photo non enregistrée : " + e.getMessage());
+                return "err";
+            }
+        }
+        @JavascriptInterface
         public void print(String title) {
             runOnUiThread(() -> {
                 String t = title == null ? "Calepinage" : title;
