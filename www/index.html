@@ -3364,6 +3364,7 @@ const SOLS=[
   {g:"Parquet",n:"Parquet massif chêne 14×(40 à 150) cm",L:1000,W:140,c:"#bf935c",pose:"aleatoire",pk:1.5,fam:"parquet",colle:1},
   {g:"Parquet",n:"Parquet point de Hongrie chêne 9×60 cm",L:600,W:90,c:"#c39a63",pose:"chevron",pk:1.08,fam:"parquet",colle:1},
   {g:"Parquet",n:"Parquet bâton rompu chêne 7×42 cm",L:420,W:70,c:"#b98d58",pose:"chevron",pk:1.2,fam:"parquet",colle:1},
+  {g:"Stratifié / vinyle",n:"Brico Dépôt · Stratifié Oak Belfast gris 10 mm AC4 19,3×138,3 cm (10,90 €/m²)",L:1383,W:193,c:"#a8a6a1",pose:"tiers",pk:2.13,sc:1,fam:"parquet",grain:"belfast",url:"https://www.bricodepot.fr/p/5063022568250"},
   {g:"Stratifié / vinyle",n:"Stratifié chêne clair 19,3×138 cm",L:1380,W:193,c:"#d2b48a",pose:"tiers",pk:2.13,sc:1,fam:"parquet"},
   {g:"Stratifié / vinyle",n:"Stratifié chêne gris 19,3×138 cm",L:1380,W:193,c:"#a39c92",pose:"tiers",pk:2.13,sc:1,fam:"parquet"},
   {g:"Stratifié / vinyle",n:"Sol vinyle clipsable (LVT) chêne 18×122 cm",L:1220,W:180,c:"#c8a77c",pose:"tiers",pk:2.2,sc:1,fam:"parquet"},
@@ -3671,13 +3672,34 @@ function texMem(){ const v=S.mem.dir!=="h"; return texCanvas("mem3"+(v?"v":"h"),
   [[190,"#3f9a3a"],[214,"#e6cf2e"]].forEach(([y,c])=>{ x.strokeStyle=c; x.lineWidth=22; x.beginPath(); x.moveTo(0,y); x.lineTo(250,y); x.bezierCurveTo(310,y,310,y-80,370,y-80); x.lineTo(630,y-80); x.bezierCurveTo(690,y-80,690,y,750,y); x.lineTo(1000,y); x.stroke(); });
   x.fillStyle="#f2c200"; x.beginPath(); x.arc(250,560,26,0,7); x.fill(); x.fillStyle="#1d1d1b"; x.font="900 120px Arial, sans-serif"; x.fillText("ISOVER",285,600);
   x.font="700 28px Arial, sans-serif"; x.fillText("SAINT-GOBAIN",560,636); x.font="italic 700 74px Arial, sans-serif"; x.fillText("Vario® Xtra",285,730); }); }
+/* Veinage d'une lame (chêne) : fibres le long de la lame, cathédrales, nœuds, lames claires / foncées comme sur la photo produit */
+function woodGrain(x,Q,r,k,sp){ if(Q.length<3) return; let best=0,ang=0; for(let i=0;i<Q.length;i++){ const a=Q[i], b=Q[(i+1)%Q.length], d=Math.hypot(b[0]-a[0],b[1]-a[1]); if(d>best){ best=d; ang=Math.atan2(b[1]-a[1],b[0]-a[0]); } }
+  const cx=Q.reduce((s,p)=>s+p[0],0)/Q.length, cy=Q.reduce((s,p)=>s+p[1],0)/Q.length, ca=Math.cos(-ang), sa=Math.sin(-ang), loc=Q.map(p=>[(p[0]-cx)*ca-(p[1]-cy)*sa,(p[0]-cx)*sa+(p[1]-cy)*ca]);
+  const L=Math.max(...loc.map(p=>Math.abs(p[0])))*2, W=Math.max(...loc.map(p=>Math.abs(p[1])))*2; if(L<4||W<2) return;
+  let sd=Math.floor(r*1e6)+7; const R=()=>{ sd=(sd*16807)%2147483647; return sd/2147483647; };
+  x.save(); x.beginPath(); Q.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1])); x.closePath(); x.clip(); x.translate(cx,cy); x.rotate(ang);
+  const gray=sp.grain==="belfast", dk=gray?"52,50,46":"70,45,20", lt=gray?"236,234,229":"250,235,205";
+  // décor imprimé : 2 ou 3 « planches » de bois par lame, nuances différentes
+  const nb=1+Math.floor(R()*3); for(let j=0;j<nb;j++){ const x0=-L/2+L*j/nb; x.fillStyle=R()<.5?`rgba(${lt},${.05+R()*.12})`:`rgba(${dk},${.04+R()*.1})`; x.fillRect(x0,-W/2,L/nb,W); }
+  x.lineCap="round";
+  const n=Math.max(8,Math.round(W/1.6)); for(let i=0;i<n;i++){ const y0=-W/2+R()*W, amp=(0.3+R()*1.6)*k*8, fr=(1+R()*3)/L*6.28, ph=R()*6.28, a=.05+R()*.16, lw=Math.max(.5,(0.4+R()*1.4)*k*2.2);
+    x.strokeStyle=R()<.68?`rgba(${dk},${a})`:`rgba(${lt},${a*1.3})`; x.lineWidth=lw; x.beginPath();
+    for(let u=-L/2;u<=L/2;u+=Math.max(2,L/90)){ const v=y0+Math.sin(u*fr+ph)*amp+Math.sin(u*fr*3.1+ph*2)*amp*.25; u===-L/2?x.moveTo(u,v):x.lineTo(u,v); } x.stroke(); }
+  // cathédrales (flammes du chêne)
+  if(R()<.75){ const c0=(R()-.5)*L*.6, cw=L*(.18+R()*.25), y=(R()-.5)*W*.3; for(let m=1;m<=5;m++){ x.strokeStyle=`rgba(${dk},${.08+R()*.08})`; x.lineWidth=Math.max(.6,k*2); x.beginPath(); x.ellipse(c0,y,cw*m/5,W*.09*m,0,0,6.283); x.stroke(); } }
+  // nœuds et fentes (chêne vieilli)
+  const nk=R()<.55?1+Math.floor(R()*2):0; for(let i=0;i<nk;i++){ const u=(R()-.5)*L*.85, v=(R()-.5)*W*.6, rr=Math.max(1.5,W*(.06+R()*.08)); const gr=x.createRadialGradient(u,v,0,u,v,rr*1.8); gr.addColorStop(0,`rgba(${dk},.55)`); gr.addColorStop(.5,`rgba(${dk},.22)`); gr.addColorStop(1,`rgba(${dk},0)`); x.fillStyle=gr; x.beginPath(); x.ellipse(u,v,rr*1.8,rr,0,0,6.283); x.fill(); }
+  if(gray) for(let i=0;i<2;i++) if(R()<.5){ const u=(R()-.5)*L, v=(R()-.5)*W*.8, l=L*(.05+R()*.15); x.strokeStyle=`rgba(${dk},.35)`; x.lineWidth=Math.max(.6,k*1.5); x.beginPath(); x.moveTo(u,v); x.lineTo(u+l,v+(R()-.5)*W*.06); x.stroke(); }
+  x.restore(); }
 function floorTexture(room,g,sp){
   const P=g.poly, xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), X0=Math.min(...xs), Y0=Math.min(...ys), Wd=Math.max(...xs)-X0, Hd=Math.max(...ys)-Y0;
   const k=Math.min(2048/Math.max(Wd,Hd), 0.5), c=document.createElement("canvas"); c.width=Math.max(8,Wd*k|0); c.height=Math.max(8,Hd*k|0);
   const x=c.getContext("2d"), s0=g.segs[0], tile=sp.fam==="carrelage"; x.fillStyle=sp.c; x.fillRect(0,0,c.width,c.height);
   tilePolys(P,[s0.x0,s0.y0],[s0.dx,s0.dy],sp).forEach(q=>{ x.beginPath(); q.p.forEach((t,i)=>{ const u=(t[0]-X0)*k, v=(Hd-(t[1]-Y0))*k; i?x.lineTo(u,v):x.moveTo(u,v); }); x.closePath();
-    x.fillStyle=shade(sp.c,tile?0.97+0.05*q.r:0.86+0.22*q.r); x.fill(); x.strokeStyle=tile?"#9c9488":"rgba(0,0,0,.25)"; x.lineWidth=tile?Math.max(1,sp.joint*k*1.2):1; x.stroke(); });
-  const t=new THREE.CanvasTexture(c); t.anisotropy=8; return {t,X0,Y0,Wd,Hd}; }
+    x.fillStyle=shade(sp.c,tile?0.97+0.05*q.r:0.86+0.22*q.r); x.fill();
+    if(sp.fam==="parquet") woodGrain(x,q.p.map(t=>[(t[0]-X0)*k,(Hd-(t[1]-Y0))*k]),q.r,k,sp);
+    x.strokeStyle=tile?"#9c9488":sp.grain?"rgba(40,38,34,.55)":"rgba(0,0,0,.25)"; x.lineWidth=tile?Math.max(1,sp.joint*k*1.2):sp.grain?Math.max(1,2.2*k):1; x.stroke(); });
+  const t=new THREE.CanvasTexture(c); t.anisotropy=8; if(sp.grain) t.encoding=THREE.sRGBEncoding; return {t,X0,Y0,Wd,Hd}; }
 
 /* Béton ciré : texture de microciment (nuages, passes de spatule, grain, pores), sans couture, 1 tuile = 1,5 m */
 function texBeton(col,fin){ const key="bc|"+col+"|"+fin; V3.tex=V3.tex||{}; if(V3.tex[key]) return V3.tex[key];
@@ -4867,7 +4889,7 @@ const IKEA_MAHDI={"source":"Planificateur de cuisine IKEA, 13/11/2026 (design 47
 function ikeaAuto(force){ try{ const rw=S.walls.filter(w=>(w.room||"")==="cuisine"); if(!rw.some(w=>/lin[eé]aire/i.test(w.name))||!rw.some(w=>/salon/i.test(w.name))) return "";
   if(!force&&(S.kitIkea||(S.kit&&S.kit.cuisine&&S.kit.cuisine.items&&S.kit.cuisine.items.length))) return "";
   const m=kitImport(JSON.parse(JSON.stringify(IKEA_MAHDI))); S.kitIkea=1; save(); return m; }catch(e){ return ""; } }
-setTimeout(()=>{ let ch=!!ikeaAuto(false); try{ if(!S.credOff){ S.walls.filter(w=>(w.room||"")==="cuisine"&&/lin[eé]aire/i.test(w.name)&&w.tile&&w.tile.on).forEach(w=>{ w.tile.on=false; ch=true; }); S.credOff=1; save(); } }catch(e){} try{ if(!S.fl8001){ const D=["#f7f6f2","#efe9df",""]; S.fin.peint.teinte="#f3f4f1"; S.walls.forEach(w=>{ if(!w.teinte||D.includes(String(w.teinte).toLowerCase())) w.teinte="#f3f4f1"; }); S.fl8001=1; save(); ch=true; } }catch(e){} if(ch) renderAll(); },300);
+setTimeout(()=>{ let ch=!!ikeaAuto(false); try{ if(!S.credOff){ S.walls.filter(w=>(w.room||"")==="cuisine"&&/lin[eé]aire/i.test(w.name)&&w.tile&&w.tile.on).forEach(w=>{ w.tile.on=false; ch=true; }); S.credOff=1; save(); } }catch(e){} try{ if(!S.fl8001){ const D=["#f7f6f2","#efe9df",""]; S.fin.peint.teinte="#f3f4f1"; S.walls.forEach(w=>{ if(!w.teinte||D.includes(String(w.teinte).toLowerCase())) w.teinte="#f3f4f1"; }); S.fl8001=1; save(); ch=true; } }catch(e){} try{ if(!S.belfast){ const BN=SOLS.find(q=>q.grain==="belfast").n; [...new Set(S.walls.map(w=>w.room||""))].forEach(rm=>{ const F=floorCfg(rm); F.on=true; F.n=BN; F.c=""; F.L=0; F.W=0; F.pose=""; if(S.bc&&S.bc[rm]) S.bc[rm].sol=false; }); S.belfast=1; save(); ch=true; } }catch(e){} if(ch) renderAll(); },300);
 document.addEventListener("click",e=>{ if(!e.target.closest("[data-ikea]")) return; if(S.kit&&S.kit.cuisine&&S.kit.cuisine.items.length&&!confirm("Remplacer les meubles de la cuisine par ceux du plan IKEA du 13/11/2026 ?")) return; const m=ikeaAuto(true); renderAll(); if(m) alert(m); });
 function loadProject(txt){
   let d; try{ d=JSON.parse(txt); }catch(e){ ioMsg("Ce texte n'est pas un projet valide : copiez-le en entier depuis le bouton « Copier le projet »."); return; }
