@@ -3088,7 +3088,7 @@ const FACADES=[ // gammes vues sur ikea.com (nov. 2026), puis anciennes gammes g
   {n:"ASKERSUND effet frêne clair",c:"#cdb79a"},{n:"BODBYN blanc cassé",c:"#eae5d8"},{n:"BODBYN gris",c:"#8f9592"},
   {n:"ENKÖPING effet bois blanc",c:"#e6dfd2"},{n:"ENKÖPING gris-vert",c:"#7f8d82"},{n:"HAVSTORP beige",c:"#d9cdb5"},
   {n:"KUNGSBACKA anthracite",c:"#3b3d3f"},{n:"LERHYTTAN teinté noir",c:"#2f2d2b"},{n:"NICKEBO anthracite mat",c:"#4a4c4c"},
-  {n:"RINGHULT blanc brillant",c:"#fafafa"},{n:"STENSUND vert clair",c:"#b8c6b1"},{n:"STENSUND beige",c:"#d8cdb8"},
+  {n:"RINGHULT blanc brillant",c:"#fafafa"},{n:"RINGHULT gris clair brillant",c:"#d3d5d2"},{n:"STENSUND vert clair",c:"#b8c6b1"},{n:"STENSUND beige",c:"#d8cdb8"},
   {n:"UPPLÖV beige foncé mat",c:"#b9a88e"},{n:"VEDHAMN chêne",c:"#b8946a"},{n:"TORHAMN frêne",c:"#c9b18c"}
 ];
 const PLANS=[ // gammes vues sur ikea.com (nov. 2026) : stratifié 2,8 cm (EKBACKEN, JÄRSTORP), 3,8 cm (SÄLJAN), plaqué bois 3,8 cm
@@ -3103,7 +3103,7 @@ const PLANS=[ // gammes vues sur ikea.com (nov. 2026) : stratifié 2,8 cm (EKBAC
   {n:"EKBACKEN stratifié blanc",c:"#efefec"},{n:"EKBACKEN stratifié effet chêne",c:"#c79f6e"},{n:"EKBACKEN stratifié effet marbre",c:"#e9e6e1"},{n:"EKBACKEN stratifié anthracite",c:"#3f4143"},
   {n:"SÄLJAN stratifié effet béton",c:"#a9a7a2"},{n:"SÄLJAN stratifié noir",c:"#222"},
   {n:"KARLBY chêne plaqué",c:"#b88a57"},{n:"KARLBY noyer plaqué",c:"#6d4a33"},{n:"MÖLLEKULLA chêne massif",c:"#c4955f"},
-  {n:"Plan quartz sur mesure blanc",c:"#f4f3ef"},{n:"Plan quartz sur mesure noir",c:"#1e1e1e"},
+  {n:"KASKER quartz sur mesure noir effet marbre blanc · 2 cm",c:"#1f1f22",v:"#e8e6e0",tile:0,marb:1},{n:"Plan quartz sur mesure blanc",c:"#f4f3ef"},{n:"Plan quartz sur mesure noir",c:"#1e1e1e"},
   {n:"Carrelage marbré blanc veiné or (Calacatta)",c:"#f2efe9",tile:1,v:"#b89a6a"},{n:"Carrelage marbré blanc veiné gris (Carrare)",c:"#eceae6",tile:1,v:"#8e9196"},
   {n:"Carrelage marbré noir veiné blanc (Marquina)",c:"#1f1f22",tile:1,v:"#e8e6e0"},{n:"Carrelage marbré vert (Verde Alpi)",c:"#2f4a3e",tile:1,v:"#cfd8cf"},
   {n:"Carrelage marbré beige (Crema Marfil)",c:"#e3d4ba",tile:1,v:"#b9a07a"},
@@ -3146,6 +3146,10 @@ const KIT=(()=>{ const K=[];
   K.push({id:"frigous",g:"Électroménager pose libre",n:"Réfrigérateur américain 91×72×178",t:"app",w:910,d:720,h:1780,f:"us",c:"#b5b9bd"});
   K.push({id:"cuisi",g:"Électroménager pose libre",n:"Cuisinière pose libre 60×60×85",t:"app",w:600,d:600,h:850,f:"four",c:"#e4e4e4",hob:1});
   K.push({id:"llinge",g:"Électroménager pose libre",n:"Lave-linge sous plan 60×60×85",t:"app",w:600,d:600,h:850,f:"ll",c:"#eceeef"});
+  K.push({id:"bplq80",g:"Éléments bas",n:"METOD élément bas 80×60×80 3 tiroirs + table de cuisson 78 cm",t:"bas",w:800,f:"3t",hob:1});
+  K.push({id:"hhotte80i",g:"Éléments muraux",n:"METOD élément mural 80×37×100 + hotte intégrée",t:"haut",w:800,h:1000,f:"2p"});
+  K.push({id:"fil",g:"Sur mesure",n:"Fileur (bande de façade découpée)",t:"bas",w:50,f:"fil"});
+  K.push({id:"filh",g:"Sur mesure",n:"Fileur mural (bande de façade découpée)",t:"haut",w:50,h:1000,f:"fil"});
   K.push({id:"custom",g:"Sur mesure",n:"Meuble sur mesure (dimensions libres)",t:"bas",w:600,f:"1p"});
   K.push({id:"ilot",g:"Sur mesure",n:"Îlot / meuble libre (dimensions libres)",t:"app",w:1200,d:900,h:900,f:"2p",c:""});
   return K; })();
@@ -3186,9 +3190,9 @@ function kitChecks(room){
     its.forEach(o=>w.openings.forEach(op=>{ if(o.it.x<op.x+op.w && op.x<o.it.x+o.b.k.w && o.b.z0<op.y+op.h && op.y<o.b.z1) ck.push({ok:false,t:`${w.name} : « ${o.b.k.n} » passe devant ${op.type==="Porte"?"la porte":"la fenêtre"} ${opName(op,w.openings.indexOf(op))}.`}); }));
     const hauts=its.filter(o=>o.b.k.t==="haut");
     if(hauts.length) ck.push({ok:true,t:`${w.name} : meubles hauts sur plaque de plâtre, poser des renforts (bois ou métal) dans l'ossature à hauteur du rail de suspension (${cm(hauts[0].b.z1-60)} cm), avant les plaques.`,ref:"DTU 25.41 / Placo"});
-    const hob=its.find(o=>o.b.k.hob), hood=its.find(o=>/hotte/.test(o.b.k.f));
+    const hob=its.find(o=>o.b.k.hob), hood=its.find(o=>/hotte/.test(o.b.k.f)||/hotte/.test(o.b.k.id||""));
     if(hob && hood){ const ok=Math.abs((hob.it.x+hob.b.k.w/2)-(hood.it.x+hood.b.k.w/2))<100; ck.push({ok,t:ok?`${w.name} : hotte centrée au-dessus de la table de cuisson.`:`${w.name} : la hotte n'est pas au-dessus de la table de cuisson.`}); }
-    else if(hob && !rw.some(x=>K.items.some(it=>it.wall===wid(x)&&/hotte/.test((kitItem(it)||{}).f||"")))) ck.push({ok:false,t:"Table de cuisson sans hotte : en ajouter une au-dessus."});
+    else if(hob && !rw.some(x=>K.items.some(it=>it.wall===wid(x)&&/hotte/.test(((kitItem(it)||{}).f||"")+((kitItem(it)||{}).id||""))))) ck.push({ok:false,t:"Table de cuisson sans hotte : en ajouter une au-dessus."});
     if(its.some(o=>o.b.k.t==="bas")){ const n=(w.points||[]).filter(p=>/Prise/.test(p.type)&&p.y>900).length;
       ck.push({ok:n>0,t:n?`${w.name} : ${n} prise(s) au-dessus du plan de travail.`:`${w.name} : aucune prise au-dessus du plan de travail (placer les prises vers 110 cm).`,ref:"NF C 15-100"}); }
   });
@@ -3196,17 +3200,83 @@ function kitChecks(room){
   if(K.items.length){ const nP=rw.reduce((a,w)=>a+(w.points||[]).filter(p=>/Prise/.test(p.type)&&p.y>900).length,0);
     ck.push({ok:nP>=4,t:nP>=4?`Cuisine : ${nP} prises au-dessus du plan de travail (4 mini sur 6).`:`Cuisine : ${nP} prise(s) au-dessus du plan de travail, il en faut au moins 4 (6 prises 16 A dans la cuisine), plus les circuits spécialisés plaque 32 A, four, lave-vaisselle.`,ref:"NF C 15-100"}); }
   return ck; }
+/* ---------- Cuisine : plans métriques cotés (élévation de chaque mur, vue de dessus) ---------- */
+function kitUse(w){ const rw=roomWalls(w), i=rw.indexOf(w), a=roomAdjust(w), nx=rw.length>1&&(i<rw.length-1||w.angle!=="libre")?rw[(i+1)%rw.length]:null;
+  return [Math.max(0,-a.dx), w.L-(a.end==="rentrant"&&nx?wT(nx):0)]; }
+function kitFc(it,K,k){ return it.c||k.c||(FACADES.find(f=>f.n===(it.fac||K.facade))||FACADES[0]).c; }
+function kitPlanTh(PL){ return /3,8 cm/.test(PL.n)?38:/2,8 cm/.test(PL.n)?28:PL.tile?30:20; }
+function kitElevSvg(w){
+  const room=w.room||"", K=kitCfg(room); if(!K.on) return "";
+  const its=K.items.map((it,i)=>({it,i,b:it.wall===wid(w)?kitBox(it,K,w.H):null})).filter(o=>o.b); if(!its.length) return "";
+  const H=w.H, L=w.L, [a0,a1]=kitUse(w), fs=Math.max(L,H)/60, PL=planOf(K,room), th=kitPlanTh(PL), Y=z=>H-z;
+  const T=(x,y,s,t,ex="")=>`<text x="${x.toFixed(0)}" y="${y.toFixed(0)}" font-size="${(s).toFixed(0)}" text-anchor="middle" dominant-baseline="middle" style="fill:var(--ink,#222)" ${ex}>${t}</text>`;
+  const dimH=(xa,xb,y,lab)=>{ const t=fs*.35; return `<g stroke="#0058a3" stroke-width="${fs*.06}"><line x1="${xa}" y1="${y}" x2="${xb}" y2="${y}"/><line x1="${xa}" y1="${y-t}" x2="${xa}" y2="${y+t}"/><line x1="${xb}" y1="${y-t}" x2="${xb}" y2="${y+t}"/></g>`+(xb-xa>fs*1.2?T((xa+xb)/2,y-fs*.55,Math.min(fs*.8,(xb-xa)/2.6),lab):""); };
+  const dimV=(za,zb,x,lab)=>{ const t=fs*.35, ya=Y(za), yb=Y(zb); return `<g stroke="#0058a3" stroke-width="${fs*.06}"><line x1="${x}" y1="${ya}" x2="${x}" y2="${yb}"/><line x1="${x-t}" y1="${ya}" x2="${x+t}" y2="${ya}"/><line x1="${x-t}" y1="${yb}" x2="${x+t}" y2="${yb}"/></g>`+(Math.abs(ya-yb)>fs*1.2?T(x+fs*.55,(ya+yb)/2,Math.min(fs*.75,Math.abs(ya-yb)/2.6),lab,`transform="rotate(-90 ${(x+fs*.55).toFixed(0)} ${((ya+yb)/2).toFixed(0)})"`):""); };
+  const chain=(xs,y)=>{ const P=[...new Set(xs.map(v=>Math.round(v*10)/10))].sort((p,q)=>p-q); let s=""; for(let k=1;k<P.length;k++) if(P[k]-P[k-1]>2) s+=dimH(P[k-1],P[k],y,cm(P[k]-P[k-1])); return s; };
+  const p=[];
+  p.push(`<rect x="0" y="0" width="${L}" height="${H}" fill="#d9d4cb"/><rect x="${a0}" y="0" width="${a1-a0}" height="${H}" fill="#fbfaf7" stroke="#8a8478" stroke-width="${fs*.06}"/>`);
+  w.openings.forEach(o=>p.push(`<rect x="${o.x}" y="${Y(o.y+o.h)}" width="${o.w}" height="${o.h}" fill="${o.type==="Porte"?"#efe9df":"#dbe9f6"}" stroke="#5b8fc9" stroke-width="${fs*.06}"/>`));
+  kitRuns(room).filter(rn=>rn.w===w).forEach(rn=>p.push(`<rect x="${rn.a}" y="${Y(880+th)}" width="${rn.b-rn.a}" height="${th}" fill="${PL.c}" stroke="#333" stroke-width="${fs*.04}"/>`));
+  its.forEach(({it,i,b})=>{ const k=b.k, x=it.x, fc=kitFc(it,K,k), base=b.z0<10&&k.t!=="app";
+    p.push(`<rect x="${x}" y="${Y(b.z1)}" width="${k.w}" height="${b.z1-b.z0}" fill="${fc}" stroke="#0058a3" stroke-width="${fs*.07}"/>`);
+    if(base) p.push(`<rect x="${x}" y="${Y(80)}" width="${k.w}" height="80" fill="#9a9690" opacity=".55"/>`);
+    if(k.t!=="app") frontPanels(it.f||k.f,x+3,x+k.w-3,base?80:b.z0,b.z1).forEach(q=>p.push(`<rect x="${q[0]}" y="${Y(q[3])+3}" width="${q[1]-q[0]}" height="${Math.max(0,q[3]-q[2]-6)}" fill="none" stroke="#00000055" stroke-width="${fs*.04}"/>`));
+    if(k.hob) p.push(`<rect x="${x+10}" y="${Y(880+th)-8}" width="${k.w-20}" height="8" fill="#111"/>`);
+    const r=Math.min(fs*.9,k.w/2.4); p.push(`<circle cx="${x+k.w/2}" cy="${Y((b.z0+b.z1)/2)}" r="${r}" fill="#0058a3"/>`+`<text x="${(x+k.w/2).toFixed(0)}" y="${Y((b.z0+b.z1)/2).toFixed(0)}" font-size="${(r*1.1).toFixed(0)}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-weight="700">${it.no||i+1}</text>`); });
+  const low=its.filter(o=>o.b.z0<10), up=its.filter(o=>o.b.z1>1400);
+  p.push(chain([a0,a1,...low.flatMap(o=>[o.it.x,o.it.x+o.b.k.w])],H+fs*2));
+  p.push(dimH(a0,a1,H+fs*4.2,`mur fini ${cm(a1-a0)}`));
+  if(up.length) p.push(chain([a0,a1,...up.flatMap(o=>[o.it.x,o.it.x+o.b.k.w])],-fs*2));
+  const zs=[0,H]; if(low.some(o=>o.b.k.t!=="app")) zs.push(80,880,880+th); its.forEach(o=>{ if(o.b.z0>10) zs.push(o.b.z0); zs.push(o.b.z1); });
+  { const Z=[...new Set(zs.map(Math.round))].sort((p,q)=>p-q); for(let k=1;k<Z.length;k++) if(Z[k]-Z[k-1]>2) p.push(dimV(Z[k-1],Z[k],L+fs*2,cm(Z[k]-Z[k-1]))); p.push(dimV(0,H,L+fs*4.2,`h ${cm(H)}`)); }
+  const vb=[-fs*2,-fs*4,L+fs*7,H+fs*9.5].map(v=>v.toFixed(0)).join(" ");
+  const rows=its.sort((p,q)=>p.it.x-q.it.x).map(({it,i,b})=>`<tr><td><b>${it.no||i+1}</b></td><td>${esc(it.n||b.k.n)}</td><td><b>${cm(Math.max(0,it.x-a0))} → ${cm(it.x+b.k.w-a0)}</b></td><td>${cm(b.k.w)}</td><td>${cm(b.z0)} → ${cm(b.z1)}</td><td>${cm(b.d)}</td></tr>`).join("");
+  return `<div class="kitel"><svg viewBox="${vb}" style="width:100%;height:auto;max-height:70vh;background:var(--card,#fff)" role="img" aria-label="Élévation cotée ${esc(w.name)}">${p.join("")}</svg>
+    <p class="hint" style="margin:4px 0">Cotes en cm. En bas : meubles au sol depuis le mur fini (après doublage). En haut : meubles muraux et colonnes. À droite : hauteurs depuis le sol fini.</p>
+    <div style="overflow-x:auto"><table class="pd-t kit-t"><thead><tr><th>N°</th><th>Meuble</th><th>Depuis le mur fini (cm)</th><th>Largeur</th><th>Hauteur</th><th>Prof.</th></tr></thead><tbody>${rows}</tbody></table></div></div>`; }
+function kitTopSvg(room){
+  const K=kitCfg(room); if(!K.on||!K.items.length) return ""; const g=roomGeom(room); if(!g.segs.length) return "";
+  const L=g.segs.reduce((a,s)=>a+s.w.L,0), fs=Math.max(60,L/70), Yf=y=>-y, Q=(P)=>`${P[0].toFixed(0)},${Yf(P[1]).toFixed(0)}`, p=[], late=[], xs=[], ys=[];
+  const add=P=>{ xs.push(P[0]); ys.push(Yf(P[1])); return Q(P); };
+  g.segs.forEach((s,k)=>{ const m=g.mid[k], o=g.outer[k], n=g.inner[k];
+    p.push(`<polygon points="${add(m.a)} ${add(m.b)} ${add(o.b)} ${add(o.a)}" fill="#bdb6aa"/>`);
+    p.push(`<polygon points="${add(m.a)} ${add(m.b)} ${add(n.b)} ${add(n.a)}" fill="#e4e1da" stroke="#9d9585" stroke-width="${fs*.05}"/>`); });
+  g.segs.forEach((s,k)=>{ const w=s.w, Tk=g.Ts[k], P=(x,o)=>[s.x0+s.dx*x+s.nx*o,s.y0+s.dy*x+s.ny*o];
+    w.openings.forEach(op=>p.push(`<polygon points="${Q(P(op.x,-g.STN))} ${Q(P(op.x+op.w,-g.STN))} ${Q(P(op.x+op.w,Tk))} ${Q(P(op.x,Tk))}" fill="${op.type==="Porte"?"#fbfaf7":"#dbe9f6"}" stroke="#5b8fc9" stroke-width="${fs*.05}"/>`));
+    const its=K.items.map((it,i)=>({it,i,b:it.wall===wid(w)?kitBox(it,K,w.H):null})).filter(o=>o.b); if(!its.length) return;
+    its.sort((a,b)=>(a.b.k.t==="haut")-(b.b.k.t==="haut")).forEach(({it,i,b})=>{ const x=it.x, e=it.x+b.k.w, d1=Tk+b.d, haut=b.k.t==="haut";
+      p.push(`<polygon points="${add(P(x,Tk))} ${add(P(e,Tk))} ${add(P(e,d1))} ${add(P(x,d1))}" fill="${kitFc(it,K,b.k)}" fill-opacity="${haut?0:.95}" stroke="#0058a3" stroke-width="${fs*.06}" ${haut?`stroke-dasharray="${fs*.3} ${fs*.2}"`:""}/>`);
+      if(!haut){ const C=P((x+e)/2,(Tk+d1)/2), r=Math.min(fs*.75,b.k.w/2.4); late.push(`<circle cx="${C[0].toFixed(0)}" cy="${Yf(C[1]).toFixed(0)}" r="${r.toFixed(0)}" fill="#0058a3"/><text x="${C[0].toFixed(0)}" y="${Yf(C[1]).toFixed(0)}" font-size="${(r*1.1).toFixed(0)}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-weight="700">${it.no||i+1}</text>`); } });
+    const [a0,a1]=kitUse(w), low=its.filter(o=>o.b.z0<10), dmax=Math.max(600,...low.map(o=>o.b.d)), off=Tk+dmax+fs*1.6;
+    const pts=[...new Set([a0,a1,...low.flatMap(o=>[o.it.x,o.it.x+o.b.k.w])].map(v=>Math.round(v*10)/10))].sort((p,q)=>p-q);
+    let ang=Math.atan2(-s.dy,s.dx)*180/Math.PI; if(ang>90.5||ang<-89.5) ang+=180;
+    for(let j=1;j<pts.length;j++){ const u=pts[j-1], v=pts[j]; if(v-u<3) continue; const A=P(u,off), B=P(v,off), t=fs*.3, A1=P(u,off-t), A2=P(u,off+t), B1=P(v,off-t), B2=P(v,off+t), M=P((u+v)/2,off+fs*.7);
+      late.push(`<g stroke="#0058a3" stroke-width="${fs*.06}"><line x1="${A[0]}" y1="${Yf(A[1])}" x2="${B[0]}" y2="${Yf(B[1])}"/><line x1="${A1[0]}" y1="${Yf(A1[1])}" x2="${A2[0]}" y2="${Yf(A2[1])}"/><line x1="${B1[0]}" y1="${Yf(B1[1])}" x2="${B2[0]}" y2="${Yf(B2[1])}"/></g>`);
+      if(v-u>fs*1.2) late.push(`<text x="${M[0].toFixed(0)}" y="${Yf(M[1]).toFixed(0)}" transform="rotate(${ang.toFixed(1)} ${M[0].toFixed(0)} ${Yf(M[1]).toFixed(0)})" font-size="${Math.min(fs*.75,(v-u)/2.6).toFixed(0)}" text-anchor="middle" dominant-baseline="middle" style="fill:var(--ink,#222)">${cm(v-u)}</text>`); }
+    const N=P(w.L/2,-g.STN-fs*1.2); p.push(`<text x="${N[0].toFixed(0)}" y="${Yf(N[1]).toFixed(0)}" transform="rotate(${ang.toFixed(1)} ${N[0].toFixed(0)} ${Yf(N[1]).toFixed(0)})" font-size="${(fs*.9).toFixed(0)}" text-anchor="middle" dominant-baseline="middle" font-weight="600" style="fill:var(--ink,#222)">${esc((w.name||"").split(" — ").pop())}</text>`); xs.push(N[0]); ys.push(Yf(N[1]));
+  });
+  const m=fs*2.5, x0=Math.min(...xs)-m, y0=Math.min(...ys)-m, vb=[x0,y0,Math.max(...xs)+m-x0,Math.max(...ys)+m-y0].map(v=>v.toFixed(0)).join(" ");
+  return `<svg viewBox="${vb}" style="width:100%;height:auto;max-height:75vh;background:var(--card,#fff)" role="img" aria-label="Cuisine vue de dessus">${p.join("")}${late.join("")}</svg><p class="hint" style="margin:4px 0">Vue de dessus : meubles au sol en plein (numéros), meubles muraux en pointillés. Cotes en cm le long de chaque mur, depuis le mur fini.</p>`; }
+/* Import d'une cuisine (fichier préparé depuis un plan IKEA) : ajoute les meubles au projet ouvert, murs retrouvés par leur nom */
+function kitImport(d){
+  const room=d.room||"", rw=S.walls.filter(w=>(w.room||"")===room); if(!rw.length) return `Pièce « ${room} » introuvable dans le projet.`;
+  const norm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]/g,"");
+  const find=n=>rw.find(w=>norm(w.name)===norm(n))||rw.find(w=>norm(w.name).includes(norm(n))||norm(n).includes(norm(w.name)));
+  const K=kitCfg(room), miss=new Set(), items=[];
+  (d.items||[]).forEach(o=>{ const w=find(o.wall); if(!w){ miss.add(o.wall); return; } const it={...o,wall:wid(w)}; if(o.fromEnd!==undefined){ const nx=rw[(rw.indexOf(w)+1)%rw.length], a1=w.L-(nx&&nx!==w&&rw.length>2?wT(nx):0); it.x=Math.round((a1-o.fromEnd)*10)/10; delete it.fromEnd; } if(o.fromStart!==undefined){ const [a0]=kitUse(w); it.x=Math.round((a0+o.fromStart)*10)/10; delete it.fromStart; } items.push(it); });
+  ["facade","plan","top","pg","pf"].forEach(k=>{ if(d[k]!==undefined) K[k]=d[k]; }); K.on=true; K.items=items;
+  return `Cuisine importée dans « ${room} » : ${items.length} éléments.${miss.size?` Murs non trouvés : ${[...miss].join(", ")}.`:""}`; }
 function kitMaterials(room){
   const K=kitCfg(room); if(!K.on||!K.items.length) return [];
   const rows=[], add=(des,det,q,u)=>{ if(q>0) rows.push({cat:"Cuisine IKEA",des,det,q,u}); }, cnt={};
   K.items.forEach(it=>{ const k=kitItem(it); if(k){ const fa=it.fac||K.facade, key=k.n+"|"+fa; if(!cnt[key]) cnt[key]={k,n:0,fa}; cnt[key].n++; } });
   Object.values(cnt).forEach(({k,n,fa})=>{ add(k.n,k.t==="app"?"":k.id==="custom"?"à faire faire ou à adapter":"caisson et aménagement intérieur",n,"u");
-    if(k.t!=="app" && !/hotteinox|etag/.test(k.f)) add(`Façade(s) ${fa} pour ${k.n.replace(/^METOD /,"").split(",")[0].split(" +")[0]}`,"",n,"lot");
-    if(k.t==="bas"||k.t==="col") add("Pied réglable METOD 8 cm","4 par meuble au sol",4*n,"u"); });
+    if(k.t!=="app" && !/hotteinox|etag|fil/.test(k.f)) add(`Façade(s) ${fa} pour ${k.n.replace(/^METOD /,"").split(",")[0].split(" +")[0]}`,"",n,"lot");
+    if((k.t==="bas"||k.t==="col")&&k.f!=="fil") add("Pied réglable METOD 8 cm","4 par meuble au sol",4*n,"u"); });
   { const jo=K.items.reduce((a,it)=>a+(it.jg?1:0)+(it.jd?1:0),0), ti=K.items.reduce((a,it)=>a+(+it.ti||0),0), et=K.items.reduce((a,it)=>a+(it.et>0?+it.et:0),0), led=K.items.filter(it=>it.led&&(kitItem(it)||{}).t==="haut");
     add(`Joue de finition ${K.facade}`,"côté visible d'un meuble",jo,"u"); add("Tiroir intérieur MAXIMERA","à l'intérieur d'un élément à porte",ti,"u"); add("Tablette METOD / UTRUSTA","étagères choisies",et,"u");
     add("Éclairage LED sous meuble mural","réglette + alimentation",led.length,"u");
-    const HD=handleOf(null,room), nh=K.items.reduce((a,it)=>{ const k=kitItem(it); return a+(k&&k.t!=="app"&&!/ouvert|etag|hotteinox/.test(it.f||k.f)?frontPanels(it.f||k.f,0,k.w,0,700).filter(p=>p[4]!=="four"&&p[4]!=="lv").length:0); },0);
+    const HD=handleOf(null,room), nh=K.items.reduce((a,it)=>{ const k=kitItem(it); return a+(k&&k.t!=="app"&&!/ouvert|etag|hotteinox|fil/.test(it.f||k.f)?frontPanels(it.f||k.f,0,k.w,0,700).filter(p=>p[4]!=="four"&&p[4]!=="lv").length:0); },0);
     if(HD.m!=="sans") add(`Poignée ${(HANDLES.find(h=>h[0]===HD.m)||[])[1]} · ${(HFIN.find(h=>h[0]===HD.f)||[])[1]}`,"une par porte ou tiroir",nh,"u"); }
   const runs=kitRuns(room), lenT=runs.reduce((a,r)=>a+(r.b-r.a),0);
   const PL=planOf(K,room);
@@ -3269,6 +3339,8 @@ function kitPanel(w){
       </details>
       <div class="btns"><button type="button" data-act="kitdel" data-i="${i}" class="ghost">Retirer</button><button type="button" data-act="kitdup" data-i="${i}">Dupliquer à la suite</button></div></div>`).join("")}
     <div class="btns" style="margin-top:8px"><button type="button" data-act="kitadd">Ajouter un meuble sur ce mur</button></div>
+    ${(()=>{ try{ const e=kitElevSvg(w); return e?`<details open style="margin-top:10px"><summary style="cursor:pointer"><b>Plan coté de ce mur</b></summary>${e}</details>`:""; }catch(er){ return ""; } })()}
+    ${(()=>{ try{ const t=kitTopSvg(room); return t?`<details style="margin-top:6px"><summary style="cursor:pointer"><b>Vue de dessus cotée de la cuisine</b></summary>${t}</details>`:""; }catch(er){ return ""; } })()}
     ${ck.map(c=>`<div class="ck ${c.ok?"ok":"ko"}"><b>${c.ok?"✓":"!"}</b><span>${esc(c.t)}</span>${c.ref?`<em>${esc(c.ref)}</em>`:""}</div>`).join("")}
     <p class="hint">Dimensions standard du système METOD (élément bas 80 cm + pieds 8 cm, plan 63,5 cm, muraux 37 cm de profondeur), à vérifier sur ikea.fr avant commande. Les prix IKEA changent souvent : saisissez-les dans le détail des prix. Les teintes affichées sont indicatives.</p>`:""}
   </section>`;
@@ -4734,6 +4806,7 @@ const ioMsg=t=>{ const p=document.getElementById("iopanel"); p.hidden=false; doc
 const projectText=()=>JSON.stringify({app:"calepinage-murs",version:2,date:new Date().toISOString().slice(0,10),...S},null,1);
 function loadProject(txt){
   let d; try{ d=JSON.parse(txt); }catch(e){ ioMsg("Ce texte n'est pas un projet valide : copiez-le en entier depuis le bouton « Copier le projet »."); return; }
+  if(d && d.kitImport){ const m=kitImport(d.kitImport); save(); renderAll(); ioMsg(m); try{ alert(m); }catch(e){} return; }
   if(!d || !Array.isArray(d.walls) || !d.walls.length){ ioMsg("Ce fichier ne contient pas de murs : ce n'est pas un projet de calepinage."); return; }
   delete d.app; delete d.version; delete d.date;
   S=d; S.cur=0; migrate(); renderAll(); save();
@@ -5180,8 +5253,9 @@ document.addEventListener("change",e=>{ const k=e.target.dataset&&e.target.datas
 function kitDossier(room){ const K=kitCfg(room); if(!K.on||!K.items.length) return "";
   const rw=S.walls.filter(w=>(w.room||"")===room), runs=kitRuns(room), PL=planOf(K,room);
   let h=`<section class="pd-page"><h2>Pose de la cuisine : ${esc(room)}</h2><p class="pd-cap">Façades ${esc(K.facade)} · plan de travail ${esc(K.plan)}. Cotes en cm depuis le début de chaque mur (angle gauche, vu depuis la pièce), hauteurs depuis le sol fini.</p>
-    <h3>Ordre de pose</h3><ol class="pd-steps">${["Doublage terminé (plaques, bandes, peinture ou béton ciré derrière les meubles), sol posé, réseaux d'eau et d'électricité sortis aux bonnes cotes.","Tracer au laser le trait des 80 cm (dessus des caissons bas sur pieds de 8 cm) et la hauteur du rail de suspension des meubles hauts.","Fixer les rails de suspension METOD dans les renforts de l'ossature (pas dans la plaque seule).","Monter les caissons, les accrocher en commençant par l'angle, régler les pieds et l'aplomb, solidariser les caissons entre eux.","Poser et découper le plan de travail (évier, plaque de cuisson), puis la crédence.","Raccorder évier, électroménager, plinthes, façades et poignées ; régler les charnières."].map(t=>`<li>${t}</li>`).join("")}</ol>`;
+    ${(()=>{ try{ const t=kitTopSvg(room); return t?`<h3>Vue de dessus cotée</h3><div class="pd-svg">${t}</div>`:""; }catch(e){ return ""; } })()}<h3>Ordre de pose</h3><ol class="pd-steps">${["Doublage terminé (plaques, bandes, peinture ou béton ciré derrière les meubles), sol posé, réseaux d'eau et d'électricité sortis aux bonnes cotes.","Tracer au laser le trait des 80 cm (dessus des caissons bas sur pieds de 8 cm) et la hauteur du rail de suspension des meubles hauts.","Fixer les rails de suspension METOD dans les renforts de l'ossature (pas dans la plaque seule).","Monter les caissons, les accrocher en commençant par l'angle, régler les pieds et l'aplomb, solidariser les caissons entre eux.","Poser et découper le plan de travail (évier, plaque de cuisson), puis la crédence.","Raccorder évier, électroménager, plinthes, façades et poignées ; régler les charnières."].map(t=>`<li>${t}</li>`).join("")}</ol>`;
   rw.forEach(w=>{ const its=K.items.filter(it=>it.wall===wid(w)).map(it=>({it,b:kitBox(it,K,w.H)})).filter(o=>o.b).sort((a,b)=>a.it.x-b.it.x); if(!its.length) return;
+    h+=`<h3>${esc(w.name)} : plan coté</h3>`+(()=>{ try{ return kitElevSvg(w); }catch(e){ return ""; } })();
     h+=`<h3>${esc(w.name)}</h3><table class="pd-t"><thead><tr><th>Meuble</th><th>De … à (cm)</th><th>Largeur</th><th>Hauteur pose</th><th>Profondeur</th></tr></thead><tbody>${its.map(({it,b})=>`<tr><td>${esc(b.k.n)}</td><td><b>${cm(it.x)} → ${cm(it.x+b.k.w)}</b></td><td>${cm(b.k.w)}</td><td>${cm(b.z0)} → ${cm(b.z1)}</td><td>${cm(b.d)}</td></tr>`).join("")}</tbody></table>`; });
   if(runs.length) h+=`<h3>Plan de travail ${PL.tile?"en carrelage":""}</h3><table class="pd-t"><thead><tr><th>Mur</th><th>De … à (cm)</th><th>Longueur à couper</th><th>Profondeur</th></tr></thead><tbody>${runs.map(rn=>`<tr><td>${esc(rn.w.name)}</td><td>${cm(rn.a)} → ${cm(rn.b)}</td><td><b>${cm(rn.b-rn.a)}</b></td><td>${PL.tile?"65 (support + carreaux, débord 2 cm)":"63,5"}</td></tr>`).join("")}</tbody></table><p class="pd-cap">Dessus du plan à ${PL.tile?"≈ 92":"≈ 91,8"} cm du sol. Évier et plaque : découpe d'après le gabarit fourni avec l'appareil.</p>`;
   return h+`</section>`; }
