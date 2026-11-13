@@ -2692,10 +2692,14 @@ function shade(hex,k){ const n=parseInt((hex||"#cccccc").slice(1),16); const f=v
 function isoWarn(){ const {iso,mem}=S; if(iso.on&&iso.pose==="mur"&&mem.on) return "";
   const miss=[!iso.on?"l'isolant fibre de bois":iso.pose!=="mur"?"l'isolant chevillé contre le mur (il est réglé entre montants)":"",!mem.on?"la membrane Vario":""].filter(Boolean).join(" et ");
   return `<div class="warn" style="margin:8px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span>Dans les réglages de ce projet, ${miss} ${miss.includes(" et ")?"sont désactivés":"est désactivé"} : ${miss.includes(" et ")?"ils n'apparaissent":"il n'apparaît"} donc pas dans les couches.</span><button type="button" data-isoon class="pri">Activer isolant chevillé + membrane</button></div>`; }
-function wallLayers(){
-  const {iso,mem,oss,pla,fin}=S, T=doublageT(), L=[], pl=12.5*pla.couches;
+function wallLayers(w){ // w : couches propres à ce mur (contre-cloison, écart, décollement), sinon réglage général
+  const {iso,mem,oss,pla,fin}=S, ctr=!!(w&&w.dbl==="contre"&&!isCol(w)), T=ctr?contreT(w):doublageT(w), L=[], pl=12.5*pla.couches;
   L.push({k:"pierre",n:"Mur en pierre",o0:-300,o1:0,fill:"url(#tx-stone)",c:"#9b9283"});
-  if(iso.on && iso.pose==="mur"){
+  if(ctr){ const gp=gapOf(w);
+    if(iso.on) L.push({k:"fibre",n:`Fibre de bois ${iso.ep} mm entre montants`,o0:gp,o1:gp+oss.g,fill:"url(#tx-fibre)",c:"#c4914f"});
+    L.push({k:"oss",n:`Ossature ${oss.g} mm, à ${fr(gp/10,1)} cm de la pierre`,o0:gp,o1:gp+oss.g,c:"#a9b1b8",studs:1});
+    if(mem.on) L.push({k:"mem",n:mem.n,o0:gp+oss.g,o1:gp+oss.g+2,fill:"url(#tx-mem)",c:"#ecebe4"});
+  } else if(iso.on && iso.pose==="mur"){
     L.push({k:"fibre",n:`Fibre de bois ${iso.ep} mm (chevillée)`,o0:0,o1:Math.min(iso.ep,T-oss.g-pl),fill:"url(#tx-fibre)",c:"#c4914f"});
     if(mem.on) L.push({k:"mem",n:mem.n,o0:Math.min(iso.ep,T-oss.g-pl),o1:Math.min(iso.ep,T-oss.g-pl)+2,fill:"url(#tx-mem)",c:"#ecebe4"});
     L.push({k:"oss",n:`Ossature ${oss.g} mm, entraxe ${oss.e/10} cm`,o0:T-oss.g-pl,o1:T-pl,c:"#a9b1b8",studs:1});
@@ -2758,7 +2762,7 @@ function renderRoom3D(){
         const pl=segsP.map(([a,b])=>`<path d="${pathOf([at(a,T+12,0),at(b,T+12,0),at(b,T+12,80),at(a,T+12,80)])}" fill="#f7f6f2" stroke="#b9b4aa" stroke-width="5"/>`).join("");
         if(!layered) face([[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]],{pick:s.i,op,fill:shade(F.peint.on||bcOnWall(w)?paintColor(w):tint,lit(s.nx,s.ny,0)),bc:bcOnWall(w),holes:holeP(T),extra:`<g stroke="#a7a398" stroke-width="7" opacity=".55">${lines.join("")}</g>${pl}${pts}`,sel});
         else {
-          const Ls=withWallCfg(w,()=>wallLayers()).filter(l=>V.lay[l.k]!==false), n=Ls.length, base=[[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]].reduce((a,p)=>a+pr(...p)[2],0)/4;
+          const Ls=withWallCfg(w,()=>wallLayers(w)).filter(l=>V.lay[l.k]!==false), n=Ls.length, base=[[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]].reduce((a,p)=>a+pr(...p)[2],0)/4;
           Ls.forEach((l,j)=>{
             const ec=V.cut==="ecorche", hl=h, E1=g.endsAt(l.o1)[k], E0=g.endsAt(l.o0)[k], dd=base-(n-j)*0.6, last=j===n-1, xa=ec&&j>0?w.L*j/n:-1e9, P0=(E,off,z)=>xa>-1e8?at(xa,off,z):[...E.a,z];
             const ho=(off)=>holes.filter(H=>H.z0<hl&&H.b>xa+10).map(H=>{ const ha=Math.max(H.a,xa+5); return pathOf([at(ha,off,H.z0),at(ha,off,Math.min(H.z1,hl)),at(H.b,off,Math.min(H.z1,hl)),at(H.b,off,H.z0)]); }).join("");
@@ -3932,13 +3936,13 @@ function buildScene(){
       const ext=(o)=>{ const E=g.endsAt(o)[k]; const t=p=>(p[0]-s.x0)*s.dx+(p[1]-s.y0)*s.dy; return [t(E.a),t(E.b)]; };
       const ext2=(o0,o1)=>{ const A=ext(o0), B=ext(o1); return [Math.min(A[0],B[0]),Math.max(A[1],B[1])]; }; // bloc qui couvre l'angle (rentrant ou sortant) sans trou
       const tag={kind:"wall",i:s.i};
-      const Ls=wallLayers().filter(l=>lay[l.k]!==false), n=Ls.length;
+      const Ls=wallLayers(w).filter(l=>lay[l.k]!==false), n=Ls.length;
       const layered=cut==="ecorche"||LAY.some(l=>lay[l.k]===false)||V.couches;
       const RA=roomAdjust(w); // angle sortant avec placo collé : le collé dépasse l'angle, l'ossature voisine démarre à l'angle de la pierre
       if(isCol(w)){ const [a1,b1]=ext2(-g.STN,0); let [a2,b2]=ext2(g.T-12.5,g.T); if(RA.dEnd) b2=Math.max(b2,w.L+RA.dEnd); const pc=paintColor(w); // placo collé au MAP sur la pierre
         if(cut==="ecorche"||V.couches){ const [pa,pb]=ext(10), mp=v3Mat("#d9d4c9",{roughness:.9}); for(let x=pa+150;x<pb-100;x+=350) for(let z=250;z<h-100;z+=400){ if(holes.some(q=>x>q.a-60&&x<q.b+60&&z>q.c-60&&z<q.d+60)) continue; scene.add(v3Box(s,x-45,x+45,0,10,z-45,z+45,mp)); } }
         if(!(w.tile&&w.tile.on)&&!(typeof bcOnWall==="function"&&bcOnWall(w))) v3Joints(scene,s,w,g.T,h,a2,b2,holes);
-        [v3Slab(s,a1,b1,-g.STN,0,0,h,holes,[M.stone,M.cap]), (cut==="ecorche"||V.couches)?v3Slab(s,a2+(b2-a2)*0.45,b2,g.T-12.5,g.T,0,h,holes,[M.pla,M.pla]):v3Slab(s,a2,b2,g.T-12.5,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } }); }
+        [v3Slab(s,a1,b1,-g.STN,0,0,h,holes,[M.stone,M.cap]), lay.pla===false?null:cut==="ecorche"?v3Slab(s,a2+(b2-a2)*0.45,b2,g.T-12.5,g.T,0,h,holes,[M.pla,M.pla]):V.couches&&lay.peint===false?v3Slab(s,a2,b2,g.T-12.5,g.T,0,h,holes,[M.pla,M.pla]):v3Slab(s,a2,b2,g.T-12.5,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } }); }
       else if(!layered){
         const [a1,b1]=ext2(-g.STN,0); let [a2,b2]=ext2(0,g.T); if(RA.colStart) a2=Math.max(a2,0); const pc=paintColor(w);
         if(V.res){ const pl=12.5*S.pla.couches, oM=Math.max(2,g.T-pl-S.oss.g), [a3,b3]=ext(oM/2), mm=S.mem.on?null:v3Slab(s,a3,b3,0,oM,0,h,holes,[M.fibre,M.cap]); if(mm){ mm.userData=tag; scene.add(mm); } if(S.mem.on){ const f=v3Slab(s,a3,b3,0,oM-3,0,h,holes,[M.fibre,M.cap]); if(f) scene.add(f); v3MemLes(scene,pick,s,w,a3,b3,oM-3,oM,h,holes,M.memO,M.cap,tag); } v3Tapes(scene,s,w,oM,h,M.tape);
@@ -3981,7 +3985,7 @@ function buildScene(){
           // huisserie
           const fm=v3Mat(o.color||"#ece7dc"); [[H.a-50,H.a],[H.b,H.b+50]].forEach(q=>scene.add(v3Box(s,q[0],q[1],g.T-10,g.T+12,0,H.d+50,fm))); scene.add(v3Box(s,H.a-50,H.b+50,g.T-10,g.T+12,H.d,H.d+50,fm));
           // ébrasement : habillage d'une seule teinte sur toute l'épaisseur (pierre + doublage), sinon on voit les couches comme un mur décollé
-          if(!(cut==="ecorche"||V.couches||LAY.some(l=>lay[l.k]===false))){ const em=finMat(w,paintColor(w)); [[H.a,H.a+12],[H.b-12,H.b]].forEach(q=>scene.add(v3Box(s,q[0],q[1],-g.STN-1,g.T-10,0,H.d,em))); scene.add(v3Box(s,H.a,H.b,-g.STN-1,g.T-10,H.d-12,H.d,em)); }
+          if(cut!=="ecorche"&&lay.pla!==false){ const em=(V.couches||LAY.some(l=>lay[l.k]===false))&&(lay.peint===false||!LAY.some(l=>l.k==="peint"))?M.pla:finMat(w,paintColor(w)); [[H.a,H.a+12],[H.b-12,H.b]].forEach(q=>scene.add(v3Box(s,q[0],q[1],-g.STN-1,g.T-10,0,H.d,em))); scene.add(v3Box(s,H.a,H.b,-g.STN-1,g.T-10,H.d-12,H.d,em)); }
           if(st==="galandage") return;
           const grp=new T3.Group(), leafW=W0-10, leafH=Math.min(H.d,o.h)-15, th=40;
           const leaf=new T3.Mesh(new T3.BoxGeometry(leafW/1000,leafH/1000,th/1000), dm); leaf.position.set((hinge==="g"?leafW/2:-leafW/2)/1000,(leafH/2+8)/1000,0); grp.add(leaf);
