@@ -4139,7 +4139,7 @@ function renderVisite(){
   document.getElementById("extra").innerHTML=v3Extra(); }
 function v3Bar(){ const V=S.v3, b=(k,l,on)=>`<button type="button" data-v3="${k}" aria-pressed="${!!on}" style="padding:5px 10px;font-size:13px;background:${on?"var(--chalk)":"#ffffffdd"};color:${on?"#fff":"#222"};border:1px solid #0002;border-radius:5px">${l}</button>`;
   const el=document.getElementById("v3bar"); if(!el) return;
-  el.innerHTML=b("visite","🚶 Visite",V.mode==="visite")+b("maquette","Maquette",V.mode!=="visite")+b("couches","Couches",V.cut==="ecorche"||V.couches)+b("ceil","Plafond",V.ceil)+b("res","🔧 Réseaux",V.res)+b("real","✨ Réaliste",V.real)+b("nuit","Nuit",V.nuit)+b("joints","Joints placo",V.joints!==false)+b("all","Logement",V.all)+b("fs","⛶ Plein écran",false); }
+  el.innerHTML=b("visite","🚶 Visite",V.mode==="visite")+b("maquette","Maquette",V.mode!=="visite")+b("couches","Couches",V.cut==="ecorche"||V.couches)+b("ceil","Plafond",V.ceil)+b("res","🔧 Réseaux",V.res)+b("real","✨ Réaliste",V.real)+b("nuit","Nuit",V.nuit)+b("joints","Joints placo",V.joints!==false)+b("all","Logement",V.all)+b("vr","🥽 VR",!!VR.on)+b("fs","⛶ Plein écran",false); }
 function v3Extra(){ const V=S.v3, LAY=wallLayers(), lay=S.r3.lay||{};
   return `<section class="box"><h2>Visite 3D</h2>
     <div class="btns" style="margin-bottom:6px;align-items:center"><span class="cap" style="margin-right:4px">Voir jusqu'à :</span>${LAY.filter(l=>l.k!=="end").map(l=>`<button type="button" data-v3="upto:${l.k}" aria-pressed="${!!V.couches&&V.cut!=="ecorche"&&lay[l.k]!==false&&LAY.slice(LAY.indexOf(l)+1).every(q=>lay[q.k]===false)}">${LAYSHORT[l.k]||l.n}</button>`).join("")}</div>
@@ -4158,32 +4158,84 @@ function v3Init(){
   V3.r=r; V3.cam=new T3.PerspectiveCamera(60,1,0.05,200); V3.wrap=wrap; V3.keys={}; V3.mv=[0,0];
   const {c,g}=v3Fit(), P=g.inner.flatMap(e=>[e.a,e.b]), ext=Math.max(Math.max(...P.map(p=>p[0]))-Math.min(...P.map(p=>p[0])),Math.max(...P.map(p=>p[1]))-Math.min(...P.map(p=>p[1])))/1000;
   V3.fp={x:c[0],y:c[1],yaw:0,pitch:0}; V3.orb={th:-0.6,ph:0.9,r:Math.max(5,ext*(wrap.clientWidth<600?2.4:1.7)+2),t:[c[0],c[1]]};
-  v3Rebuild(); v3Events(); v3Loop(); }
+  v3Rebuild(); v3Events(); v3Loop(); VR.on=null;
+  try{ if(navigator.xr&&navigator.xr.isSessionSupported) navigator.xr.isSessionSupported("immersive-vr").then(ok=>{ VR.xr=!!ok; }).catch(()=>{}); }catch(e){} }
 function v3Rebuild(){ if(!V3.r) return; { const R=V3.r, real=!!S.v3.real; R.toneMapping=real?THREE.ACESFilmicToneMapping:THREE.NoToneMapping; R.toneMappingExposure=real?.82:1; R.shadowMap.enabled=real; R.shadowMap.type=THREE.PCFSoftShadowMap; R.physicallyCorrectLights=false; } if(V3.scene) V3.scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); });
   const b=buildScene(); V3.scene=b.scene; V3.pick=b.pick; V3.walls=b.wallSets; V3.dirty=true; }
 function v3Cam(){ const V=S.v3, cam=V3.cam, wrap=V3.wrap, W=wrap.clientWidth, H=wrap.clientHeight;
   if(V3.r.domElement.width!==Math.round(W*V3.r.getPixelRatio())||V3.r.domElement.height!==Math.round(H*V3.r.getPixelRatio())){ V3.r.setSize(W,H,false); }
   cam.aspect=W/H; cam.updateProjectionMatrix();
   if(V.mode==="visite"){ cam.fov=V3.fov||70; cam.updateProjectionMatrix(); const f=V3.fp; cam.position.set(f.x/1000,1.6,-f.y/1000);
-    cam.lookAt(cam.position.x+Math.cos(f.pitch)*Math.sin(f.yaw), 1.6+Math.sin(f.pitch), cam.position.z-Math.cos(f.pitch)*Math.cos(f.yaw)); }
+    if(!(VR.on&&VR.on!=="xr"&&vrApply(cam))) cam.lookAt(cam.position.x+Math.cos(f.pitch)*Math.sin(f.yaw), 1.6+Math.sin(f.pitch), cam.position.z-Math.cos(f.pitch)*Math.cos(f.yaw)); }
   else { cam.fov=50; cam.updateProjectionMatrix(); const o=V3.orb, tx=o.t[0]/1000, tz=-o.t[1]/1000;
     cam.position.set(tx+o.r*Math.sin(o.ph)*Math.sin(o.th), o.r*Math.cos(o.ph)+0.5, tz+o.r*Math.sin(o.ph)*Math.cos(o.th)); cam.lookAt(tx,1.0,tz); }
   const cx=cam.position.x*1000, cy=-cam.position.z*1000, mq=V.mode!=="visite";
   (V3.walls||[]).forEach(ws=>{ const front=mq && (ws.nx*(cx-ws.mx)+ws.ny*(cy-ws.my))<0, k=front?Math.min(1,1000/ws.H):1;
     ws.objs.forEach(o=>{ if(o.isGroup||o.isSprite) o.visible=!front; else o.scale.y=k; }); (ws.net||[]).forEach(o=>o.visible=!front); }); }
+/* ---------- Réalité virtuelle : sans casque (gyroscope), boîtier téléphone (écran partagé), casque VR (WebXR) ---------- */
+const VR={on:null,o:null,q:null,off:0,last:0,walk:false,stereo:null,xr:false};
+function vrOrient(){ return ((screen.orientation&&screen.orientation.angle)!=null?screen.orientation.angle:(window.orientation||0))*Math.PI/180; }
+function vrOnOri(e){ if(e.alpha==null&&e.beta==null) return; VR.o={a:(e.alpha||0)*Math.PI/180,b:(e.beta||0)*Math.PI/180,g:(e.gamma||0)*Math.PI/180}; VR.last=performance.now(); if(V3) V3.dirty=true; }
+function vrQuat(){ if(!VR.o) return null; const T=THREE, q=new T.Quaternion(), e=new T.Euler(VR.o.b,VR.o.a,-VR.o.g,"YXZ");
+  q.setFromEuler(e); q.multiply(new T.Quaternion(-Math.sqrt(0.5),0,0,Math.sqrt(0.5))); q.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),-vrOrient())); return q; }
+function vrHeading(q){ const d=new THREE.Vector3(0,0,-1).applyQuaternion(q); return Math.atan2(-d.x,-d.z); }
+function vrApply(cam){ const q=vrQuat(); if(!q) return false; if(VR.cal){ VR.off=(-V3.fp.yaw)-vrHeading(q); VR.cal=false; }
+  const qo=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),VR.off); cam.quaternion.copy(qo.multiply(q));
+  const d=new THREE.Vector3(0,0,-1).applyQuaternion(cam.quaternion); V3.fp.yaw=Math.atan2(d.x,-d.z); V3.fp.pitch=Math.asin(Math.max(-1,Math.min(1,d.y))); return true; }
+async function vrStart(mode){
+  if(mode==="xr") return vrXR();
+  try{ if(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==="function"){ const r=await DeviceOrientationEvent.requestPermission(); if(r!=="granted") setTimeout(()=>vrMsg("Autorise l'accès aux mouvements du téléphone pour la VR (réglages du navigateur)."),300); } }catch(e){}
+  S.v3.mode="visite"; VR.on=mode; VR.cal=true; VR.o=null; VR.last=0; window.addEventListener("deviceorientation",vrOnOri,true);
+  const w=V3.wrap; w.classList.add("vr-"+mode);
+  if(mode==="casque"){ try{ await (w.requestFullscreen?w.requestFullscreen():Promise.resolve()); }catch(e){} try{ await screen.orientation.lock("landscape"); }catch(e){} }
+  vrUi(); setTimeout(()=>{ if(VR.on&&!VR.o) vrMsg("Pas de gyroscope détecté sur cet appareil : glisse le doigt pour regarder autour."); },1800); V3.dirty=true; }
+function vrStop(){ window.removeEventListener("deviceorientation",vrOnOri,true); const w=V3.wrap; if(w) w.classList.remove("vr-gyro","vr-casque"); VR.on=null; VR.walk=false;
+  try{ if(document.fullscreenElement) document.exitFullscreen(); }catch(e){} try{ screen.orientation.unlock(); }catch(e){} vrUi(); if(V3.r){ V3.r.setScissorTest(false); } V3.dirty=true; }
+function vrMsg(t){ const m=document.getElementById("vrmsg"); if(!m) return; m.textContent=t; m.style.display="block"; clearTimeout(VR.mt); VR.mt=setTimeout(()=>m.style.display="none",4500); }
+function vrUi(){ const w=V3.wrap; if(!w) return; let u=document.getElementById("vrui");
+  if(!u){ u=document.createElement("div"); u.id="vrui"; w.appendChild(u); }
+  const on=VR.on; u.innerHTML=on?`<button type="button" data-vr="stop" style="position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:6;padding:6px 14px;border-radius:16px;border:0;background:#000a;color:#fff;font-size:13px">✕ Quitter la VR</button>${on==="casque"?`<div style="position:absolute;left:50%;top:0;bottom:0;width:2px;background:#000;z-index:5;transform:translateX(-1px)"></div><div style="position:absolute;left:0;right:0;bottom:10px;text-align:center;z-index:6;color:#fff;font-size:12px;text-shadow:0 0 4px #000">Touche l'écran (ou le bouton du casque) et garde appuyé pour avancer</div>`:`<button type="button" data-vr="recal" style="position:absolute;right:8px;top:8px;z-index:6;padding:6px 10px;border-radius:16px;border:0;background:#000a;color:#fff;font-size:13px">⟲ Recentrer</button>`}`:"";
+  if(!document.getElementById("vrmsg")){ const m=document.createElement("div"); m.id="vrmsg"; m.style.cssText="position:absolute;left:50%;top:48px;transform:translateX(-50%);z-index:7;background:#000c;color:#fff;padding:8px 12px;border-radius:8px;font-size:13px;max-width:85%;display:none;text-align:center"; w.appendChild(m); }
+  const bar=document.getElementById("v3bar"), joy=document.getElementById("v3joy"); if(bar) bar.style.display=on?"none":"flex"; if(joy) joy.style.display=on==="casque"?"none":(S.v3.mode==="visite"?"block":"none"); }
+function vrMenu(){ const pop=document.getElementById("v3pop"); if(!pop) return; pop.style.display="block";
+  pop.innerHTML=`<b>Réalité virtuelle</b><div style="display:grid;gap:8px;margin-top:8px">
+    <button type="button" data-vr="gyro" style="text-align:left;padding:8px">📱 <b>Sans casque</b><br><small>Tu bouges le téléphone pour regarder autour, le joystick pour avancer.</small></button>
+    <button type="button" data-vr="casque" style="text-align:left;padding:8px">🥽 <b>Boîtier VR pour téléphone</b><br><small>Écran partagé en deux pour un casque type Cardboard, VR Box ou Samsung. Mets le téléphone en paysage dans le boîtier.</small></button>
+    ${VR.xr?`<button type="button" data-vr="xr" style="text-align:left;padding:8px">🕶️ <b>Casque VR autonome</b><br><small>Meta Quest, Pico… (ouvrir l'appli dans le navigateur du casque).</small></button>`:`<small style="color:var(--muted,#666)">Casque autonome (Meta Quest, Pico) : ouvre le lien de l'appli dans le navigateur du casque, l'option apparaîtra ici.</small>`}
+    <button type="button" data-vr="close" class="ghost" style="padding:6px">Fermer</button></div>`; }
+async function vrXR(){ const r=V3.r; if(!navigator.xr) return; let ses; try{ ses=await navigator.xr.requestSession("immersive-vr",{optionalFeatures:["local-floor"]}); }catch(e){ vrMsg("Le casque n'a pas accepté la session VR."); return; }
+  S.v3.mode="visite"; V3.dirty=true; v3Cam(); r.xr.enabled=true; try{ r.xr.setReferenceSpaceType("local-floor"); }catch(e){}
+  await r.xr.setSession(ses); VR.on="xr"; cancelAnimationFrame(V3.raf); V3.raf=0;
+  const sc=V3.scene, f=V3.fp; sc.position.set(0,0,0); sc.rotation.y=0; const piv=new THREE.Group(); // le monde est déplacé pour que l'utilisateur démarre au point de visite
+  sc.rotation.y=f.yaw; sc.position.set(-f.x/1000,0,f.y/1000).applyAxisAngle(new THREE.Vector3(0,1,0),f.yaw);
+  const step=()=>{ const xc=r.xr.getCamera(V3.cam), d=new THREE.Vector3(0,0,-1).applyQuaternion(xc.quaternion); d.y=0; if(d.lengthSq()<1e-6) return; d.normalize().multiplyScalar(0.5); sc.position.sub(d); };
+  for(let i=0;i<2;i++){ const c=r.xr.getController(i); c.addEventListener("selectstart",step); }
+  r.setAnimationLoop(()=>r.render(V3.scene,V3.cam));
+  ses.addEventListener("end",()=>{ r.setAnimationLoop(null); r.xr.enabled=false; sc.position.set(0,0,0); sc.rotation.y=0; VR.on=null; vrUi(); V3.dirty=true; v3Loop(); }); vrUi(); }
+function vrRender(){ const r=V3.r, cam=V3.cam, W=V3.wrap.clientWidth, H=V3.wrap.clientHeight;
+  if(VR.on!=="casque"){ r.render(V3.scene,cam); return; }
+  if(!VR.stereo){ VR.stereo=new THREE.StereoCamera(); VR.stereo.eyeSep=0.064; }
+  cam.aspect=W/2/H; cam.fov=90; cam.updateProjectionMatrix(); cam.updateMatrixWorld(); VR.stereo.update(cam);
+  r.setScissorTest(true); r.setScissor(0,0,W/2,H); r.setViewport(0,0,W/2,H); r.render(V3.scene,VR.stereo.cameraL);
+  r.setScissor(W/2,0,W/2,H); r.setViewport(W/2,0,W/2,H); r.render(V3.scene,VR.stereo.cameraR); r.setScissorTest(false); r.setViewport(0,0,W,H); }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-vr]"); if(!b) return; const k=b.dataset.vr, pop=document.getElementById("v3pop");
+  if(k==="close"){ if(pop) pop.style.display="none"; return; } if(k==="stop"){ if(VR.on==="xr"){ try{ V3.r.xr.getSession().end(); }catch(e){} } else vrStop(); return; }
+  if(k==="recal"){ VR.cal=true; V3.dirty=true; return; } if(pop) pop.style.display="none"; vrStart(k); });
+document.addEventListener("fullscreenchange",()=>{ if(!document.fullscreenElement&&VR.on==="casque") vrStop(); });
 function v3Loop(){ if(S.view!=="visite"||!document.getElementById("v3wrap")){ V3.raf=0; return; }
   const V=S.v3; let moved=false;
-  if(V.mode==="visite"){ const k=V3.keys, f=V3.fp; let fw=(k.ArrowUp||k.z||k.w?1:0)-(k.ArrowDown||k.s?1:0)+V3.mv[1], st=(k.d?1:0)-(k.q||k.a?1:0)+V3.mv[0]; if(k.ArrowLeft) f.yaw-=0.03; if(k.ArrowRight) f.yaw+=0.03;
+  if(V.mode==="visite"){ const k=V3.keys, f=V3.fp; let fw=(k.ArrowUp||k.z||k.w?1:0)-(k.ArrowDown||k.s?1:0)+V3.mv[1]+(VR.walk?0.6:0), st=(k.d?1:0)-(k.q||k.a?1:0)+V3.mv[0]; if(k.ArrowLeft) f.yaw-=0.03; if(k.ArrowRight) f.yaw+=0.03;
     if(fw||st||k.ArrowLeft||k.ArrowRight){ const sp=28, nx=f.x+(Math.sin(f.yaw)*fw+Math.cos(f.yaw)*st)*sp, ny=f.y+(Math.cos(f.yaw)*fw-Math.sin(f.yaw)*st)*sp;
       if(insideAny(nx,ny)){ f.x=nx; f.y=ny; } else if(insideAny(nx,f.y)) f.x=nx; else if(insideAny(f.x,ny)) f.y=ny; moved=true; } }
-  if(moved||V3.dirty){ v3Cam(); V3.r.render(V3.scene,V3.cam); V3.dirty=false; }
+  if(VR.on==="xr"){ V3.raf=0; return; }
+  if(moved||V3.dirty||(VR.on&&VR.o)){ v3Cam(); vrRender(); V3.dirty=false; }
   V3.raf=requestAnimationFrame(v3Loop); }
 function v3Events(){
   const el=V3.r.domElement, wrap=V3.wrap; let drag=null;
   const ray=new THREE.Raycaster(), ndc=e=>{ const R=el.getBoundingClientRect(); return new THREE.Vector2((e.clientX-R.left)/R.width*2-1,-(e.clientY-R.top)/R.height*2+1); };
   const hitObj=e=>{ ray.setFromCamera(ndc(e),V3.cam); const h=ray.intersectObjects(V3.pick,false); return h[0]; };
   const pts=new Map();
-  el.addEventListener("pointerdown",e=>{ el.setPointerCapture(e.pointerId); pts.set(e.pointerId,[e.clientX,e.clientY]);
+  el.addEventListener("pointerdown",e=>{ if(VR.on==="casque"){ VR.walk=true; return; } el.setPointerCapture(e.pointerId); pts.set(e.pointerId,[e.clientX,e.clientY]);
     const h=hitObj(e), ud=h&&h.object.userData, movable=ud&&(ud.kind==="meub"||ud.kind==="kit")&&V3.sel&&V3.sel.kind===ud.kind&&V3.sel.idx===ud.idx&&V3.sel.room===ud.room;
     if(pts.size>=2&&drag){ drag.pinch=true; drag.moved=true; drag.obj=null; drag.d0=0; return; }
     drag={x:e.clientX,y:e.clientY,moved:false,obj:movable?ud:null,orb:{...V3.orb},fp:{...V3.fp},d0:0}; });
@@ -4192,11 +4244,12 @@ function v3Events(){
       if(S.v3.mode==="visite") V3.fov=Math.max(20,Math.min(100,drag.fov*drag.d0/d)); else V3.orb.r=Math.max(1.5,Math.min(40,drag.orb.r*drag.d0/d)); V3.dirty=true; return; }
     if(drag.pinch) return;
     if(drag.obj){ ray.setFromCamera(ndc(e),V3.cam); const pl=new THREE.Plane(new THREE.Vector3(0,1,0),0), pt=new THREE.Vector3(); if(!ray.ray.intersectPlane(pl,pt)) return; v3MoveSel(pt.x*1000,-pt.z*1000); return; }
+    if(VR.on&&VR.o){ if(drag.off0===undefined) drag.off0=VR.off; VR.off=drag.off0+dx*0.005; V3.dirty=true; return; }
     if(S.v3.mode==="visite"){ V3.fp.yaw=drag.fp.yaw-dx*0.005; V3.fp.pitch=Math.max(-1.2,Math.min(1.2,drag.fp.pitch+dy*0.004)); }
     else { V3.orb.th=drag.orb.th-dx*0.006; V3.orb.ph=Math.max(0.12,Math.min(1.5,drag.orb.ph-dy*0.005)); }
     V3.dirty=true; });
-  el.addEventListener("pointercancel",e=>{ pts.delete(e.pointerId); if(!pts.size) drag=null; });
-  el.addEventListener("pointerup",e=>{ pts.delete(e.pointerId); if(!drag) return; if(drag.pinch){ if(!pts.size) drag=null; return; } const d=drag; drag=null;
+  el.addEventListener("pointercancel",e=>{ VR.walk=false; pts.delete(e.pointerId); if(!pts.size) drag=null; });
+  el.addEventListener("pointerup",e=>{ VR.walk=false; pts.delete(e.pointerId); if(!drag) return; if(drag.pinch){ if(!pts.size) drag=null; return; } const d=drag; drag=null;
     if(d.obj){ save(); renderSide(); v3Rebuild(); return; }
     if(!d.moved){ const h=hitObj(e); v3Select(h?h.object.userData:null); } });
   el.addEventListener("wheel",e=>{ e.preventDefault(); if(S.v3.mode==="visite"){ const f=V3.fp, st=e.deltaY<0?250:-250, nx=f.x+Math.sin(f.yaw)*st, ny=f.y+Math.cos(f.yaw)*st; if(insideAny(nx,ny)){ f.x=nx; f.y=ny; } } else V3.orb.r=Math.max(1.5,Math.min(40,V3.orb.r*(e.deltaY<0?0.9:1.1))); V3.dirty=true; },{passive:false});
@@ -4219,6 +4272,7 @@ function v3Cmd(k){ const V=S.v3;
   if(k==="couches"){ if(V.cut==="ecorche"||V.couches){ V.cut=""; V.couches=false; } else { V.cut="ecorche"; v3FaceWall(); } }
   if(k.startsWith("upto:")){ const L=wallLayers(), i=L.findIndex(l=>l.k===k.slice(5)); S.r3.lay={}; L.forEach((l,j)=>{ if(j>i) S.r3.lay[l.k]=false; }); V.cut=""; V.couches=true; v3FaceWall(); }
   if(k==="cutfini"){ V.cut=""; V.couches=false; S.r3.lay={}; } if(k==="cutlay"){ V.cut=""; V.couches=true; } if(k==="cutecorche"){ V.cut="ecorche"; v3FaceWall(); }
+  if(k==="vr"){ if(VR.on) vrStop(); else vrMenu(); return; }
   if(k==="fs"){ const w=V3.wrap; if(document.fullscreenElement) document.exitFullscreen(); else if(w.requestFullscreen) w.requestFullscreen().then(()=>{ V3.dirty=true; }).catch(()=>{}); return; }
   save(); const j=document.getElementById("v3joy"); if(j) j.style.display=V.mode==="visite"?"block":"none"; v3Rebuild(); v3Bar(); document.getElementById("extra").innerHTML=v3Extra();
   document.getElementById("legend").innerHTML=(V.res?netLegend():"")+(V.mode==="visite"?`<span>Visite : glissez pour regarder autour, joystick ou flèches / ZQSD pour avancer, pincez avec deux doigts pour zoomer. Touchez un meuble pour le peindre, l'ouvrir ou le déplacer.</span>`:`<span>Maquette : glissez pour tourner, molette ou pincer pour zoomer. Touchez un meuble pour le peindre, l'ouvrir ou le déplacer (glisser).</span>`); }
@@ -4813,7 +4867,7 @@ const IKEA_MAHDI={"source":"Planificateur de cuisine IKEA, 13/11/2026 (design 47
 function ikeaAuto(force){ try{ const rw=S.walls.filter(w=>(w.room||"")==="cuisine"); if(!rw.some(w=>/lin[eé]aire/i.test(w.name))||!rw.some(w=>/salon/i.test(w.name))) return "";
   if(!force&&(S.kitIkea||(S.kit&&S.kit.cuisine&&S.kit.cuisine.items&&S.kit.cuisine.items.length))) return "";
   const m=kitImport(JSON.parse(JSON.stringify(IKEA_MAHDI))); S.kitIkea=1; save(); return m; }catch(e){ return ""; } }
-setTimeout(()=>{ if(ikeaAuto(false)) renderAll(); },300);
+setTimeout(()=>{ let ch=!!ikeaAuto(false); try{ if(!S.credOff){ S.walls.filter(w=>(w.room||"")==="cuisine"&&/lin[eé]aire/i.test(w.name)&&w.tile&&w.tile.on).forEach(w=>{ w.tile.on=false; ch=true; }); S.credOff=1; save(); } }catch(e){} if(ch) renderAll(); },300);
 document.addEventListener("click",e=>{ if(!e.target.closest("[data-ikea]")) return; if(S.kit&&S.kit.cuisine&&S.kit.cuisine.items.length&&!confirm("Remplacer les meubles de la cuisine par ceux du plan IKEA du 13/11/2026 ?")) return; const m=ikeaAuto(true); renderAll(); if(m) alert(m); });
 function loadProject(txt){
   let d; try{ d=JSON.parse(txt); }catch(e){ ioMsg("Ce texte n'est pas un projet valide : copiez-le en entier depuis le bouton « Copier le projet »."); return; }
