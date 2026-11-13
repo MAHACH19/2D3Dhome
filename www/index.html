@@ -3795,6 +3795,28 @@ function hdSave(){ if(!HD.a||HD.n<1) return; hdShow(); const url=V3.r.domElement
   ov.innerHTML=`<img src="${url}" style="max-width:100%;max-height:78vh;border-radius:6px"><div style="color:#fff;font:14px system-ui,sans-serif;text-align:center">Appui long sur l'image pour l'enregistrer</div><div style="display:flex;gap:8px"><a href="${url}" download="${nm}" style="color:#fff;background:#1d63c4;padding:8px 14px;border-radius:6px;text-decoration:none;font:600 14px system-ui">Télécharger</a><button style="padding:8px 14px;border-radius:6px;border:0;font:600 14px system-ui">Fermer</button></div>`;
   ov.querySelector("button").onclick=()=>ov.remove(); document.body.appendChild(ov); }
 document.addEventListener("click",e=>{ if(!e.target.closest("[data-hd]")) return; e.stopPropagation(); if(HD.n>=HD.max) hdSave(); else { HD.snap=true; hdBadge(); } },true);
+/* 📏 Mesure en 3D : toucher deux points sur n'importe quelle surface (mur fini, sol, meuble…) → distance affichée */
+const MES={on:false,pts:[],list:[],g:null};
+function mesFmt(mm){ return (Math.round(mm)/10).toFixed(1).replace(".",",")+" cm"; }
+function mesTap(e){ const el=V3.r.domElement, R=el.getBoundingClientRect(), ray=new THREE.Raycaster();
+  ray.setFromCamera(new THREE.Vector2((e.clientX-R.left)/R.width*2-1,-(e.clientY-R.top)/R.height*2+1),V3.cam);
+  const hs=ray.intersectObjects(V3.scene.children,true).filter(h=>{ const o=h.object, m=[].concat(o.material)[0]; let q=o; while(q){ if(q.userData&&(q.userData.mes||q.userData.ao)) return false; q=q.parent; } return o.isMesh&&o.visible&&!(m&&m.transparent&&m.opacity<.35); });
+  if(!hs.length){ mesHint("Aucune surface ici : touchez un mur, le sol ou un meuble"); return; }
+  let p=hs[0].point.clone(); const all=MES.list.flat().concat(MES.pts); all.forEach(q=>{ if(p.distanceTo(q)<.03) p=q.clone(); }); // aimant 3 cm sur les points existants
+  MES.pts.push(p); if(MES.pts.length===2){ MES.list.push(MES.pts); MES.pts=[]; } mesDraw(); v3Bar(); }
+function mesHint(t){ const w=V3.wrap; if(!w) return; let el=w.querySelector("#v3mes"); if(!t){ if(el) el.remove(); return; }
+  if(!el){ el=document.createElement("div"); el.id="v3mes"; el.style.cssText="position:absolute;left:50%;transform:translateX(-50%);top:92px;z-index:5;padding:6px 11px;border-radius:16px;background:rgba(200,40,30,.88);color:#fff;font:600 13px system-ui,sans-serif;white-space:nowrap;pointer-events:none"; w.appendChild(el); } el.textContent=t; }
+function mesLabel(lines,pos){ const c=document.createElement("canvas"), x=c.getContext("2d"), fs=40, f2=28; x.font=`700 ${fs}px sans-serif`; let tw=x.measureText(lines[0]).width; x.font=`600 ${f2}px sans-serif`; if(lines[1]) tw=Math.max(tw,x.measureText(lines[1]).width);
+  c.width=Math.ceil(tw+30); c.height=lines[1]?fs+f2+30:fs+22; x.fillStyle="rgba(200,40,30,.94)"; x.fillRect(0,0,c.width,c.height); x.fillStyle="#fff"; x.textBaseline="top"; x.font=`700 ${fs}px sans-serif`; x.fillText(lines[0],15,10); if(lines[1]){ x.font=`600 ${f2}px sans-serif`; x.fillText(lines[1],15,fs+16); }
+  const t=new THREE.CanvasTexture(c); t.encoding=THREE.sRGBEncoding; const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,sizeAttenuation:false,toneMapped:false})); const k=.0011; sp.scale.set(c.width*k,c.height*k,1); sp.position.copy(pos); sp.renderOrder=31; return sp; }
+function mesDraw(){ if(!V3.scene){ return; } if(MES.g){ MES.g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ if(o.material.map) o.material.map.dispose(); o.material.dispose(); } }); V3.scene.remove(MES.g); MES.g=null; }
+  const g=new THREE.Group(); g.userData.mes=1; const red=new THREE.MeshBasicMaterial({color:"#e0301e",depthTest:false,transparent:true,opacity:.95,toneMapped:false});
+  const dot=p=>{ const m=new THREE.Mesh(new THREE.SphereGeometry(.012,12,8),red); m.position.copy(p); m.renderOrder=30; g.add(m); };
+  MES.list.forEach(([a,b])=>{ dot(a); dot(b); const L=a.distanceTo(b); if(L>1e-4){ const cy=new THREE.Mesh(new THREE.CylinderGeometry(.0035,.0035,L,8),red); cy.position.copy(a).add(b).multiplyScalar(.5); cy.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),b.clone().sub(a).normalize()); cy.renderOrder=30; g.add(cy); }
+    const dh=Math.hypot(b.x-a.x,b.z-a.z)*1000, dv=Math.abs(b.y-a.y)*1000, tol=Math.max(8,L*1000*.03), sub=dh>tol&&dv>tol?`↔ ${mesFmt(dh)} · ↕ ${mesFmt(dv)}`:dv<=tol?"↔ horizontal":"↕ vertical";
+    g.add(mesLabel([mesFmt(L*1000),sub],a.clone().add(b).multiplyScalar(.5))); });
+  MES.pts.forEach(dot); V3.scene.add(g); MES.g=g; V3.dirty=true;
+  mesHint(!MES.on?null:MES.pts.length?"Touchez le 2e point":MES.list.length?"Touchez un 1er point pour une nouvelle mesure":"📏 Touchez le 1er point à mesurer"); }
 function v3Mat(color,o){ return new THREE.MeshStandardMaterial(Object.assign({color:new THREE.Color(color),roughness:.85,metalness:0,side:THREE.DoubleSide},o||{})); }
 function wallMatrix(s,o0){ const m=new THREE.Matrix4(); m.set(s.dx,0,s.nx,(s.x0+s.nx*o0)/1000, 0,1,0,0, -s.dy,0,-s.ny,-(s.y0+s.ny*o0)/1000, 0,0,0,1); return m; }
 const LAYSHORT={pierre:"Pierre",fibre:"Fibre de bois",mem:"Membrane Vario",oss:"Ossature",pla:"Plaque",end:"Enduit",peint:"Peinture"};
@@ -4216,7 +4238,7 @@ function renderVisite(){
   document.getElementById("extra").innerHTML=v3Extra(); }
 function v3Bar(){ const V=S.v3, b=(k,l,on)=>`<button type="button" data-v3="${k}" aria-pressed="${!!on}" style="padding:5px 10px;font-size:13px;background:${on?"var(--chalk)":"#ffffffdd"};color:${on?"#fff":"#222"};border:1px solid #0002;border-radius:5px">${l}</button>`;
   const el=document.getElementById("v3bar"); if(!el) return;
-  el.innerHTML=b("visite","🚶 Visite",V.mode==="visite")+b("maquette","Maquette",V.mode!=="visite")+b("couches","Couches",V.cut==="ecorche"||V.couches)+b("ceil","Plafond",V.ceil)+b("res","🔧 Réseaux",V.res)+b("real","✨ Réaliste",V.real)+b("nuit","Nuit",V.nuit)+b("joints","Joints placo",V.joints!==false)+b("all","Logement",V.all)+b("vr","🥽 VR",!!VR.on)+b("fs","⛶ Plein écran",false); }
+  el.innerHTML=b("visite","🚶 Visite",V.mode==="visite")+b("maquette","Maquette",V.mode!=="visite")+b("couches","Couches",V.cut==="ecorche"||V.couches)+b("ceil","Plafond",V.ceil)+b("res","🔧 Réseaux",V.res)+b("real","✨ Réaliste",V.real)+b("nuit","Nuit",V.nuit)+b("joints","Joints placo",V.joints!==false)+b("all","Logement",V.all)+b("mes","📏 Mesure",MES.on)+(MES.list.length||MES.pts.length?b("mesclr","✕ Effacer mesures",false):"")+b("vr","🥽 VR",!!VR.on)+b("fs","⛶ Plein écran",false); }
 function v3Extra(){ const V=S.v3, LAY=wallLayers(), lay=S.r3.lay||{};
   return `<section class="box"><h2>Visite 3D</h2>
     <div class="btns" style="margin-bottom:6px;align-items:center"><span class="cap" style="margin-right:4px">Voir jusqu'à :</span>${LAY.filter(l=>l.k!=="end").map(l=>`<button type="button" data-v3="upto:${l.k}" aria-pressed="${!!V.couches&&V.cut!=="ecorche"&&lay[l.k]!==false&&LAY.slice(LAY.indexOf(l)+1).every(q=>lay[q.k]===false)}">${LAYSHORT[l.k]||l.n}</button>`).join("")}</div>
@@ -4238,7 +4260,7 @@ function v3Init(){
   v3Rebuild(); v3Events(); v3Loop(); VR.on=null;
   try{ if(navigator.xr&&navigator.xr.isSessionSupported) navigator.xr.isSessionSupported("immersive-vr").then(ok=>{ VR.xr=!!ok; }).catch(()=>{}); }catch(e){} }
 function v3Rebuild(){ if(!V3.r) return; { const R=V3.r, real=!!S.v3.real; R.toneMapping=real?THREE.ACESFilmicToneMapping:THREE.NoToneMapping; R.toneMappingExposure=real?.75:1; R.shadowMap.enabled=real; R.shadowMap.type=THREE.PCFSoftShadowMap; R.physicallyCorrectLights=false; } if(V3.scene) V3.scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.shadow&&o.shadow.map){ o.shadow.map.dispose(); o.shadow.map=null; } if(o.material) [].concat(o.material).forEach(m=>{ if(m&&m.map&&m.map.__own){ m.map.dispose(); } }); });
-  const b=buildScene(); V3.scene=b.scene; V3.pick=b.pick; V3.walls=b.wallSets; V3.dirty=true; }
+  const b=buildScene(); V3.scene=b.scene; V3.pick=b.pick; V3.walls=b.wallSets; V3.dirty=true; MES.g=null; mesDraw(); }
 function v3Cam(){ const V=S.v3, cam=V3.cam, wrap=V3.wrap, W=wrap.clientWidth, H=wrap.clientHeight;
   if(V3.r.domElement.width!==Math.round(W*V3.r.getPixelRatio())||V3.r.domElement.height!==Math.round(H*V3.r.getPixelRatio())){ V3.r.setSize(W,H,false); }
   cam.aspect=W/H; cam.updateProjectionMatrix();
@@ -4329,7 +4351,7 @@ function v3Events(){
   el.addEventListener("pointercancel",e=>{ VR.walk=false; pts.delete(e.pointerId); if(!pts.size) drag=null; });
   el.addEventListener("pointerup",e=>{ VR.walk=false; pts.delete(e.pointerId); if(!drag) return; if(drag.pinch){ if(!pts.size) drag=null; return; } const d=drag; drag=null;
     if(d.obj){ save(); renderSide(); v3Rebuild(); return; }
-    if(!d.moved){ const h=hitObj(e); v3Select(h?h.object.userData:null); } });
+    if(!d.moved){ if(MES.on){ mesTap(e); return; } const h=hitObj(e); v3Select(h?h.object.userData:null); } });
   el.addEventListener("wheel",e=>{ e.preventDefault(); if(S.v3.mode==="visite"){ const f=V3.fp, st=e.deltaY<0?250:-250, nx=f.x+Math.sin(f.yaw)*st, ny=f.y+Math.cos(f.yaw)*st; if(insideAny(nx,ny)){ f.x=nx; f.y=ny; } } else V3.orb.r=Math.max(1.5,Math.min(40,V3.orb.r*(e.deltaY<0?0.9:1.1))); V3.dirty=true; },{passive:false});
   if(V3.winBound) { /* déjà branché */ } else { V3.winBound=1;
   window.addEventListener("keydown",e=>{ if(S.view!=="visite"||/INPUT|SELECT|TEXTAREA/.test((e.target||{}).tagName||"")) return; V3.keys[e.key.length===1?e.key.toLowerCase():e.key]=true; if(e.key.startsWith("Arrow")) e.preventDefault(); });
@@ -4350,6 +4372,7 @@ function v3Cmd(k){ const V=S.v3;
   if(k==="couches"){ if(V.cut==="ecorche"||V.couches){ V.cut=""; V.couches=false; } else { V.cut="ecorche"; v3FaceWall(); } }
   if(k.startsWith("upto:")){ const L=wallLayers(), i=L.findIndex(l=>l.k===k.slice(5)); S.r3.lay={}; L.forEach((l,j)=>{ if(j>i) S.r3.lay[l.k]=false; }); V.cut=""; V.couches=true; v3FaceWall(); }
   if(k==="cutfini"){ V.cut=""; V.couches=false; S.r3.lay={}; } if(k==="cutlay"){ V.cut=""; V.couches=true; } if(k==="cutecorche"){ V.cut="ecorche"; v3FaceWall(); }
+  if(k==="mes"){ MES.on=!MES.on; MES.pts=[]; mesDraw(); v3Bar(); return; } if(k==="mesclr"){ MES.list=[]; MES.pts=[]; mesDraw(); v3Bar(); return; }
   if(k==="vr"){ if(VR.on) vrStop(); else vrMenu(); return; }
   if(k==="fs"){ const w=V3.wrap; if(document.fullscreenElement) document.exitFullscreen(); else if(w.requestFullscreen) w.requestFullscreen().then(()=>{ V3.dirty=true; }).catch(()=>{}); return; }
   save(); const j=document.getElementById("v3joy"); if(j) j.style.display=V.mode==="visite"?"block":"none"; v3Rebuild(); v3Bar(); document.getElementById("extra").innerHTML=v3Extra();
