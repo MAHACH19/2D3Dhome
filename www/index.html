@@ -3527,7 +3527,7 @@ function solPanel(w){
 }
 
 /* ---------- Visite 3D immersive (three.js) ---------- */
-const NUANCIER=[["Blanc pur","#f7f6f2"],["Blanc cassé","#efeadf"],["Lin","#e6dcc8"],["Greige","#cfc6b8"],["Gris perle","#c9cac6"],["Gris anthracite","#4b4e52"],["Vert sauge","#b3bca4"],["Vert olive","#7d7f5a"],["Bleu gris","#8e9aa6"],["Bleu nuit","#2f3d55"],["Terracotta","#b9674a"],["Ocre","#c99a4a"],["Rose poudré","#e3c7bf"],["Noir","#232323"]];
+const NUANCIER=[["Flügger White FL 8001","#f3f4f1"],["Blanc pur","#f7f6f2"],["Blanc cassé","#efeadf"],["Lin","#e6dcc8"],["Greige","#cfc6b8"],["Gris perle","#c9cac6"],["Gris anthracite","#4b4e52"],["Vert sauge","#b3bca4"],["Vert olive","#7d7f5a"],["Bleu gris","#8e9aa6"],["Bleu nuit","#2f3d55"],["Terracotta","#b9674a"],["Ocre","#c99a4a"],["Rose poudré","#e3c7bf"],["Noir","#232323"]];
 function paintColor(w){ if(w&&w.teinte) return w.teinte; const prod=(w&&w.peintN)||S.fin.peint.n; return /teint/i.test(prod)?(S.fin.peint.teinte||"#efe9df"):"#f7f6f2"; }
 const LUM=[
   {id:"plaf",n:"Plafonnier (point DCL)",c:"lum"},{id:"susp",n:"Suspension (point DCL)",c:"lum"},{id:"spot",n:"Spot LED encastré Ø 8 cm",c:"lum"},
@@ -4867,7 +4867,7 @@ const IKEA_MAHDI={"source":"Planificateur de cuisine IKEA, 13/11/2026 (design 47
 function ikeaAuto(force){ try{ const rw=S.walls.filter(w=>(w.room||"")==="cuisine"); if(!rw.some(w=>/lin[eé]aire/i.test(w.name))||!rw.some(w=>/salon/i.test(w.name))) return "";
   if(!force&&(S.kitIkea||(S.kit&&S.kit.cuisine&&S.kit.cuisine.items&&S.kit.cuisine.items.length))) return "";
   const m=kitImport(JSON.parse(JSON.stringify(IKEA_MAHDI))); S.kitIkea=1; save(); return m; }catch(e){ return ""; } }
-setTimeout(()=>{ let ch=!!ikeaAuto(false); try{ if(!S.credOff){ S.walls.filter(w=>(w.room||"")==="cuisine"&&/lin[eé]aire/i.test(w.name)&&w.tile&&w.tile.on).forEach(w=>{ w.tile.on=false; ch=true; }); S.credOff=1; save(); } }catch(e){} if(ch) renderAll(); },300);
+setTimeout(()=>{ let ch=!!ikeaAuto(false); try{ if(!S.credOff){ S.walls.filter(w=>(w.room||"")==="cuisine"&&/lin[eé]aire/i.test(w.name)&&w.tile&&w.tile.on).forEach(w=>{ w.tile.on=false; ch=true; }); S.credOff=1; save(); } }catch(e){} try{ if(!S.fl8001){ const D=["#f7f6f2","#efe9df",""]; S.fin.peint.teinte="#f3f4f1"; S.walls.forEach(w=>{ if(!w.teinte||D.includes(String(w.teinte).toLowerCase())) w.teinte="#f3f4f1"; }); S.fl8001=1; save(); ch=true; } }catch(e){} if(ch) renderAll(); },300);
 document.addEventListener("click",e=>{ if(!e.target.closest("[data-ikea]")) return; if(S.kit&&S.kit.cuisine&&S.kit.cuisine.items.length&&!confirm("Remplacer les meubles de la cuisine par ceux du plan IKEA du 13/11/2026 ?")) return; const m=ikeaAuto(true); renderAll(); if(m) alert(m); });
 function loadProject(txt){
   let d; try{ d=JSON.parse(txt); }catch(e){ ioMsg("Ce texte n'est pas un projet valide : copiez-le en entier depuis le bouton « Copier le projet »."); return; }
