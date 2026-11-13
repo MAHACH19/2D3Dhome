@@ -3893,6 +3893,8 @@ function buildScene(){
           const st=o.style||"pleine", dc=o.color||"#ece7dc", dm=v3Mat(dc,{roughness:.6}), W0=H.b-H.a, hinge=o.hinge==="d"?"d":"g", push=o.push==="out"?-1:1, ang=(st==="coulissante"||st==="galandage")?0:(o.open??70)*Math.PI/180;
           // huisserie
           const fm=v3Mat(o.color||"#ece7dc"); [[H.a-50,H.a],[H.b,H.b+50]].forEach(q=>scene.add(v3Box(s,q[0],q[1],g.T-10,g.T+12,0,H.d+50,fm))); scene.add(v3Box(s,H.a-50,H.b+50,g.T-10,g.T+12,H.d,H.d+50,fm));
+          // ébrasement : habillage d'une seule teinte sur toute l'épaisseur (pierre + doublage), sinon on voit les couches comme un mur décollé
+          if(!(cut==="ecorche"||V.couches||LAY.some(l=>lay[l.k]===false))){ const em=finMat(w,paintColor(w)); [[H.a,H.a+12],[H.b-12,H.b]].forEach(q=>scene.add(v3Box(s,q[0],q[1],-g.STN-1,g.T-10,0,H.d,em))); scene.add(v3Box(s,H.a,H.b,-g.STN-1,g.T-10,H.d-12,H.d,em)); }
           if(st==="galandage") return;
           const grp=new T3.Group(), leafW=W0-10, leafH=Math.min(H.d,o.h)-15, th=40;
           const leaf=new T3.Mesh(new T3.BoxGeometry(leafW/1000,leafH/1000,th/1000), dm); leaf.position.set((hinge==="g"?leafW/2:-leafW/2)/1000,(leafH/2+8)/1000,0); grp.add(leaf);
