@@ -2613,15 +2613,24 @@ function clipRect(P,x0,y0,x1,y1){
     if(ins(cur)){ if(!ins(prev)) out.push(cut(prev,cur)); out.push(cur); } else if(ins(prev)) out.push(cut(prev,cur)); }); });
   return out;
 }
+/* Plafond sous solives bois (réglages propres à chaque pièce) : solives 100×200 parallèles à un mur, entraxes mesurés travée par travée,
+   isolant fibre de bois + membrane entre les solives, fourrures F45 sur cavaliers vissés sous les solives, plaques sous les F45 */
+const CEIL_SOL={ref:"", s0:300, se:600, sx:"", jw:100, jh:200, fh:22, memPose:"entre", lat:"depose"};
+function ceilJoists(c,maxX){ const ax=[]; let x=+c.s0||300; const L=String(c.sx||"").trim().split(/[;\s]+/).map(t=>parseFloat(t.replace(/,$/,"").replace(",","."))).filter(v=>v>0).map(v=>Math.round(v*10));
+  for(let i=0;x<maxX-10&&i<200;i++){ ax.push(x); x+=L.length?(L[i]!==undefined?L[i]:L[L.length-1]):(+c.se||600); } return ax; }
+function ceilRef(room,g){ const rs=g.segs, c=ceilCfg(room); return rs.find(q=>q.w.id&&q.w.id===c.ref)||rs.find(q=>/fen/i.test(q.w.name||"")&&q.w.openings.some(o=>o.type==="Fenêtre"))||rs.find(q=>q.w.openings.some(o=>o.type==="Fenêtre"))||rs[0]; }
 function ceilCfg(room){
   if(!S.ceil) S.ceil={};
-  if(!S.ceil[room]) S.ceil[room]={on:false, e:500, susp:1200, len:2500, plaN:"", couches:1, iso:false, isoN:S.iso.n, ep:100, mem:true, peintN:"Flügger Flutex 2S mat spécial plafond", plenum:200};
-  return S.ceil[room];
+  if(!S.ceil[room]) S.ceil[room]={on:false, mode:"sol", e:500, susp:1200, len:2500, plaN:"", couches:1, iso:true, isoN:S.iso.n, ep:200, mem:true, peintN:"Flügger Flutex 2S mat spécial plafond", plenum:200};
+  const c=S.ceil[room]; Object.entries(CEIL_SOL).forEach(([k,v])=>{ if(c[k]===undefined) c[k]=v; }); if(!c.mode) c.mode="susp";
+  return c;
 }
 function computeCeil(room){
   const g=roomGeom(room), c=ceilCfg(room), res={g,c,ok:false,checks:[]};
   if(!c.on || !g.poly) return res;
-  const P=polyArea(g.poly)<0?[...g.poly].reverse():g.poly;
+  const sol=c.mode==="sol", sR=sol?ceilRef(room,g):null;
+  const FW=p=>{ if(!sol) return p; const a=p[0]-sR.x0, b=p[1]-sR.y0; return [a*sR.nx+b*sR.ny, a*sR.dx+b*sR.dy]; }, BW=q=>sol?[sR.x0+q[0]*sR.nx+q[1]*sR.dx, sR.y0+q[0]*sR.ny+q[1]*sR.dy]:q;
+  const PL=g.poly.map(FW), P=polyArea(PL)<0?[...PL].reverse():PL;
   const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]);
   const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
   const area=Math.abs(polyArea(P))/1e6;
@@ -2635,6 +2644,8 @@ function computeCeil(room){
     for(let k=0;k+1<xsI.length;k+=2){ const a=xsI[k], b=xsI[k+1], L=b-a; if(L<100) continue;
       fur.push({y,a,b}); const nb=Math.ceil(L/3000-1e-9); bars+=nb; ecl+=nb-1; susp+=Math.max(1,Math.ceil(L/c.susp)); }
   }
+  if(c.mode==="sol"&&fur.length){ const ly=Math.max(...fur.map(f=>f.y)); if(y1-ly>c.e){ const y=(ly+y1)/2, xsI=[]; P.forEach((p,i)=>{ const q=P[(i+1)%P.length]; if((p[1]<=y&&q[1]>y)||(q[1]<=y&&p[1]>y)) xsI.push(p[0]+(y-p[1])/(q[1]-p[1])*(q[0]-p[0])); }); xsI.sort((a,b)=>a-b);
+    for(let k=0;k+1<xsI.length;k+=2){ const a=xsI[k], b=xsI[k+1], L=b-a; if(L<100) continue; fur.push({y,a,b,rive:1}); const nb=Math.ceil(L/3000-1e-9); bars+=nb; ecl+=nb-1; } } }
   // plaques : grand côté perpendiculaire aux fourrures, bouts sur fourrure, joints décalés
   const Leff=Math.max(c.e, Math.floor(c.len/c.e)*c.e), off=Math.max(c.e, Math.round(Leff/c.e/2)*c.e);
   const plates=[]; let col=0;
@@ -2646,6 +2657,7 @@ function computeCeil(room){
   }
   const pc=plates.length*c.couches;
   const ck=(ok,t,ref)=>res.checks.push({ok,t,ref});
+  if(sol) return ceilSol(res,{g,c,P,x0,x1,y0,y1,area,per,pl,W,fur,bars,ecl,plates,pc,Leff,off,FW,BW,sR,ck,room});
   const emax=(c.iso||c.couches>1)?500:600;
   ck(c.e<=emax, c.e<=emax?`Entraxe des fourrures ${c.e/10} cm : conforme (maxi ${emax/10} cm${emax===500?" avec isolant ou 2 couches":""}).`:`Entraxe des fourrures ${c.e/10} cm trop grand : ${emax/10} cm maximum${emax===500?" avec isolant ou 2 couches de plaques":""}.`,"DTU 25.41 / fabricants");
   ck(c.susp<=1200, c.susp<=1200?`Suspentes tous les ${c.susp/10} cm sur chaque fourrure : conforme (maxi 120 cm).`:`Suspentes trop espacées (${c.susp/10} cm) : 120 cm maximum.`,"DTU 25.41 / fabricants");
@@ -2657,19 +2669,66 @@ function computeCeil(room){
   Object.assign(res,{ok:true,P,x0,x1,y0,y1,area,per,pl,W,fur,bars,ecl,susp,plates,pc,Leff,off});
   return res;
 }
+function ceilSol(res,o){ const {g,c,P,x0,x1,y0,y1,area,pl,fur,plates,ck,BW,sR,FW}=o, jw=+c.jw||100, jh=+c.jh||200, fh=+c.fh||22;
+  // solives : lignes X = axe, coupées par le contour de la pièce
+  const axes=ceilJoists(c,x1), joists=[];
+  axes.forEach(a=>{ const ysI=[]; P.forEach((p,i)=>{ const q=P[(i+1)%P.length]; if((p[0]<=a&&q[0]>a)||(q[0]<=a&&p[0]>a)) ysI.push(p[1]+(a-p[0])/(q[0]-p[0])*(q[1]-p[1])); }); ysI.sort((u,v)=>u-v);
+    for(let k=0;k+1<ysI.length;k+=2) if(ysI[k+1]-ysI[k]>50) joists.push({x:a,a:ysI[k],b:ysI[k+1]}); });
+  const ent=axes.slice(1).map((a,i)=>a-axes[i]), nJ=new Set(joists.map(j=>j.x)).size;
+  const jArea=axes.reduce((s,a)=>{ const q=clipRect(P,a-jw/2,y0-1,a+jw/2,y1+1); return s+(q.length>2?Math.abs(polyArea(q)):0); },0)/1e6, isoA=Math.max(0,area-jArea), jLen=joists.reduce((s,j)=>s+j.b-j.a,0)/1000;
+  // cavaliers : à chaque croisement fourrure / solive
+  let cav=0, gapMax=0; fur.forEach(f=>{ f.cav=axes.filter(a=>a>f.a+jw/2&&a<f.b-jw/2); cav+=f.cav.length; const st=[f.a,...f.cav,f.b]; st.slice(1).forEach((v,i)=>{ gapMax=Math.max(gapMax,v-st[i]); }); });
+  const thin=/15|18/.test(pl.n), emax=c.couches>1?500:thin?600:500, Hf=g.H-fh-12.5*c.couches;
+  ck(c.e<=emax, c.e<=emax?`Fourrures F45 à ${c.e/10} cm d'entraxe, perpendiculaires aux solives : conforme (maxi ${emax/10} cm pour des plaques de 12,5 mm posées en travers).`:`Entraxe des fourrures F45 ${c.e/10} cm trop grand : ${emax/10} cm maximum sous des plaques de 12,5 mm${c.couches>1?" en 2 couches":""}.`,"DTU 25.41 (plafonds)");
+  ck(gapMax<=1200, gapMax<=1200?`Un cavalier sous chaque solive croisée (${cav} cavaliers, 2 vis à bois chacun) : appuis tous les ${fr(gapMax/10,0)} cm au plus le long des F45, conforme (maxi 120 cm).`:`Il y a ${fr(gapMax/10,0)} cm sans appui sur une fourrure F45 : maxi 120 cm, ajoutez une solive, une lambourde ou une suspente.`,"DTU 25.41 / fabricants");
+  if(ent.length){ const mn=Math.min(...ent), mx=Math.max(...ent); ck(mx<=650&&mn>=300, `${nJ} solive(s) ${jw/10}×${jh/10} cm parallèles au mur « ${sR.w.name} », entraxes ${ent.map(v=>fr(v/10,0)).join(" · ")} cm (de ${fr(mn/10,0)} à ${fr(mx/10,0)} cm).${mx>650?" Une travée dépasse 65 cm : vérifiez la mesure.":""}${mn<300?" Une travée fait moins de 30 cm : vérifiez la saisie (séparez les mesures par des espaces, la virgule sert aux décimales).":""}`,"Relevé"); }
+  else ck(false,`Aucune solive dans la pièce : vérifiez la position de la 1re solive (${cm(+c.s0)} cm de la pierre) et les entraxes.`,"Relevé");
+  ck(o.Leff%c.e===0, `Plaques ${cm(o.W)}×${cm(o.Leff)} cm, grand côté parallèle aux solives (en travers des F45), chaque about sur une F45, abouts décalés de ${cm(o.off)} cm d'une rangée à l'autre.`,"DTU 25.41");
+  if(!c.ref&&!sR.w.openings.some(o=>o.type==="Fenêtre")) ck(false,`Pas de fenêtre dans cette pièce : le sens des solives est supposé parallèle au mur « ${sR.w.name} ». Choisissez le bon mur dans « Solives parallèles au mur ».`,"Relevé");
+  ck(true,"Pas de vide technique sous les solives (seulement cavalier + F45) : boîtes de dérivation et gaines électriques le long des solives ou dans les murs, boîtiers DCL et spots étanches à l'air, chaque traversée de membrane avec une manchette. Gaines VMC dans un coffrage ou par les murs, pas à travers les solives.","Réseaux");
+  if(c.lat==="depose") ck(true,"Dépose d'abord l'ancien placo et le lattis : les vis traversaient le lattis jusqu'aux solives. Retirer aussi les clous et vis qui dépassent pour que les cavaliers portent à plat sous les solives.","Préparation");
+  else ck(false,"Lattis conservé : l'isolant ne peut pas être glissé entre les solives par le dessous. Il faut passer par le plancher du dessus, ou déposer le lattis. Les cavaliers se vissent alors à travers le lattis dans les solives (vis plus longues).","Préparation");
+  if(c.iso){ const iso=ISO.find(i=>i.n===c.isoN)||S.iso; ck(c.ep<=jh, c.ep<=jh?`Isolant ${iso.n} ${c.ep} mm entre les solives (hauteur ${jh/10} cm), découpé à la largeur de chaque travée + 1 cm pour qu'il tienne serré. R = ${fr(c.ep/1000/iso.lambda,2)} m²·K/W.`:`Isolant de ${c.ep} mm plus épais que les solives (${jh} mm) : il descendrait sous les solives, là où passent les F45. Prenez ${jh} mm maximum.`,"Pose"); }
+  if(c.mem) ck(true, c.memPose==="entre"?"Membrane hygrovariable entre les solives, sous l'isolant : agrafée sur les flancs des solives, rubans KB1 en continu sur le bois des deux côtés de chaque solive, et raccordée à la membrane des murs. Plus simple et plus étanche si vous préférez : une seule membrane continue sous les solives (les cavaliers se vissent au travers).":"Membrane hygrovariable continue sous les solives, côté chaud ; les cavaliers se vissent au travers. Recouvrements 10 cm scotchés KB1, raccord aux murs au DoubleFit.","Étanchéité à l'air");
+  ck(true,"Murs : l'isolant fibre de bois et la membrane des murs montent entre les solives jusqu'en haut ; les rails hauts et les plaques des murs s'arrêtent sous les solives. Membrane des murs raccordée à celle du plafond.","Jonction murs / plafond");
+  // rail haut des murs parallèles aux solives : doit tomber sous une solive
+  g.segs.forEach((sg,k)=>{ const par=Math.abs(sg.dx*sR.dx+sg.dy*sR.dy)>.98; if(!par) return; const w=sg.w; let L0=null; try{ L0=withWallCfg(w,()=>wallLayers(w)).find(l=>l.k==="oss"); }catch(e){} if(!L0) return;
+    const off=(L0.o0+L0.o1)/2, m=[sg.x0+sg.dx*sg.w.L/2+sg.nx*off, sg.y0+sg.dy*sg.w.L/2+sg.ny*off], X=FW(m)[0], near=axes.length?axes.reduce((b,a)=>Math.abs(a-X)<Math.abs(b-X)?a:b,axes[0]):null;
+    if(near===null) return; const rw=Math.max(48,L0.o1-L0.o0), d=Math.abs(near-X), okR=d<=jw/2-rw/2;
+    ck(okR, okR?`Mur « ${w.name} » (parallèle aux solives) : son rail haut tombe sous une solive, vissé dedans tous les 60 cm.`:`Mur « ${w.name} » (parallèle aux solives) : son rail haut est à ${fr(d/10,1)} cm de l'axe de la solive la plus proche, il ne tombe pas dessous. Fixez-le sur une lambourde 45×45 vissée sur des entretoises entre solives (tous les 60 cm).`,"DTU 25.41"); });
+  const toP=Q=>Q.map(BW);
+  plates.forEach(p=>{ p.polyL=p.poly; p.poly=toP(p.poly); });
+  fur.forEach(f=>{ f.A=BW([f.a,f.y]); f.B=BW([f.b,f.y]); f.cavP=f.cav.map(a=>BW([a,f.y])); });
+  joists.forEach(j=>{ j.A=BW([j.x,j.a]); j.B=BW([j.x,j.b]); j.poly=toP([[j.x-jw/2,j.a],[j.x+jw/2,j.a],[j.x+jw/2,j.b],[j.x-jw/2,j.b]]); });
+  const PP=g.poly, xs=PP.map(q=>q[0]), ys=PP.map(q=>q[1]);
+  Object.assign(res,{ok:true,sol:true,P:PP,PL:P,L:{x0,x1,y0,y1},x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys),area,per:o.per,pl,W:o.W,fur,bars:o.bars,ecl:o.ecl,susp:0,cav,plates,pc:o.pc,Leff:o.Leff,off:o.off,
+    joists,axes,ent,nJ,isoA,jLen,jArea,Hf,BW,FW,sR,jw,jh,fh,bays:(()=>{ const xs=[x0,...axes.filter(a=>a>x0&&a<x1).flatMap(a=>[a-jw/2,a+jw/2]),x1], out=[]; for(let i=0;i+1<xs.length;i+=2){ const q=clipRect(P,xs[i],y0-1,xs[i+1],y1+1); if(q.length>2) out.push({b:xs[i+1]-xs[i],L:Math.abs(polyArea(q))/Math.max(1,xs[i+1]-xs[i])}); } return out; })()}); return res; }
 function ceilMaterials(room){
   const R=computeCeil(room); if(!R.ok) return [];
   const {c,area,per,pl,W,Leff}=R, rows=[], o=OSS[S.oss.four]||OSS["Générique"];
   const brand=(S.oss.four||"").split(" — ")[0];
   const add=(des,det,q,u,pack,packName)=>{ if(q>0) rows.push({cat:"Plafond",des,det,q,u,pack,packName}); };
+  if(R.sol){
+    add("Fourrure F45 · 300 cm", `${R.fur.length} lignes perpendiculaires aux solives, entraxe ${c.e/10} cm`, R.bars, "u");
+    add("Cavalier F45 (fixation sous solive bois)", "un à chaque croisement fourrure / solive", R.cav, "u");
+    add(c.lat==="garde"?"Vis à bois 4 × 60 mm (cavaliers, à travers le lattis)":"Vis à bois 4 × 35 mm (cavaliers)", "2 par cavalier", Math.ceil(R.cav*2*1.05/100)*100, "u", 100, "boîte(s) de 100");
+    add("Éclisse F45", "jonction des fourrures (décalées)", R.ecl, "u");
+  } else {
   add(`Fourrure ${brand==="Placo"?"Stil F530":"F530"} · 300 cm`, `${R.fur.length} lignes, entraxe ${c.e/10} cm`, R.bars, "u");
   add("Suspente pivot ou rapide F530 + cheville plafond", `tous les ${c.susp/10} cm, plénum ≈ ${c.plenum/10} cm`, R.susp, "u");
-  add("Éclisse F530", "jonction des fourrures", R.ecl, "u");
+  add("Éclisse F530", "jonction des fourrures", R.ecl, "u"); }
   add(`Cornière de rive ${brand==="Placo"?"Stil CR2":"30/30"} · 300 cm`, `périmètre ${fr(per,2)} m`, Math.ceil(per*1.05/3), "u");
   add("Cheville à frapper (cornière de rive)", "tous les 60 cm", Math.ceil(per/0.6), "u");
+  const isoArea=R.sol?R.isoA:area, upA=R.sol?per*R.jh/1000:0;
   if(c.iso){ const iso=ISO.find(i=>i.n===c.isoN)||S.iso, panA=iso.W*iso.Lg/1e6;
-    add(`${iso.f} ${iso.n} · ${c.ep} mm · ${cm(iso.W)}×${cm(iso.Lg)} cm`, `plafond ${fr(area,2)} m², R = ${fr(c.ep/1000/iso.lambda,2)} m²·K/W`, Math.ceil(area*(1+(S.iso.perte||5)/100)/panA), "panneaux"); }
-  if(c.mem){ const m=S.mem, packA=m.rollW*m.rollL/1e6;
+    add(`${iso.f} ${iso.n} · ${c.ep} mm · ${cm(iso.W)}×${cm(iso.Lg)} cm`, R.sol?`entre solives ${fr(isoArea,2)} m² (recoupé par travée), R = ${fr(c.ep/1000/iso.lambda,2)} m²·K/W`:`plafond ${fr(area,2)} m², R = ${fr(c.ep/1000/iso.lambda,2)} m²·K/W`, R.sol?Math.ceil(R.bays.reduce((t,B)=>{ const bw=Math.min(B.b,iso.W)+10, per=Math.max(1,Math.floor(iso.W/bw)), rows=Math.ceil(B.b/(iso.W)); return t+B.L/iso.Lg/per*rows; },0)*(1+(S.iso.perte||5)/100)):Math.ceil(isoArea*(1+(S.iso.perte||5)/100)/panA), "panneaux"); }
+  if(R.sol&&S.iso.on){ const iw=ISO.find(i=>i.n===S.iso.n)||S.iso, pA=iw.W*iw.Lg/1e6; add(`${iw.f} ${iw.n} · ${S.iso.ep} mm`, `remontée de l'isolant des murs entre les solives (${fr(per,2)} m × ${R.jh/10} cm)`, Math.ceil(upA*1.1/pA), "panneaux"); }
+  if(c.mem&&R.sol){ const m=S.mem, packA=m.rollW*m.rollL/1e6, mA=c.memPose==="entre"?isoArea*1.05+R.jLen*2*0.05+per*(R.jh/1000+.1):area*1.12+per*(R.jh/1000+.1);
+    add(m.n, c.memPose==="entre"?`entre les solives (retours 5 cm agrafés sur les flancs) + remontée des murs entre solives`:"sous les solives + remontée des murs entre solives", Math.ceil(mA), "m²", packA, `rouleau(x) de ${fr(packA)} m²`);
+    add("Adhésif Vario KB1", c.memPose==="entre"?"le long de chaque solive, des deux côtés, + recouvrements":"recouvrements du plafond", Math.ceil((c.memPose==="entre"?R.jLen*2:0)+area/((m.rollW-(m.recouv||100))/1000)), "m", 40, "rouleau(x) de 40 m");
+    add("Agrafes inox 10 mm", "membrane sur les solives, tous les 10 cm", Math.ceil(R.jLen*2*10*1.1/1000)*1000, "u", 1000, "boîte(s) de 1000");
+    add("Mastic Vario DoubleFit 310 ml", "jonction plafond / murs", Math.ceil(per), "m", 8, "cartouche(s), ≈ 8 m chacune"); }
+  else if(c.mem){ const m=S.mem, packA=m.rollW*m.rollL/1e6;
     add(m.n, "plafond, lés + retours 10 cm sur les murs", Math.ceil(area*1.12+per*0.1), "m²", packA, `rouleau(x) de ${fr(packA)} m²`);
     add("Adhésif Vario KB1", "recouvrements du plafond", Math.ceil(area/((m.rollW-(m.recouv||100))/1000)), "m", 40, "rouleau(x) de 40 m");
     add("Mastic Vario DoubleFit 310 ml", "jonction plafond / murs", Math.ceil(per), "m", 8, "cartouche(s), ≈ 8 m chacune"); }
@@ -2904,8 +2963,8 @@ function renderRoom3D(){
     const d=pathOf(f.pts)+(f.holes||"");
     parts.push(`<g${f.pick!==undefined?` data-pick="${f.pick}" style="cursor:pointer"`:""} opacity="${f.op??1}"><path d="${d}" fill-rule="evenodd" fill="${f.fill}"${f.fop?` fill-opacity="${f.fop}"`:""} stroke="${f.sel?"#1d63c4":(f.stroke||"#5d574d")}" stroke-width="${f.sel?22:6}"/>${f.bc?`<path d="${d}" fill-rule="evenodd" fill="#000" filter="url(#bcf)"/>`:""}${f.tone&&f.tone<1?`<path d="${d}" fill-rule="evenodd" fill="#000" opacity="${(1-f.tone).toFixed(2)}"/>`:""}${f.extra||""}</g>`);
   });
-  ceils.forEach(({g,ceilR,T2})=>{ const H=g.H, cl=[];
-    ceilR.fur.forEach(f=>{ cl.push(line([...T2([f.a,f.y]),H-5],[...T2([f.b,f.y]),H-5],` stroke="#6e7b8a" stroke-width="12" stroke-dasharray="60 40"`)); });
+  ceils.forEach(({g,ceilR,T2})=>{ const H=ceilR.sol?ceilR.Hf:g.H, cl=[];
+    ceilR.fur.forEach(f=>{ cl.push(line([...T2(f.A||[f.a,f.y]),H-5],[...T2(f.B||[f.b,f.y]),H-5],` stroke="#6e7b8a" stroke-width="12" stroke-dasharray="60 40"`)); });
     ceilR.plates.forEach(p=>cl.push(`<path d="${pathOf(p.poly.map(q=>[...T2(q),H]))}" fill="none" stroke="#8a867c" stroke-width="7"/>`));
     const c0=g.poly.reduce((a,p)=>[a[0]+p[0]/g.poly.length,a[1]+p[1]/g.poly.length],[0,0]), lc=pr(c0[0],c0[1],H-40);
     parts.push(`<g><path d="${pathOf(g.poly.map(p=>[...p,H]))}" fill="#ffffff" fill-opacity=".16" stroke="#1d63c4" stroke-width="10"/>${cl.join("")}<circle cx="${lc[0].toFixed(0)}" cy="${lc[1].toFixed(0)}" r="60" fill="#ffe9a8" stroke="#c9a640" stroke-width="10"/></g>`); });
@@ -2962,25 +3021,31 @@ function renderCeil(){
   plates.forEach((p,i)=>{
     parts.push(`<polygon points="${pp(p.poly)}" fill="${i%2?"#ece9e1":"#f6f4ef"}" stroke="#7d786d" stroke-width="${fs*.05}"/>`);
     const xs=p.poly.map(q=>q[0]), ys=p.poly.map(q=>q[1]), mx=(Math.min(...xs)+Math.max(...xs))/2, my=(Math.min(...ys)+Math.max(...ys))/2;
-    const full=Math.abs(polyArea(p.poly))>p.w*p.h*0.98;
+    const full=Math.abs(polyArea(p.poly))>p.w*p.h*0.98, LQ=p.polyL||p.poly, lx=LQ.map(q=>q[0]), ly=LQ.map(q=>q[1]);
     parts.push(`<text x="${mx}" y="${Yf(my)}" text-anchor="middle" font-size="${fs*.7}" style="fill:var(--ink)">PL${p.n}</text>`);
-    if(!full) parts.push(`<text x="${mx}" y="${Yf(my)+fs*.8}" text-anchor="middle" font-size="${fs*.5}" style="fill:var(--muted)">${cm(Math.max(...xs)-Math.min(...xs))}×${cm(Math.max(...ys)-Math.min(...ys))}</text>`);
+    if(!full) parts.push(`<text x="${mx}" y="${Yf(my)+fs*.8}" text-anchor="middle" font-size="${fs*.5}" style="fill:var(--muted)">${cm(Math.max(...lx)-Math.min(...lx))}×${cm(Math.max(...ly)-Math.min(...ly))}</text>`);
   });
   parts.push(`<g clip-path="url(#cl-ceil)">`);
-  fur.forEach(f=>{ parts.push(`<line x1="${f.a}" y1="${Yf(f.y)}" x2="${f.b}" y2="${Yf(f.y)}" stroke="#6e7b8a" stroke-width="${fs*.12}" stroke-dasharray="${fs*.6} ${fs*.3}"/>`);
+  if(R.sol){ R.joists.forEach(j=>parts.push(`<polygon points="${pp(j.poly)}" fill="#b98a55" fill-opacity=".55" stroke="#7a5428" stroke-width="${fs*.06}"/>`));
+    fur.forEach(f=>{ parts.push(`<line x1="${f.A[0]}" y1="${Yf(f.A[1])}" x2="${f.B[0]}" y2="${Yf(f.B[1])}" stroke="#6e7b8a" stroke-width="${fs*.12}" stroke-dasharray="${fs*.6} ${fs*.3}"/>`); f.cavP.forEach(q=>parts.push(`<rect x="${q[0]-fs*.22}" y="${Yf(q[1])-fs*.22}" width="${fs*.44}" height="${fs*.44}" fill="#b4541a"/>`)); }); }
+  else fur.forEach(f=>{ parts.push(`<line x1="${f.a}" y1="${Yf(f.y)}" x2="${f.b}" y2="${Yf(f.y)}" stroke="#6e7b8a" stroke-width="${fs*.12}" stroke-dasharray="${fs*.6} ${fs*.3}"/>`);
     const n=Math.max(1,Math.ceil((f.b-f.a)/c.susp)), st=(f.b-f.a)/n; for(let k=0;k<n;k++) parts.push(`<circle cx="${f.a+st*(k+.5)}" cy="${Yf(f.y)}" r="${fs*.2}" fill="#b4541a"/>`); });
   parts.push(`</g>`);
   parts.push(`<polygon points="${pp(P)}" fill="none" stroke="#3b4a5a" stroke-width="${fs*.18}" stroke-dasharray="${fs*.2} ${fs*.15}"/>`);
   parts.push(`<text x="${(x0+x1)/2}" y="${Yf(y0)+fs*2.2}" text-anchor="middle" font-size="${fs*.8}" style="fill:var(--muted)">${cm(x1-x0)} cm</text>`);
   parts.push(`<text x="${x1+fs*1.2}" y="${Yf((y0+y1)/2)}" font-size="${fs*.8}" style="fill:var(--muted)">${cm(y1-y0)} cm</text>`);
+  if(R.sol&&R.axes.length){ // cotes des solives depuis la pierre du mur de référence
+    const yL=R.L.y0-fs*1.6, D=R.BW, q0=D([0,yL]); let prev=0; const tk=(x)=>{ const a=D([x,yL-fs*.35]), b=D([x,yL+fs*.35]); return `<line x1="${a[0]}" y1="${Yf(a[1])}" x2="${b[0]}" y2="${Yf(b[1])}" stroke="#7a5428" stroke-width="${fs*.06}"/>`; };
+    parts.push(tk(0)); R.axes.forEach(a=>{ const A=D([prev,yL]), B=D([a,yL]), M=D([(prev+a)/2,yL-fs*.5]); parts.push(`<line x1="${A[0]}" y1="${Yf(A[1])}" x2="${B[0]}" y2="${Yf(B[1])}" stroke="#7a5428" stroke-width="${fs*.05}"/>${tk(a)}<text x="${M[0]}" y="${Yf(M[1])}" text-anchor="middle" font-size="${fs*.5}" style="fill:#7a5428">${cm(a-prev)}</text>`); prev=a; });
+    const lb=D([R.axes[R.axes.length-1]/2,yL-fs*1.3]); parts.push(`<text x="${lb[0]}" y="${Yf(lb[1])}" text-anchor="middle" font-size="${fs*.5}" style="fill:#7a5428">pierre « ${esc(R.sR.w.name)} » → axes des solives (cm)</text>`); }
   parts.push(lumSvg(room,fs));
   const vbA=[x0-g.STN-fs*2, Yf(y1)-g.STN-fs*2, x1-x0+2*g.STN+fs*8, y1-y0+2*g.STN+fs*5]; document.getElementById("plan").dataset.vb=JSON.stringify(vbA); const vb=vbA.join(" ");
   document.getElementById("plan").innerHTML=`<svg viewBox="${vb}" role="img" aria-label="Calepinage du plafond ${esc(room)}">${parts.join("")}</svg>`;
-  document.getElementById("legend").innerHTML=`<span><i style="background:#6e7b8a"></i>Fourrures F530 (entraxe ${c.e/10} cm)</span><span><i style="background:#b4541a;border-radius:50%"></i>Suspentes</span><span><i style="background:#3b4a5a"></i>Cornière de rive</span><span>Plaques ${cm(R.W)}×${cm(R.Leff)} cm, perpendiculaires aux fourrures, abouts décalés</span>`;
+  document.getElementById("legend").innerHTML=R.sol?`<span><i style="background:#b98a55"></i>Solives ${R.jw/10}×${R.jh/10} cm (au-dessus)</span><span><i style="background:#6e7b8a"></i>Fourrures F45 (entraxe ${c.e/10} cm)</span><span><i style="background:#b4541a"></i>Cavaliers sous solives</span><span><i style="background:#3b4a5a"></i>Cornière de rive</span><span>Plaques ${cm(R.W)}×${cm(R.Leff)} cm, parallèles aux solives, abouts décalés</span>`:`<span><i style="background:#6e7b8a"></i>Fourrures F530 (entraxe ${c.e/10} cm)</span><span><i style="background:#b4541a;border-radius:50%"></i>Suspentes</span><span><i style="background:#3b4a5a"></i>Cornière de rive</span><span>Plaques ${cm(R.W)}×${cm(R.Leff)} cm, perpendiculaires aux fourrures, abouts décalés</span>`;
   document.getElementById("extra").innerHTML=`<section class="box"><h2>Plafond : ${esc(room)}</h2>
-    <div class="stats"><div class="stat"><b>${fr(R.area,2)} m²</b><span>Surface</span></div><div class="stat"><b>${R.bars}</b><span>Fourrures 3 m</span></div><div class="stat"><b>${R.susp}</b><span>Suspentes</span></div><div class="stat"><b>${R.pc}</b><span>Plaques</span></div><div class="stat"><b>${fr(R.per,2)} m</b><span>Cornière de rive</span></div></div>
+    <div class="stats"><div class="stat"><b>${fr(R.area,2)} m²</b><span>Surface</span></div><div class="stat"><b>${R.bars}</b><span>Fourrures ${R.sol?"F45 ":""}3 m</span></div>${R.sol?`<div class="stat"><b>${R.nJ}</b><span>Solives</span></div><div class="stat"><b>${R.cav}</b><span>Cavaliers</span></div><div class="stat"><b>${cm(R.Hf)} cm</b><span>Hauteur finie</span></div>`:`<div class="stat"><b>${R.susp}</b><span>Suspentes</span></div>`}<div class="stat"><b>${R.pc}</b><span>Plaques</span></div><div class="stat"><b>${fr(R.per,2)} m</b><span>Cornière de rive</span></div></div>
     <div style="margin-top:10px">${[...R.checks,...lumChecks(room)].map(k=>`<div class="ck ${k.ok?"ok":"ko"}"><b>${k.ok?"✓":"!"}</b><span>${esc(k.t)}</span>${k.ref?`<em>${esc(k.ref)}</em>`:""}</div>`).join("")}</div>
-    <p class="cap" style="margin:10px 0 0">Ordre de pose : cornière de rive au laser, suspentes, fourrures avec éclisses, ${c.iso?"isolant, ":""}${c.mem?"membrane, ":""}plaques (vissées tous les 30 cm maxi), puis bandes et finitions comme les murs. Le matériel du plafond est compté dans le métré « Cette pièce » et « Tous les murs ».</p>
+    <p class="cap" style="margin:10px 0 0">Ordre de pose : ${R.sol?`${c.lat!=="garde"?"dépose de l'ancien placo et du lattis, ":""}${c.iso?"isolant entre les solives (+ remontée de l'isolant des murs), ":""}${c.mem?(c.memPose==="sous"?"membrane continue sous les solives, ":"membrane entre les solives agrafée et scotchée sur les flancs, "):""}cornière de rive au laser, cavaliers sous chaque solive (2 vis), fourrures F45 clipsées avec éclisses décalées, plaques`:`cornière de rive au laser, suspentes, fourrures avec éclisses, ${c.iso?"isolant, ":""}${c.mem?"membrane, ":""}plaques`} (vissées tous les 30 cm maxi), puis bandes et finitions comme les murs. Le matériel du plafond est compté dans le métré « Cette pièce » et « Tous les murs ».</p>
     </section>`;
 }
 function ceilPanel(w){
@@ -2988,11 +3053,19 @@ function ceilPanel(w){
   const isoN=[...new Set(ISO.map(i=>i.n))];
   return `<section class="box">
     <h2><span class="sw" style="background:#6e7b8a"></span>Plafond : ${esc(room)}</h2>
-    <label class="chk"><input type="checkbox" data-ceil="on" ${c.on?"checked":""}> Doubler le plafond (fourrures F530 suspendues)</label>
+    <label class="chk"><input type="checkbox" data-ceil="on" ${c.on?"checked":""}> Doubler le plafond</label>
+    ${c.on?`<div class="row" style="grid-template-columns:1fr"><label class="f">Type de plafond<select data-ceil="mode"><option value="sol"${c.mode==="sol"?" selected":""}>Sous solives bois : fourrures F45 sur cavaliers</option><option value="susp"${c.mode!=="sol"?" selected":""}>Suspendu : fourrures F530 + suspentes</option></select></label></div>
+    ${c.mode==="sol"?`<div class="row" style="grid-template-columns:1fr"><label class="f">Solives parallèles au mur<select data-ceil="ref"><option value=""${!c.ref?" selected":""}>Auto : ${(ceilRef(room,g)||{w:{openings:[]}}).w.openings.some(o=>o.type==="Fenêtre")?"mur avec la fenêtre":"pas de fenêtre, à choisir"} (${esc((ceilRef(room,g)||{w:{name:"—"}}).w.name)})</option>${g.segs.map(q=>`<option value="${esc(q.w.id||"")}"${q.w.id&&q.w.id===c.ref?" selected":""}>${esc(q.w.name)}</option>`).join("")}</select></label></div>
+    <div class="row"><label class="f">Largeur solive (cm)<input type="number" min="4" step="0.5" data-ceil="jw" data-cmv value="${c.jw/10}"></label><label class="f">Hauteur solive (cm)<input type="number" min="8" step="0.5" data-ceil="jh" data-cmv value="${c.jh/10}"></label></div>
+    <div class="row"><label class="f">1re solive : axe à (cm) de la pierre de ce mur<input type="number" min="1" step="0.5" data-ceil="s0" data-cmv value="${c.s0/10}"></label><label class="f">Entraxe régulier (cm), si pas de relevé<input type="number" min="20" step="1" data-ceil="se" data-cmv value="${c.se/10}"></label></div>
+    <div class="row" style="grid-template-columns:1fr"><label class="f">Entraxes mesurés travée par travée (cm, d'axe en axe, séparés par des espaces)<input type="text" inputmode="decimal" data-ceil="sx" data-txt placeholder="ex. 45 52 60 58,5 40" value="${esc(c.sx||"")}"></label></div>
+    <div class="row"><label class="f">Ossature sous solives : cavalier + F45 (cm)<input type="number" min="1" step="0.1" data-ceil="fh" data-cmv value="${c.fh/10}"></label>
+      <label class="f">Ancien lattis<select data-ceil="lat"><option value="depose"${c.lat!=="garde"?" selected":""}>Déposé avec l'ancien placo</option><option value="garde"${c.lat==="garde"?" selected":""}>Conservé</option></select></label></div>
+    <p class="hint">La hauteur des murs est prise sous les solives : rails hauts et plaques des murs s'arrêtent dessous ; isolant et membrane des murs montent entre les solives.</p>`:""}`:""}
     ${!g.closed?`<p class="hint">Fermez la pièce (angle « Rentrant » sur le dernier mur) pour que le plafond soit calculé.</p>`:""}
     ${c.on?`<div class="row">
       <label class="f">Entraxe fourrures<select data-ceil="e" data-n>${[400,500,600].map(v=>`<option value="${v}"${c.e===v?" selected":""}>${v/10} cm</option>`).join("")}</select></label>
-      <label class="f">Entraxe suspentes<select data-ceil="susp" data-n>${[900,1000,1200].map(v=>`<option value="${v}"${c.susp===v?" selected":""}>${v/10} cm</option>`).join("")}</select></label>
+      ${c.mode==="sol"?"":`<label class="f">Entraxe suspentes<select data-ceil="susp" data-n>${[900,1000,1200].map(v=>`<option value="${v}"${c.susp===v?" selected":""}>${v/10} cm</option>`).join("")}</select></label>`}
     </div>
     <div class="row">
       <label class="f">Plaques<select data-ceil="plaN"><option value=""${!c.plaN?" selected":""}>Comme les murs</option>${PLA.map(p=>`<option${p.n===c.plaN?" selected":""}>${esc(p.n)}</option>`).join("")}</select></label>
@@ -3000,12 +3073,13 @@ function ceilPanel(w){
     </div>
     <div class="row">
       <label class="f">Couches<select data-ceil="couches" data-n>${[1,2].map(v=>`<option${c.couches===v?" selected":""}>${v}</option>`).join("")}</select></label>
-      <label class="f">Plénum (cm)<input type="number" min="5" step="1" data-ceil="plenum" data-cmv value="${c.plenum/10}"></label>
+      ${c.mode==="sol"?"":`<label class="f">Plénum (cm)<input type="number" min="5" step="1" data-ceil="plenum" data-cmv value="${c.plenum/10}"></label>`}
     </div>
-    <label class="chk"><input type="checkbox" data-ceil="iso" ${c.iso?"checked":""}> Isolant fibre de bois au plafond</label>
+    <label class="chk"><input type="checkbox" data-ceil="iso" ${c.iso?"checked":""}> Isolant fibre de bois au plafond${c.mode==="sol"?" (entre les solives)":""}</label>
     ${c.iso?`<div class="row"><label class="f">Isolant<select data-ceil="isoN">${opt(isoN,c.isoN)}</select></label>
       <label class="f">Épaisseur<select data-ceil="ep" data-n>${opt(EPS,c.ep)}</select></label></div>`:""}
     <label class="chk"><input type="checkbox" data-ceil="mem" ${c.mem?"checked":""}> Membrane ${esc(S.mem.n)} au plafond</label>
+    ${c.mode==="sol"&&c.mem?`<div class="row" style="grid-template-columns:1fr"><label class="f">Membrane<select data-ceil="memPose"><option value="entre"${c.memPose!=="sous"?" selected":""}>Entre les solives, sous l'isolant</option><option value="sous"${c.memPose==="sous"?" selected":""}>Continue sous les solives</option></select></label></div>`:""}
     <div class="row" style="grid-template-columns:1fr"><label class="f">Peinture du plafond<select data-ceil="peintN">${opt(PEINT.map(p=>p.n),c.peintN)}</select></label></div>`:""}
   </section>`;
 }
@@ -3820,6 +3894,23 @@ function mesDraw(){ if(!V3.scene){ return; } if(MES.g){ MES.g.traverse(o=>{ if(o
   mesHint(!MES.on?null:MES.pts.length?"Touchez le 2e point":MES.list.length?"Touchez un 1er point pour une nouvelle mesure":"📏 Touchez le 1er point à mesurer"); }
 /* Grand angle 0,6× : ≈ 118° de champ horizontal comme l'ultra grand-angle d'un téléphone (champ vertical plafonné à 135°) */
 function v3UwFov(a){ return Math.min(135,2*Math.atan(Math.tan(59*Math.PI/180)/Math.max(.3,a))*180/Math.PI); }
+/* Plafond sous solives en 3D : solives bois, isolant et membrane entre solives, cavaliers + F45, plaques (en mode Couches : plaques sur la moitié de la pièce, membrane sur les 3/4) */
+function ceilFinH(room,g){ try{ const R=computeCeil(room); if(R.ok&&R.sol) return R.Hf; }catch(e){} return g.H; }
+function v3CeilSol(scene,room,g,X,V,R){ const T3=THREE, H=g.H, c=R.c, P=pt=>X.p(pt[0],pt[1]);
+  const flat=(Q,z,mat,ro)=>{ if(!Q||Q.length<3) return; const sh=new T3.Shape(Q.map(q=>{ const r=P(q); return new T3.Vector2(r[0]/1000,r[1]/1000); })), ge=new T3.ShapeGeometry(sh); ge.rotateX(-Math.PI/2); ge.translate(0,z/1000,0); const m=new T3.Mesh(ge,mat); if(ro) m.renderOrder=ro; scene.add(m); return m; };
+  const beam=(A,B,w,z0,z1,mat)=>{ const a=P(A), b=P(B), L=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L<1) return; const ge=new T3.BoxGeometry(L/1000,(z1-z0)/1000,w/1000), m=new T3.Mesh(ge,mat);
+    m.position.set((a[0]+b[0])/2000,(z0+z1)/2000,-(a[1]+b[1])/2000); m.rotation.y=Math.atan2(b[1]-a[1],b[0]-a[0]); scene.add(m); return m; };
+  const lay=(S.r3&&S.r3.lay)||{}, cut=V.couches||V.cut==="ecorche", PL=R.PL, L=R.L, half=(f)=>clipRect(PL,L.x0-1,L.y0-1,L.x0+(L.x1-L.x0)*f,L.y1+1).map(R.BW);
+  const wood=v3Mat("#b98a55",{roughness:.8}), Hs=H; // dessous des solives = hauteur des murs
+  R.joists.forEach(j=>beam(j.A,j.B,R.jw,Hs,Hs+R.jh,wood));
+  if(c.iso&&lay.fibre!==false){ const fm=v3Mat("#ffffff",{map:texFibre(),roughness:1}); // isolant : panneau dans chaque travée
+    const xs=[R.L.x0,...R.axes.flatMap(a=>[a-R.jw/2,a+R.jw/2]),R.L.x1]; for(let i=0;i+1<xs.length;i+=2){ const q=clipRect(PL,xs[i],L.y0-1,xs[i+1],L.y1+1); if(q.length>2) flat(q.map(R.BW),Hs+Math.max(4,R.jh-c.ep)+2,fm); } }
+  if(c.mem&&lay.mem!==false){ const mm=v3Mat("#ffffff",{map:texMem(),transparent:true,opacity:.9,roughness:.55}), Q=cut?half(.75):PL.map(R.BW); flat(Q,Hs+(c.memPose==="sous"?-1:1),mm); }
+  if(lay.oss!==false){ const st=v3Mat("#a9b1b8",{metalness:.6,roughness:.4}), cv=v3Mat("#8d949b",{metalness:.6,roughness:.4});
+    R.fur.forEach(f=>{ beam(f.A,f.B,45,Hs-R.fh,Hs-R.fh+18,st); f.cavP.forEach(q=>{ const d=[R.sR.dx*30,R.sR.dy*30]; beam([q[0]-d[0],q[1]-d[1]],[q[0]+d[0],q[1]+d[1]],60,Hs-R.fh,Hs,cv); }); }); }
+  if(lay.pla!==false||!cut){ const pm=v3Mat("#fbfbf9",{transparent:V.mode!=="visite"||V.res,opacity:V.res?0.14:V.mode!=="visite"?0.25:1,depthWrite:!V.res});
+    flat(cut?half(.5):PL.map(R.BW),R.Hf,pm); }
+}
 function v3Mat(color,o){ return new THREE.MeshStandardMaterial(Object.assign({color:new THREE.Color(color),roughness:.85,metalness:0,side:THREE.DoubleSide},o||{})); }
 function wallMatrix(s,o0){ const m=new THREE.Matrix4(); m.set(s.dx,0,s.nx,(s.x0+s.nx*o0)/1000, 0,1,0,0, -s.dy,0,-s.ny,-(s.y0+s.ny*o0)/1000, 0,0,0,1); return m; }
 const LAYSHORT={pierre:"Pierre",fibre:"Fibre de bois",mem:"Membrane Vario",oss:"Ossature",pla:"Plaque",end:"Enduit",peint:"Peinture"};
@@ -4151,9 +4242,11 @@ function buildScene(){
       { const B=(S.bc||{})[room]; if(B&&B.on&&B.sol) mat=bcMat(B); }
 
       const fl=new T3.Mesh(geo,mat); fl.userData={kind:"floor",room}; scene.add(fl); pick.push(fl);
-      if(V.ceil){ const cg=new T3.ShapeGeometry(sh); cg.rotateX(-Math.PI/2); cg.translate(0,g.H/1000,0); const cm2=new T3.Mesh(cg,v3Mat("#fbfbf9",{transparent:V.mode!=="visite"||V.res,opacity:V.res?0.14:V.mode!=="visite"?0.25:1,depthWrite:!V.res})); scene.add(cm2); }
+      const CR=V.ceil?computeCeil(room):null;
+      if(V.ceil&&CR&&CR.ok&&CR.sol) v3CeilSol(scene,room,g,X,V,CR);
+      else if(V.ceil){ const cg=new T3.ShapeGeometry(sh); cg.rotateX(-Math.PI/2); cg.translate(0,g.H/1000,0); const cm2=new T3.Mesh(cg,v3Mat("#fbfbf9",{transparent:V.mode!=="visite"||V.res,opacity:V.res?0.14:V.mode!=="visite"?0.25:1,depthWrite:!V.res})); scene.add(cm2); }
       // luminaires / VMC (coordonnées locales à la pièce)
-      lumList(room).forEach((L,li)=>{ const [px,py]=X.p(L.x,L.y), H0=g.H/1000, pos=new T3.Vector3(px/1000,H0,-py/1000), t=L.t, tg={kind:"lum",room,idx:li};
+      lumList(room).forEach((L,li)=>{ const [px,py]=X.p(L.x,L.y), H0=ceilFinH(room,g)/1000, pos=new T3.Vector3(px/1000,H0,-py/1000), t=L.t, tg={kind:"lum",room,idx:li};
         const mk=(geo,mat,dy)=>{ const m=new T3.Mesh(geo,mat); m.position.copy(pos); m.position.y-=dy; m.userData=tg; scene.add(m); pick.push(m); return m; };
         const emis=v3Mat("#fff7e0",{emissive:new T3.Color(V.nuit?"#ffe9b0":"#fff3d8"),emissiveIntensity:V.nuit?1:0.35});
         const lm=(t==="susp"||t==="plaf")&&lusOf(L); let lowY=t==="susp"?1.0:0.15;
@@ -4165,7 +4258,7 @@ function buildScene(){
         if(t==="vmc"||t==="vmcins"){ mk(new T3.CylinderGeometry(0.075,0.075,0.02,24),M.white,0.01); mk(new T3.TorusGeometry(0.05,0.006,6,24).rotateX(Math.PI/2),v3Mat("#c9c9c9"),0.022); }
         if((t==="spot"||t==="plaf"||t==="susp"||t==="regl") && lights.length<8){ const pl=new T3.PointLight("#ffe7b8",V.nuit?(t==="spot"?0.55:0.9):0.18,6,1.6); pl.position.copy(pos); pl.position.y-=lm?lowY*0.9:t==="susp"?1.0:0.15; scene.add(pl); lights.push(pl); } });
       // créations en placo
-      creas(room).forEach(c=>{ const sg=g.segs.find(q=>wid(q.w)===c.wall)||g.segs[0]; if(!sg) return; const ww=sg.w, sp=creaSpan(ww), T0=g.Ts?g.Ts[g.segs.indexOf(sg)]:g.T, hh=Math.min(ww.H,g.H), pm=v3Mat("#efebe3",{roughness:.8}), P=creaFit(c,room), x=sp.a+(P.x||0); if(c.t==="led"&&+c.pos===1){ P.y=Math.max(0,Math.min(P.y||0,hh-20)); P.L=Math.max(20,Math.min(P.L,hh-P.y)); }
+      creas(room).forEach(c=>{ const sg=g.segs.find(q=>wid(q.w)===c.wall)||g.segs[0]; if(!sg) return; const ww=sg.w, sp=creaSpan(ww), T0=g.Ts?g.Ts[g.segs.indexOf(sg)]:g.T, hh=Math.min(ww.H,ceilFinH(room,g)), pm=v3Mat("#efebe3",{roughness:.8}), P=creaFit(c,room), x=sp.a+(P.x||0); if(c.t==="led"&&+c.pos===1){ P.y=Math.max(0,Math.min(P.y||0,hh-20)); P.L=Math.max(20,Math.min(P.L,hh-P.y)); }
         const add=m=>{ if(m){ scene.add(m); } };
         if(c.t==="coffh") add(v3Box(sg,x,x+P.L,T0,T0+P.l,hh-P.h,hh,pm));
         if(c.t==="coffv") add(v3Box(sg,x,x+P.l,T0,T0+P.pf,0,hh,pm));
@@ -4208,7 +4301,7 @@ function buildScene(){
           bxp(pv,pw,ph,e,x-hxp,y,e/2); const hx=hl?pw/2-0.05:-pw/2+0.05; hb(pv,[(x-hxp-pw/2)*1000,(x-hxp+pw/2)*1000,(y-ph/2)*1000,(y+ph/2)*1000],[(x+hx-hxp)*1000,(y+ph*0.2)*1000],false,e); }
         const [px,py]=X.p(m.x,m.y); grp.position.set(px/1000,0,-py/1000); grp.rotation.y=-((m.rot||0)+(V.all?roomLayout(room).rot:0))*Math.PI/180; scene.add(grp); });
     }
-    const NN=V.res?v3Net(scene,pick,room,g,X,wallSets):netRoom(room,g,X); if(V.ceil||V.res) v3Traps(scene,pick,room,NN.traps,g.H);
+    const NN=V.res?v3Net(scene,pick,room,g,X,wallSets):netRoom(room,g,X); if(V.ceil||V.res) v3Traps(scene,pick,room,NN.traps,ceilFinH(room,g));
   });
   if(V.res) v3Vmc(scene,pick,rooms);
   if(V.nuit && !lights.length){ const a=new T3.AmbientLight("#ffffff",0.25); scene.add(a); }
@@ -4796,7 +4889,7 @@ function onField(e){
   if(el.dataset.rp==="move"){ S.walls[S.cur].room=el.value; renderAll(); return; }
   if(el.dataset.ceil!==undefined){ const c=ceilCfg(S.walls[S.cur].room||""), k=el.dataset.ceil;
     if(el.type==="checkbox") c[k]=el.checked; else if(el.dataset.n!==undefined) c[k]=+el.value; else if(el.dataset.cmv!==undefined){ const v=parseFloat(el.value); if(!(v>0)) return; c[k]=Math.round(v*10); } else c[k]=el.value;
-    if(el.dataset.cmv!==undefined) renderOut(); else renderAll(); return; }
+    if(el.dataset.cmv!==undefined||el.dataset.txt!==undefined) renderOut(); else renderAll(); return; }
   if(el.dataset.div!==undefined){ const d=S.walls[S.cur].divers[+el.dataset.div];
     if(el.dataset.dk==="n"){ d.n=el.value; renderAll(); } else { d.q=parseFloat(el.value)||0; renderOut(); } return; }
   if(el.dataset.list){
@@ -4984,7 +5077,7 @@ const IKEA_MAHDI={"source":"Planificateur de cuisine IKEA, 13/11/2026 (design 47
 function ikeaAuto(force){ try{ const rw=S.walls.filter(w=>(w.room||"")==="cuisine"); if(!rw.some(w=>/lin[eé]aire/i.test(w.name))||!rw.some(w=>/salon/i.test(w.name))) return "";
   if(!force&&(S.kitIkea||(S.kit&&S.kit.cuisine&&S.kit.cuisine.items&&S.kit.cuisine.items.length))) return "";
   const m=kitImport(JSON.parse(JSON.stringify(IKEA_MAHDI))); S.kitIkea=1; save(); return m; }catch(e){ return ""; } }
-setTimeout(()=>{ let ch=!!ikeaAuto(false); try{ if(!S.p250){ S.p250=1; S.pla.lens=[2500]; ch=true; } }catch(e){} try{ if(!S.credOff){ S.walls.filter(w=>(w.room||"")==="cuisine"&&/lin[eé]aire/i.test(w.name)&&w.tile&&w.tile.on).forEach(w=>{ w.tile.on=false; ch=true; }); S.credOff=1; save(); } }catch(e){} try{ if(!S.fl8001){ const D=["#f7f6f2","#efe9df",""]; S.fin.peint.teinte="#f3f4f1"; S.walls.forEach(w=>{ if(!w.teinte||D.includes(String(w.teinte).toLowerCase())) w.teinte="#f3f4f1"; }); S.fl8001=1; save(); ch=true; } }catch(e){} try{ if(!S.belfast){ const BN=SOLS.find(q=>q.grain==="belfast").n; [...new Set(S.walls.map(w=>w.room||""))].forEach(rm=>{ const F=floorCfg(rm); F.on=true; F.n=BN; F.c=""; F.L=0; F.W=0; F.pose=""; if(S.bc&&S.bc[rm]) S.bc[rm].sol=false; }); S.belfast=1; save(); ch=true; } }catch(e){} if(ch) renderAll(); },300);
+setTimeout(()=>{ let ch=!!ikeaAuto(false); try{ if(!S.solv){ S.solv=1; [...new Set(S.walls.map(x=>x.room||""))].forEach(n=>{ const c=ceilCfg(n); if(c.on&&c.mode==="susp") return; Object.assign(c,{on:true,mode:"sol",iso:true,isoN:S.iso.n,ep:200,mem:true,memPose:"entre",e:500,len:2500,lat:"depose"}); }); ch=true; } }catch(e){} try{ if(!S.p250){ S.p250=1; S.pla.lens=[2500]; ch=true; } }catch(e){} try{ if(!S.credOff){ S.walls.filter(w=>(w.room||"")==="cuisine"&&/lin[eé]aire/i.test(w.name)&&w.tile&&w.tile.on).forEach(w=>{ w.tile.on=false; ch=true; }); S.credOff=1; save(); } }catch(e){} try{ if(!S.fl8001){ const D=["#f7f6f2","#efe9df",""]; S.fin.peint.teinte="#f3f4f1"; S.walls.forEach(w=>{ if(!w.teinte||D.includes(String(w.teinte).toLowerCase())) w.teinte="#f3f4f1"; }); S.fl8001=1; save(); ch=true; } }catch(e){} try{ if(!S.belfast){ const BN=SOLS.find(q=>q.grain==="belfast").n; [...new Set(S.walls.map(w=>w.room||""))].forEach(rm=>{ const F=floorCfg(rm); F.on=true; F.n=BN; F.c=""; F.L=0; F.W=0; F.pose=""; if(S.bc&&S.bc[rm]) S.bc[rm].sol=false; }); S.belfast=1; save(); ch=true; } }catch(e){} if(ch) renderAll(); },300);
 document.addEventListener("click",e=>{ if(!e.target.closest("[data-ikea]")) return; if(S.kit&&S.kit.cuisine&&S.kit.cuisine.items.length&&!confirm("Remplacer les meubles de la cuisine par ceux du plan IKEA du 13/11/2026 ?")) return; const m=ikeaAuto(true); renderAll(); if(m) alert(m); });
 function loadProject(txt){
   let d; try{ d=JSON.parse(txt); }catch(e){ ioMsg("Ce texte n'est pas un projet valide : copiez-le en entier depuis le bouton « Copier le projet »."); return; }
