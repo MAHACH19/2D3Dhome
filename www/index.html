@@ -2389,7 +2389,8 @@ function renderPlan(r){
     if(p.bias){ const x0=p.x+3, y0=p.y+3, y1=p.y+p.h-3, pr=(p.prof||[[p.y,p.dB],[p.y+p.h,p.dT]]).map(([y,d])=>`${p.x+p.w+d-3},${Y(Math.max(y0,Math.min(y1,y)))}`).join(" "); parts.push(`<polygon points="${x0},${Y(y0)} ${pr} ${x0},${Y(y1)}" fill="url(#tx-fibre)" stroke="#7a5326" stroke-width="${fs*.06}" stroke-dasharray="${fs*.3} ${fs*.2}"/>`); return; }
     parts.push(R(p.x+3,p.y+3,p.w-6,p.h-6,`fill="url(#tx-fibre)" stroke="#7a5326"`,`stroke-width="${fs*.06}" ${p.cut?`stroke-dasharray="${fs*.3} ${fs*.2}"`:""}`));
   });
-  if(v==="iso"&&r.murMode) r.ins.forEach(p=>{ if(p.w<fs*2.2||p.h<fs*1.6) return; const cx=p.x+p.w/2, cy=Y(p.y+p.h)+fs*1.25;
+  const UPi=(v==="iso"||v==="all")?wallUp(S.walls[S.cur],r):null;
+  if(v==="iso"&&r.murMode) r.ins.forEach(p0=>{ if(p0.w<fs*2.2||p0.h<fs*1.6) return; const e=upExt(UPi,r,p0), p=e&&e.cont?{...p0,h:e.hT,cut:true,notch:e.jn.length>0}:p0, cx=p.x+p.w/2, cy=Y(p0.y+p0.h)+fs*(e?2:1.25);
     parts.push(`<g style="pointer-events:none"><rect x="${cx-fs*2.3}" y="${cy-fs*0.95}" width="${fs*4.6}" height="${fs*(p.cut?1.9:1.3)}" rx="${fs*.2}" fill="#ffffffdd" stroke="${p.cut?"#b4541a":"#7a5326"}" stroke-width="${fs*.05}"/>${T(cx,cy+fs*0.05,`<tspan font-weight="700">${cm(p.w)}×${cm(p.h)}</tspan>`,"middle",`font-size="${fs*0.72}"`)}${p.cut?T(cx,cy+fs*0.75,p.notch?"entaille":"à couper","middle",`font-size="${fs*0.6}"`):""}</g>`); });
 
   const studOp = v==="pla" ? .35 : v==="fin" ? 0 : (v==="iso" && r.murMode) ? 0 : 1;
@@ -2534,15 +2535,24 @@ function renderPlan(r){
   });
 
   const UP=(v==="iso"||v==="mem"||v==="all"||v==="oss"||v==="pla")?wallUp(S.walls[S.cur],r):null, UE=UP?UP.top-H+fs*1.6:0;
-  if(UP){ const X=r.ins&&r.ins.length?r.ins.flatMap(p=>[p.x,p.x+p.w]):[0,L], f0=Math.max(0,Math.min(...X)), f1=Math.min(L,Math.max(...X)), sw=fs*.06;
+  if(UP){ const X=r.ins&&r.ins.length?r.ins.flatMap(p=>[p.x,p.x+p.w]):[0,L], f0=Math.min(...X), f1=Math.max(...X), sw=fs*.06;
     if(UP.keep) parts.push(R(0,H,L,UP.jb-H,`fill="#d9d2c4" stroke="#8a8375"`,`stroke-width="${sw}" stroke-dasharray="${fs*.3} ${fs*.2}"`));
     if(v!=="pla"&&v!=="oss") parts.push(R(f0,H,f1-f0,UP.top-H,`fill="url(#tx-fibre)" stroke="#7a5326"`,`stroke-width="${sw}"`));
     if(v==="mem"||v==="all") parts.push(R(f0,H,f1-f0,UP.top-H,`fill="url(#tx-mem)" fill-opacity=".55" stroke="#2f7fd0"`,`stroke-width="${sw}"`));
     if(UP.par){ parts.push(R(0,UP.jb,L,UP.jh,`fill="none" stroke="#7a5428"`,`stroke-width="${fs*.08}" stroke-dasharray="${fs*.6} ${fs*.3}"`)); parts.push(`<text x="${L/2}" y="${Y(UP.jb+UP.jh/2)+fs*.3}" text-anchor="middle" font-size="${fs*.7}" style="fill:#7a5428">1re solive devant, à ${cm(UP.near)} cm de la pierre : l'isolant monte entre le mur et elle</text>`); }
-    else UP.xs.forEach(x=>{ const a=Math.max(0,x-UP.jw/2), b=Math.min(L,x+UP.jw/2); if(b<=a) return;
+    else UP.xs.forEach(x=>{ const a=Math.max(f0,x-UP.jw/2), b=Math.min(f1,x+UP.jw/2); if(b<=a) return;
       parts.push(R(a,UP.jb,b-a,UP.jh,`fill="#b98a55" stroke="#7a5428"`,`stroke-width="${sw}"`));
       if(v==="mem"||v==="all"||v==="iso"){ const y0=Y(UP.jb), y1=Y(UP.jb+UP.jh); parts.push(`<path d="M${a-fs*.12} ${y0} L${a-fs*.12} ${y1-fs*.12} L${b+fs*.12} ${y1-fs*.12} L${b+fs*.12} ${y0}" fill="none" stroke="#2f7fd0" stroke-width="${fs*.14}"/>`); }
       if(b-a>fs) parts.push(`<text x="${(a+b)/2}" y="${Y(UP.jb+UP.jh/2)}" text-anchor="middle" font-size="${fs*.55}" transform="rotate(-90 ${(a+b)/2} ${Y(UP.jb+UP.jh/2)})" style="fill:#fff">solive</text>`); });
+    if((v==="iso"||v==="mem"||v==="all")&&!UP.par){ const B=upBays(UP,r); B.bays.forEach(b=>{ const cx=(b.x0+b.x1)/2, yy=Y(UP.jb+UP.jh*.62), fz=Math.min(fs*.62,b.w/3.2);
+        if(b.w>fs*.8) parts.push(`<line x1="${b.x0+fs*.08}" y1="${yy+fz*.45}" x2="${b.x1-fs*.08}" y2="${yy+fz*.45}" stroke="#3d3a33" stroke-width="${sw}"/><text x="${cx}" y="${yy}" text-anchor="middle" font-size="${fz}" font-weight="700" style="fill:#3d3a33;paint-order:stroke;stroke:#fff;stroke-width:${fz*.18}px">${cm(b.w)}</text>`); });
+      if(B.bays.length){ const b=B.bays.reduce((m,q)=>q.w>m.w?q:m), tx=b.x0+fs*.45, ty=Y(UP.jb+B.hJ/2); if(b.w>fs*2.2) parts.push(`<text x="${tx}" y="${ty}" text-anchor="middle" font-size="${fs*.5}" transform="rotate(-90 ${tx} ${ty})" style="fill:#3d3a33">↕ ${cm(B.hJ)}</text>`); } }
+    if(v==="iso"||v==="all") (r.ins||[]).forEach(q=>{ const e=upExt(UP,r,q); if(!e||!e.cont) return; const x0=q.x+3, x1=q.x+q.w-3, yb=q.y+3, yt=UP.top-3; let d=`M${x0} ${Y(yb)} L${x0} ${Y(yt)}`;
+        e.jn.slice().sort((a,b)=>a.x-b.x).forEach(n=>{ const a=q.x+n.x, b=q.x+n.x+n.w, yn=UP.top-n.h; d+=` L${Math.max(x0,a)} ${Y(yt)} L${Math.max(x0,a)} ${Y(yn)} L${Math.min(x1,b)} ${Y(yn)} L${Math.min(x1,b)} ${Y(yt)}`; });
+        d+=` L${x1} ${Y(yt)} L${x1} ${Y(yb)} Z`; parts.push(`<path d="${d}" fill="none" stroke="#b4541a" stroke-width="${fs*.07}" stroke-dasharray="${fs*.35} ${fs*.18}"/>`); });
+    if(!UP.par) UP.xs.forEach(x=>{ const a=x-UP.jw/2, b=x+UP.jw/2; if(b<=f0||a>=f1) return; const yb=UP.jb, ym=Y(UP.jb+UP.jh/2), fz=fs*.62, st=`font-weight="700" style="fill:#1d4f8f;paint-order:stroke;stroke:#fff;stroke-width:${fz*.2}px"`;
+        if(!(v==="mem"||v==="all"||v==="iso")) parts.push(`<path d="M${a-fs*.12} ${Y(UP.jb+UP.jh)} L${a-fs*.12} ${Y(yb)+fs*.12} L${b+fs*.12} ${Y(yb)+fs*.12} L${b+fs*.12} ${Y(UP.jb+UP.jh)}" fill="none" stroke="#2f7fd0" stroke-width="${fs*.14}"/>`);
+        parts.push(`<text x="${a-fs*.45}" y="${ym}" text-anchor="middle" font-size="${fz}" ${st} transform="rotate(-90 ${a-fs*.45} ${ym})">${cm(UP.jh)}</text><text x="${b+fs*.45}" y="${ym}" text-anchor="middle" font-size="${fz}" ${st} transform="rotate(90 ${b+fs*.45} ${ym})">${cm(UP.jh)}</text><text x="${x}" y="${Y(yb)+fs*.72}" text-anchor="middle" font-size="${fz}" ${st}>${cm(UP.jw)}</text>`); });
     parts.push(`<line x1="${L+fs*.4}" y1="${Y(UP.top)}" x2="${L+fs*1.2}" y2="${Y(UP.top)}" stroke="#7a5326" stroke-width="${sw}"/><text x="${L+fs*.4}" y="${Y(UP.top)-fs*.35}" font-size="${fs*.75}" font-weight="700" style="fill:#7a5326">${cm(UP.top)} cm</text>`);
     parts.push(`<text x="${L/2}" y="${Y(UP.top)-fs*.45}" text-anchor="middle" font-size="${fs*.75}" font-weight="600" style="fill:#7a5326">Isolant${v==="mem"||v==="all"||v==="iso"?" + membrane":""} jusqu'à ${cm(UP.top)} cm entre les solives</text>`); }
   const fP=(v==="iso"||v==="all")&&r.adj.fib?r.adj.fib:{pre:0,cut:0};
@@ -2583,17 +2593,17 @@ function cutListHtml(r,v){
     const P=cutPieces(r,"iso"), W=S.iso.W, Lg=S.iso.Lg;
     return `<section class="box"><h2>Liste de coupe de l'isolant</h2><p class="cap" style="margin:0 0 8px">${P.length} morceaux, panneaux de ${cm(W)} × ${cm(Lg)} cm. Position = coin bas gauche du morceau, depuis le début du mur et depuis le sol. Touchez une ligne pour la fiche.</p>`+
       tb(["N°","Position","Largeur","Hauteur","Coupe"],P.map((q,i)=>{ const ops=r.ops.filter(o=>q.x<o.x1&&q.x+q.w>o.x&&q.y<o.y1&&q.y+q.h>o.y);
-        const c=[q.bias?(q.prof&&q.prof.length>2?`suit la pierre : ${cm(q.w+Math.min(...q.prof.map(z=>z[1])))} à ${cm(q.w+Math.max(...q.prof.map(z=>z[1])))} (gabarit)`:`en biais : ${cm(q.w+q.dB)} en bas, ${cm(q.w+q.dT)} en haut`):q.w<W-1?`largeur ${cm(q.w)}`:"",q.h<Lg-1?`hauteur ${cm(q.h)}`:"",...ops.map(o=>`entaille ${opName(o,o.i)}`)].filter(Boolean).join(", ")||"entier";
-        return `<tr data-pcl="${i}" style="cursor:pointer"><td><b>I${q.n}</b></td><td>${cm(q.x)} / ${cm(q.y)} cm</td><td class="n"><b>${cm(q.w)}</b></td><td class="n"><b>${cm(q.h)}</b></td><td class="n">${c}</td></tr>`; }))+gabaritHtml(P,"I")+(()=>{ const U=wallUp(S.walls[S.cur],r); return U?`<p class="cap" style="margin:10px 0 0"><b>Remontée entre les solives :</b> la fibre continue au-dessus du mur, de ${cm(U.H)} à ${cm(U.top)} cm du sol (bandes de ${cm(U.top-U.H)} cm de haut)${U.par?", dans la travée entre le mur et la 1re solive.":`, recoupées entre les solives (${U.xs.length} solive(s) traversent ce mur).`}</p>`:""; })()+`</section>`; }
+        const c=[q.bias?(q.prof&&q.prof.length>2?`suit la pierre : ${cm(q.w+Math.min(...q.prof.map(z=>z[1])))} à ${cm(q.w+Math.max(...q.prof.map(z=>z[1])))} (gabarit)`:`en biais : ${cm(q.w+q.dB)} en bas, ${cm(q.w+q.dT)} en haut`):q.w<W-1?`largeur ${cm(q.w)}`:"",q.up?`hauteur continue ${cm(q.h)} (${cm(q.h0)} + ${cm(q.h-q.h0)} entre solives)`:q.h<Lg-1?`hauteur ${cm(q.h)}`:"",...(q.jn||[]).map(n=>`entaille ${cm(n.w)}×${cm(n.h)} à ${cm(n.x)} du bord gauche`),...ops.map(o=>`entaille ${opName(o,o.i)}`)].filter(Boolean).join(", ")||"entier";
+        return `<tr data-pcl="${i}" style="cursor:pointer"><td><b>I${q.n}</b></td><td>${cm(q.x)} / ${cm(q.y)} cm</td><td class="n"><b>${cm(q.w)}</b></td><td class="n"><b>${cm(q.h)}</b></td><td class="n" style="${q.up?"white-space:normal;min-width:180px":""}">${c}</td></tr>`; }))+gabaritHtml(P,"I")+(()=>{ const U=wallUp(S.walls[S.cur],r); return U?upBaysHtml(U,r,"iso"):""; })()+`</section>`; }
   if(v==="oss"){ const P=cutPieces(r,"oss");
     const rails=r.rails.map(x=>({k:x.kind,len:x.len||Math.abs((x.x1||0)-(x.x0||0)),x0:x.x0,y:x.y0}));
     return `<section class="box"><h2>Liste de coupe de l'ossature</h2><p class="cap" style="margin:0 0 8px">${P.length} montants ${S.oss.g} mm. Axe = milieu du montant, mesuré depuis le début du mur. Touchez une ligne pour la fiche.</p>`+
       tb(["N°","Type","Axe","Longueur","Bas à"],P.map((q,i)=>{ const ax=q.x===0?0:q.x>=r.L-FL-1?r.L:q.x+FL/2; return `<tr data-pcl="${i}" style="cursor:pointer"><td><b>M${q.n}</b></td><td>${q.sk==="cadre"?"encadrement":q.sk==="coupe"?"coupé":"courant"}</td><td class="n"><b>${cm(ax)}</b></td><td class="n"><b>${cm(q.h-(q.sk==="coupe"?0:10))}</b></td><td class="n">${cm(q.y)}</td></tr>`; }))+
       `<h3 style="margin:12px 0 6px;font-size:15px">Rails</h3>`+tb(["Rail","Usage","Début","Longueur à couper"],rails.map((x,i)=>`<tr><td><b>R${i+1}</b></td><td>${x.k==="bas"?"rail bas (sol)":x.k==="haut"?"rail haut (plafond)":x.k==="renfort"?"renfort sortie d'eau":"traverse (linteau / appui), +10 cm de chaque côté"}</td><td class="n">${cm(x.x0||0)}${x.k==="traverse"||x.k==="renfort"?` · h ${cm(x.y||0)}`:""}</td><td class="n"><b>${cm(x.len)}</b></td></tr>`))+`</section>`; }
   if(v==="mem"){ if(!r.memOn) return `<section class="box"><h2>Liste de coupe de la membrane</h2><p class="hint">Pas de membrane sur ce mur.</p></section>`;
-    const Hm=r.H+200;
+    const UM=wallUp(S.walls[S.cur],r), Hm=(UM?UM.top:r.H)+200;
     return `<section class="box"><h2>Liste de coupe de la membrane</h2><p class="cap" style="margin:0 0 8px">Lés ${S.mem.dir!=="h"?"verticaux":"horizontaux"} de ${cm(S.mem.rollW)} cm, recouvrement ${cm(S.mem.recouv||100)} cm.</p>`+
-      tb(["Lé","Position","Largeur posée","Longueur à couper"],r.les.map(l=>l.v?`<tr><td><b>Lé ${l.k+1}</b></td><td>${cm(l.x0)} → ${cm(l.x1)} cm</td><td class="n">${cm(l.x1-l.x0)}</td><td class="n"><b>${cm(Hm)}</b> <small>(hauteur + 2 × 10 cm)</small></td></tr>`:`<tr><td><b>Lé ${l.k+1}</b></td><td>h ${cm(l.y0)} → ${cm(l.y1)} cm</td><td class="n">${cm(l.y1-l.y0)}</td><td class="n"><b>${cm(r.L+200)}</b></td></tr>`))+`</section>`; }
+      tb(["Lé","Position","Largeur posée","Longueur à couper"],r.les.map(l=>l.v?`<tr><td><b>Lé ${l.k+1}</b></td><td>${cm(l.x0)} → ${cm(l.x1)} cm</td><td class="n">${cm(l.x1-l.x0)}</td><td class="n"><b>${cm(Hm)}</b> <small>(${UM?`jusqu'à ${cm(UM.top)} cm + 10 cm en bas + 10 cm de retour contre le plancher`:"hauteur + 2 × 10 cm"})</small></td></tr>`:`<tr><td><b>Lé ${l.k+1}</b></td><td>h ${cm(l.y0)} → ${cm(l.y1)} cm</td><td class="n">${cm(l.y1-l.y0)}</td><td class="n"><b>${cm(r.L+200)}</b></td></tr>`))+(UM?upBaysHtml(UM,r,"mem"):"")+`</section>`; }
   return "";
 }
 function gabaritHtml(list,pre){ const B=list.filter(q=>q.bias&&q.prof&&q.prof.length>2); if(!B.length) return "";
@@ -2639,9 +2649,47 @@ const CEIL_SOL={ref:"", s0:300, se:600, sx:"", jw:100, jh:200, fh:22, memPose:"e
 function upTopOf(c,H){ return +c.upTop>0?+c.upTop:H+(c.lat==="garde"?(+c.latT||25):0)+(+c.jh||200); }
 function wallUp(w,r){ if(!w||!w.upJ||isCol(w)) return null; const room=w.room||"", c=ceilCfg(room); if(!c.on||c.mode!=="sol") return null; const R=computeCeil(room); if(!R.ok||!R.sol) return null;
   const g=R.g, sg=g.segs.find(q=>q.w===w); if(!sg) return null; const sR=R.sR, k=sg.dx*sR.nx+sg.dy*sR.ny, X0=R.FW([sg.x0,sg.y0])[0], dx=(r.adj&&r.adj.dx)||0;
-  const H=r.H, keep=c.lat==="garde", jb=Math.min(upTopOf(c,H)-R.jh, H+(keep?(+c.latT||25):0)), top=upTopOf(c,H), par=Math.abs(k)<.05;
-  const xs=par?[]:R.axes.map(a=>(a-X0)/k+dx).filter(x=>x>-R.jw&&x<r.L+R.jw).sort((a,b)=>a-b);
+  const H=r.H, keep=c.lat==="garde", jb=Math.max(H,Math.min(upTopOf(c,H)-R.jh, H+(keep?(+c.latT||25):0))), top=upTopOf(c,H), par=Math.abs(k)<.05;
+  const xs=par?[]:R.axes.map(a=>(a-X0)/k+dx).filter(x=>x>-R.jw-400&&x<r.L+R.jw+400).sort((a,b)=>a-b);
   const near=par?Math.min(...R.axes.map(a=>Math.abs(a-X0))):0; return {H,top,jb,jw:R.jw,jh:R.jh,keep,latT:+c.latT||25,xs,par,near}; }
+/* morceaux entre les solives (remontée isolant/membrane des murs) : largeurs exactes de chaque travée le long du mur */
+function upBays(U,r){ if(!U) return null; const L=r.L, X=r.ins&&r.ins.length?r.ins.flatMap(p=>[p.x,p.x+p.w]):[0,L], f0=Math.min(...X), f1=Math.max(...X), hB=Math.max(0,U.jb-U.H), hJ=Math.max(0,U.top-U.jb);
+  const J=U.par?[]:U.xs.map(x=>{ const s=[Math.max(f0,x-U.jw/2),Math.min(f1,x+U.jw/2)]; s.ax=x; return s; }).filter(s=>s[1]>s[0]), bays=[]; let x=f0;
+  J.forEach(s=>{ if(s[0]-x>5) bays.push({x0:x,x1:s[0]}); x=Math.max(x,s[1]); }); if(f1-x>5) bays.push({x0:x,x1:f1});
+  bays.forEach((b,i)=>{ b.n=i+1; b.w=b.x1-b.x0; b.h=hJ; b.edge=b.x0<=f0+1||b.x1>=f1-1; b.cutW=b.w+(b.edge&&J.length?5:10); });
+  return {f0,f1,hB,hJ,J,bays}; }
+/* morceau d'isolant du haut prolongé d'une seule pièce jusqu'en haut (entre les solives), avec entaille à chaque solive */
+function upExt(U,r,q){ if(!U||!q||q.y+q.h<U.H-1) return null; const Lg=S.iso.Lg||1220, dh=U.top-U.H, hT=q.h+dh, nh=Math.max(0,U.top-U.jb);
+  if(hT>Lg+1) return {cont:false,hT};
+  const jn=U.par?[]:U.xs.map(x=>[Math.max(0,x-U.jw/2-q.x),Math.min(q.w,x+U.jw/2-q.x)]).filter(s=>s[1]-s[0]>1).map(s=>({x:s[0],w:s[1]-s[0],h:nh}));
+  if(jn.some(n=>n.w>=q.w-1)) return {cont:false,hT};
+  return {cont:true,hT,jn}; }
+function upDetailSvg(U){ if(!U||U.par) return ""; const jw=U.jw, jh=U.jh, s=1.1, gap=Math.max(160,jw*1.6), W=jw+2*gap, Hs=jh+120, ox=40, oy=30, X=x=>ox+x*s, Yy=y=>oy+y*s, t=(x,y,tx,o="")=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="15" font-weight="700" fill="#1d4f8f" ${o}>${tx}</text>`;
+  let g=`<rect x="${X(0)}" y="${Yy(-20)}" width="${W*s}" height="${20*s}" fill="#cfc6b4"/><text x="${X(W/2)}" y="${Yy(-6)}" text-anchor="middle" font-size="11" fill="#5a4a32">plancher au-dessus</text>`;
+  g+=`<rect x="${X(0)}" y="${Yy(0)}" width="${gap*s}" height="${jh*s}" fill="#d9b27a"/><rect x="${X(gap+jw)}" y="${Yy(0)}" width="${gap*s}" height="${jh*s}" fill="#d9b27a"/>`;
+  g+=`<rect x="${X(gap)}" y="${Yy(0)}" width="${jw*s}" height="${jh*s}" fill="#b98a55" stroke="#7a5428"/><text x="${X(gap+jw/2)}" y="${Yy(jh/2)}" text-anchor="middle" font-size="12" fill="#fff" transform="rotate(-90 ${X(gap+jw/2)} ${Yy(jh/2)})">solive</text>`;
+  g+=`<rect x="${X(0)}" y="${Yy(jh)}" width="${W*s}" height="${100*s}" fill="#d9b27a" opacity=".55"/><text x="${X(W/2)}" y="${Yy(jh+70)}" text-anchor="middle" font-size="11" fill="#5a4a32">isolant du mur (dessous)</text>`;
+  g+=`<path d="M${X(gap)-3} ${Yy(0)} L${X(gap)-3} ${Yy(jh)+3} L${X(gap+jw)+3} ${Yy(jh)+3} L${X(gap+jw)+3} ${Yy(0)}" fill="none" stroke="#2f7fd0" stroke-width="4"/>`;
+  g+=t(X(gap)-16,Yy(jh/2),`${cm(jh)} cm`,`transform="rotate(-90 ${X(gap)-16} ${Yy(jh/2)})"`)+t(X(gap+jw)+22,Yy(jh/2),`${cm(jh)} cm`,`transform="rotate(90 ${X(gap+jw)+22} ${Yy(jh/2)})"`)+t(X(gap+jw/2),Yy(jh)+22,`${cm(jw)} cm`);
+  g+=`<text x="${X(gap/2)}" y="${Yy(jh/2)}" text-anchor="middle" font-size="11" fill="#5a4a32">isolant</text><text x="${X(gap*1.5+jw)}" y="${Yy(jh/2)}" text-anchor="middle" font-size="11" fill="#5a4a32">isolant</text>`;
+  return `<div style="margin:10px 0"><svg viewBox="0 0 ${W*s+80} ${Hs*s+50}" style="width:100%;max-width:420px;display:block;margin:auto">${g}</svg><p class="cap" style="text-align:center;margin:2px 0 0">Coupe d'une solive vue de face : la membrane (bleu) fait le U ${cm(jh)} × ${cm(jw)} × ${cm(jh)} cm autour de la solive, scotchée KB1.</p></div>`; }
+function upBaysHtml(U,r,kind){ const B=upBays(U,r); if(!B) return ""; const tr=(a,i)=>`<tr>${a.map((x,j)=>`<td${j>1?' class="n"':""}>${x}</td>`).join("")}</tr>`;
+  const th=a=>`<thead><tr>${a.map((x,i)=>`<th${i>1?' style="text-align:right"':""}>${x}</th>`).join("")}</tr></thead>`;
+  let s=`<h3 style="margin:12px 0 6px;font-size:15px">Découpes entre les solives (au-dessus du mur, de ${cm(U.H)} à ${cm(U.top)} cm)</h3>`+upDetailSvg(U);
+  if(kind==="iso"){ const C=(r.ins||[]).map((q,i)=>({q,i,e:upExt(U,r,q)})).filter(o=>o.e), Cc=C.filter(o=>o.e.cont), Cn=C.filter(o=>!o.e.cont);
+    if(Cc.length) s+=`<p class="cap" style="margin:0 0 6px;color:#7a5326"><b>Hauteur continue :</b> ${Cc.map(o=>"I"+(o.i+1)).join(", ")} montent d'une seule pièce jusqu'à ${cm(U.top)} cm (voir leur hauteur et leurs entailles de solive ci-dessus). ${Cn.length?`${Cn.map(o=>"I"+(o.i+1)).join(", ")} dépasseraient un panneau de ${cm(S.iso.Lg)} cm : pour eux, coupez les bandes IS ci-dessous.`:"Le tableau ci-dessous sert à contrôler la largeur exacte de chaque travée avant de découper les entailles."}</p>`;
+    s+=`<p class="cap" style="margin:0 0 6px">${U.par?`Solives parallèles à ce mur : une seule bande, dans la travée entre la pierre et la 1re solive (${cm(U.near-U.jw/2)} cm de profondeur).`:`${B.J.length} solive(s) de ${cm(U.jw)} cm traversent ce mur. Largeur = espace mesuré entre les faces des solives ; « à couper » = +1 cm pour que la fibre tienne serrée (+0,5 cm côté angle).`}</p>`;
+    const rows=[]; if(B.hB>0) rows.push(tr([`<b>IS0</b>`,`${cm(B.f0)} → ${cm(B.f1)} cm`,`bande sous les solives`,`<b>${cm(B.f1-B.f0)}</b>`,`<b>${cm(B.hB)}</b>`]));
+    B.bays.forEach(b=>rows.push(tr([`<b>IS${b.n}</b>`,`${cm(b.x0)} → ${cm(b.x1)} cm`,cm(b.w),`<b>${cm(U.par?b.w:b.cutW)}</b>`,`<b>${cm(b.h)}</b>`])));
+    s+=`<div class="tbl-wrap"><table class="cutl">${th(["N°","Position","Largeur entre solives","Largeur à couper","Hauteur"])}<tbody>${rows.join("")}</tbody></table></div>`;
+    if(B.hB>0) s+=`<p class="cap" style="margin:4px 0 0">IS0 = bande continue sous les solives (épaisseur de l'ancien plafond).</p>`;
+  } else {
+    s+=`<p class="cap" style="margin:0 0 6px">${S.mem.dir==="h"?`Lés horizontaux : ajoutez une bande de membrane de <b>${cm(r.L+200)} × ${cm(U.top-U.H+200)} cm</b> (hauteur au-dessus du mur + 10 cm de recouvrement sur le dernier lé + 10 cm de retour contre le plancher).`:`Les lés du mur montent jusqu'à ${cm(U.top)} cm, puis 10 cm de retour contre le plancher.`} ${U.par?"":`Au droit de chaque solive, fendez le lé sur ${cm(B.hJ)} cm de chaque côté de la solive, rabattez les languettes sur ses flancs, puis posez une manchette.`}</p>`;
+    const rows=[]; B.bays.forEach(b=>rows.push(tr([`<b>T${b.n}</b>`,`${cm(b.x0)} → ${cm(b.x1)} cm`,`travée (partie du lé)`,`<b>${cm(b.w)}</b> × <b>${cm(b.h)}</b>`])));
+    if(!U.par) B.J.forEach((j,i)=>rows.push(tr([`<b>MJ${i+1}</b>`,`solive à ${cm(j.ax)} cm`,`manchette`,`<b>${cm(2*U.jh+U.jw+100)}</b> × <b>${cm(150)}</b>`])));
+    s+=`<div class="tbl-wrap"><table class="cutl">${th(["N°","Position","Rôle","Dimension (L × H)"])}<tbody>${rows.join("")}</tbody></table></div><p class="cap" style="margin:4px 0 0">T = espace entre deux solives que le lé couvre : les languettes fendues se rabattent sur les flancs, le haut du lé se retourne de 10 cm contre le plancher. MJ = manchette qui fait le tour de la solive (flanc + dessous + flanc, 5 cm de recouvrement de chaque côté), scotchée KB1 sur tout son pourtour.</p>`;
+  }
+  return s; }
 function upWalls(room){ return S.walls.filter(w=>(w.room||"")===room&&w.upJ&&!isCol(w)); }
 function latScrew(c){ const n=(+c.latT||25)+35+3; return "4 × "+(n<=50?50:n<=60?60:n<=70?70:80)+" mm"; }
 function ceilJoists(c,maxX){ const ax=[]; let x=+c.s0||300; const L=String(c.sx||"").trim().split(/[;\s]+/).map(t=>parseFloat(t.replace(/,$/,"").replace(",","."))).filter(v=>v>0).map(v=>Math.round(v*10));
@@ -5266,7 +5314,7 @@ document.getElementById("scan-file").addEventListener("change",e=>{ const f=e.ta
 /* ---------- Fiche de coupe au toucher (vue 2D isolant / plaques) ---------- */
 let CUTSEL=null;
 function cutPieces(r,v){
-  if(v==="iso"||(v==="all"&&r.isoOn)) return (r.ins||[]).map((q,i)=>({...q,kind:"iso",n:i+1}));
+  if(v==="iso"||(v==="all"&&r.isoOn)){ const U=wallUp(S.walls[S.cur],r); return (r.ins||[]).map((q,i)=>{ const e=upExt(U,r,q); return e&&e.cont?{...q,kind:"iso",n:i+1,h0:q.h,h:e.hT,jn:e.jn,up:U.top}:{...q,kind:"iso",n:i+1}; }); }
   if(v==="oss") return r.studs.map((q,i)=>({x:q.x,y:q.y0,w:FL,h:q.y1-q.y0,kind:"oss",sk:q.kind,n:i+1})).sort((a,b)=>a.x-b.x||a.y-b.y).map((q,i)=>({...q,n:i+1}));
   if(v==="pla"||v==="fin") return r.plates.filter(q=>q.layer===1).map((q,i)=>({...q,kind:"pla",n:q.n||i+1}));
   return [];
@@ -5287,11 +5335,12 @@ function cutSheet(){
   const Yp=y=>oy+Hh-y*k;
   let g=`<rect x="${ox}" y="${oy}" width="${W}" height="${Hh}" fill="${iso?"#d9b27a":"#ece8df"}" stroke="#5a4a32" stroke-width="1.5"/>`;
   ops.forEach(c=>{ g+=`<rect x="${ox+c.x0*k}" y="${Yp(c.y1)}" width="${(c.x1-c.x0)*k}" height="${(c.y1-c.y0)*k}" fill="var(--card)" stroke="#b4541a" stroke-dasharray="4 3" stroke-width="1.5"/>`; });
+  (q.jn||[]).forEach(n=>{ g+=`<rect x="${ox+n.x*k}" y="${oy}" width="${n.w*k}" height="${n.h*k}" fill="var(--card)" stroke="#7a5428" stroke-dasharray="4 3" stroke-width="1.5"/><text x="${ox+(n.x+n.w/2)*k}" y="${oy+n.h*k/2+4}" text-anchor="middle" font-size="${fsz-1}" fill="#7a5428">solive</text>`; });
   const scr=iso?[]:screwPts(r).filter(([x,y])=>x>=q.x-1&&x<=q.x+q.w+1&&y>=q.y&&y<=q.y+q.h).map(([x,y])=>[clamp(x-q.x,10,q.w-10),y-q.y]);
   scr.forEach(([x,y])=>{ g+=`<circle cx="${ox+x*k}" cy="${Yp(y)}" r="2.6" fill="#333"/>`; });
   g+=`<line x1="${ox}" y1="${oy+Hh+14}" x2="${ox+W}" y2="${oy+Hh+14}" stroke="#1d63c4"/><text x="${ox+W/2}" y="${oy+Hh+30}" text-anchor="middle" font-size="${fsz+1}" font-weight="700" fill="#1d63c4">${cm(q.w)} cm</text>`;
   g+=`<line x1="${ox-14}" y1="${oy}" x2="${ox-14}" y2="${oy+Hh}" stroke="#1d63c4"/><text x="${ox-20}" y="${oy+Hh/2}" text-anchor="middle" font-size="${fsz+1}" font-weight="700" fill="#1d63c4" transform="rotate(-90 ${ox-20} ${oy+Hh/2})">${cm(q.h)} cm</text>`;
-  const lines=[`Largeur à couper : <b>${cm(q.w)} cm</b>`,`Hauteur à couper : <b>${cm(q.h)} cm</b>`,
+  const lines=[`Largeur à couper : <b>${cm(q.w)} cm</b>`,`Hauteur à couper : <b>${cm(q.h)} cm</b>${q.up?` (d'une seule pièce : ${cm(q.h0)} sur le mur + ${cm(q.h-q.h0)} entre les solives, jusqu'à ${cm(q.up)} cm du sol)`:""}`,...(q.jn||[]).map(n=>`<b>Entaille solive</b> en haut : ${cm(n.w)} cm de large × ${cm(n.h)} cm de haut, à ${cm(n.x)} cm du bord gauche`),
     `Position : à ${cm(q.x)} cm du début du mur, ${cm(q.y)} cm du sol`,
     q.w>=full.w-1&&q.h>=full.h-1&&!ops.length?`${iso?"Panneau entier":"Plaque entière"} : pas de coupe`:`Dans ${iso?"un panneau":"une plaque"} de ${cm(full.w)} × ${cm(full.h)} cm : `+([q.w<full.w-1?`couper à ${cm(q.w)} cm de large (chute ${cm(full.w-q.w)} cm)`:"",q.h<full.h-1?`couper à ${cm(q.h)} cm de haut (chute ${cm(full.h-q.h)} cm)`:""].filter(Boolean).join(" et ")||"garder entier(ère), seulement la découpe ci-dessous"),
     ...(!iso&&q.trimL>0?[`<b>Bord aminci coupé à gauche</b> : retirer ${cm(q.trimL)} cm (bout de mur, bord droit contre l'angle)`]:[]),
