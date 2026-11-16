@@ -361,9 +361,9 @@ section.box{border-radius:12px}
             <button type="button" data-view="3d">Mur 3D</button>
             <button type="button" data-view="coupe">Coupes</button>
             <button type="button" data-view="all">Tout</button>
-            <button type="button" data-view="oss">Ossature</button>
             <button type="button" data-view="iso">Isolant</button>
             <button type="button" data-view="mem">Membrane</button>
+            <button type="button" data-view="oss">Ossature</button>
             <button type="button" data-view="pla">Plaques</button>
             <button type="button" data-view="fin">Enduits</button>
             <button type="button" data-view="res">Réseaux</button>
@@ -1229,26 +1229,6 @@ function renderSide(){ renderQuick();
   </section>
 
   <section class="box">
-    <h2><span class="sw" style="background:var(--steel)"></span>Ossature métallique</h2>
-    <div class="row" style="grid-template-columns:1fr">
-      <label class="f">Fournisseur<select id="oss-four" data-b="oss.four" data-re>${opt(Object.keys(OSS),oss.four)}</select></label>
-    </div>
-    <div class="row">
-      <label class="f">Gamme (mm)<select id="oss-g" data-act="gamme">${opt([48,70,90],oss.g)}</select></label>
-      <label class="f">Entraxe<select id="oss-e" data-b="oss.e" data-num><option value="600"${oss.e==600?" selected":""}>60 cm</option><option value="400"${oss.e==400?" selected":""}>40 cm</option></select></label>
-    </div>
-    <div class="row">
-      <label class="f">Longueur rail (cm)<input id="oss-rl" type="number" step="1" data-b="oss.railLen" data-cm value="${oss.railLen/10}"></label>
-      <label class="f">Longueurs montants (cm)<input id="oss-ml" data-list="oss.lens" value="${oss.lens.map(v=>v/10).join(", ")}"></label>
-      <label class="f">Jeu en haut des montants (mm)<input type="number" min="0" max="20" step="1" data-b="oss.jeu" data-num value="${jeuM()}" title="0 = montant au contact du fond des rails haut et bas"></label>
-    </div>
-    <label class="chk"><input type="checkbox" id="oss-d" data-b="oss.double" ${oss.double?"checked":""}> Montants doublés autour des ouvertures</label>
-    ${S.iso.on && S.iso.pose==="mur"?`<label class="chk"><input type="checkbox" id="oss-ap" data-b="oss.appuis" ${oss.appuis?"checked":""}> Appuis intermédiaires fixés au mur (sinon autoportante)</label>`:""}
-    <label class="chk"><input type="checkbox" id="oss-da" data-b="oss.doubleAll" ${oss.doubleAll?"checked":""}> Montants doublés sur tout le mur (jumelés)</label>
-    <p class="hint">Les montants jumelés rigidifient le mur et augmentent la hauteur possible.</p>
-  </section>
-
-  <section class="box">
     <h2><span class="sw" style="background:var(--fibre)"></span>Isolant fibre de bois</h2>
     <label class="chk"><input type="checkbox" id="iso-on" data-b="iso.on" data-re ${iso.on?"checked":""}> Poser un isolant fibre de bois</label>
     ${iso.on?`<label class="chk wcfg"><input type="checkbox" data-wcfg="noIso" ${!w.noIso?"checked":""}> Isolant sur <b>${esc(w.name)}</b></label>${S.walls.some(x=>x.noIso)?`<p class="hint" style="margin:0 0 6px">Sans isolant : ${esc(S.walls.filter(x=>x.noIso).map(x=>x.name).join(", "))}</p>`:""}`:""}
@@ -1279,6 +1259,43 @@ function renderSide(){ renderQuick();
   </section>
 
   <section class="box">
+    <h2><span class="sw" style="background:var(--mem)"></span>Membrane pare-vapeur</h2>
+    <label class="chk"><input type="checkbox" id="mem-on" data-b="mem.on" data-re ${S.mem.on?"checked":""}> Poser une membrane côté chaud</label>
+    ${S.mem.on?`<label class="chk wcfg"><input type="checkbox" data-wcfg="noMem" ${!w.noMem?"checked":""}> Membrane sur <b>${esc(w.name)}</b></label>${S.walls.some(x=>x.noMem)?`<p class="hint" style="margin:0 0 6px">Sans membrane : ${esc(S.walls.filter(x=>x.noMem).map(x=>x.name).join(", "))}</p>`:""}`:""}
+    ${S.mem.on?`
+    <div class="row" style="grid-template-columns:1fr">
+      <label class="f">Produit<select id="mem-n" data-act="memn">${opt(MEM.map(m=>m.n),S.mem.n)}</select></label>
+    </div>
+    <div class="row">
+      <label class="f">Largeur rouleau (cm)<input id="mem-w" type="number" step="1" data-b="mem.rollW" data-cm value="${S.mem.rollW/10}"></label>
+      <label class="f">Longueur rouleau (m)<input id="mem-l" type="number" step="1" data-b="mem.rollL" data-m value="${S.mem.rollL/1000}"></label>
+      <label class="f">Recouvrement (cm)<input id="mem-r" type="number" step="1" data-b="mem.recouv" data-cm value="${S.mem.recouv/10}"></label>
+    </div>
+    <div class="row" style="grid-template-columns:1fr"><label class="f">Sens de pose<select data-b="mem.dir" data-re><option value="v"${S.mem.dir!=="h"?" selected":""}>Déroulée sur la hauteur : lés verticaux de ${cm(S.mem.rollW)} cm</option><option value="h"${S.mem.dir==="h"?" selected":""}>Déroulée sur la longueur : lés horizontaux</option></select></label></div>
+    <p class="hint">${S.mem.dir!=="h"?"Chaque lé est coupé à la hauteur du mur + 10 cm de retour en haut et en bas, posé côte à côte avec recouvrement vertical collé au KB1.":"Lés horizontaux, recouvrements collés à l'adhésif."} Jonctions avec sol, plafond et murs au mastic. Film translucide quadrillé : le quadrillage aide à couper droit et à repérer les montants.</p>`:""}
+  </section>
+
+  <section class="box">
+    <h2><span class="sw" style="background:var(--steel)"></span>Ossature métallique</h2>
+    <div class="row" style="grid-template-columns:1fr">
+      <label class="f">Fournisseur<select id="oss-four" data-b="oss.four" data-re>${opt(Object.keys(OSS),oss.four)}</select></label>
+    </div>
+    <div class="row">
+      <label class="f">Gamme (mm)<select id="oss-g" data-act="gamme">${opt([48,70,90],oss.g)}</select></label>
+      <label class="f">Entraxe<select id="oss-e" data-b="oss.e" data-num><option value="600"${oss.e==600?" selected":""}>60 cm</option><option value="400"${oss.e==400?" selected":""}>40 cm</option></select></label>
+    </div>
+    <div class="row">
+      <label class="f">Longueur rail (cm)<input id="oss-rl" type="number" step="1" data-b="oss.railLen" data-cm value="${oss.railLen/10}"></label>
+      <label class="f">Longueurs montants (cm)<input id="oss-ml" data-list="oss.lens" value="${oss.lens.map(v=>v/10).join(", ")}"></label>
+      <label class="f">Jeu en haut des montants (mm)<input type="number" min="0" max="20" step="1" data-b="oss.jeu" data-num value="${jeuM()}" title="0 = montant au contact du fond des rails haut et bas"></label>
+    </div>
+    <label class="chk"><input type="checkbox" id="oss-d" data-b="oss.double" ${oss.double?"checked":""}> Montants doublés autour des ouvertures</label>
+    ${S.iso.on && S.iso.pose==="mur"?`<label class="chk"><input type="checkbox" id="oss-ap" data-b="oss.appuis" ${oss.appuis?"checked":""}> Appuis intermédiaires fixés au mur (sinon autoportante)</label>`:""}
+    <label class="chk"><input type="checkbox" id="oss-da" data-b="oss.doubleAll" ${oss.doubleAll?"checked":""}> Montants doublés sur tout le mur (jumelés)</label>
+    <p class="hint">Les montants jumelés rigidifient le mur et augmentent la hauteur possible.</p>
+  </section>
+
+  <section class="box">
     <h2><span class="sw" style="background:var(--plaque)"></span>Plaques de parement</h2>
     <div class="row">
       <label class="f">Fournisseur<select id="pla-f" data-act="plaf">${opt(plaF,pla.f)}</select></label>
@@ -1295,23 +1312,6 @@ function renderSide(){ renderQuick();
     </div>
     <label class="chk"><input type="checkbox" data-b="pla.rogne" data-re ${pla.rogne?"checked":""}> Couper le bord aminci aux deux bouts du mur (bord droit dans les angles)</label>
     ${pla.rogne?`<div class="row"><label class="f">Largeur retirée (cm)<input type="number" min="1" max="15" step="0.5" data-b="pla.rogneW" data-cm value="${(pla.rogneW||50)/10}"></label></div><p class="hint">La première plaque est recoupée de cette largeur côté angle, et les montants sont placés pour que tous les joints tombent sur un montant.</p>`:""}
-  </section>
-
-  <section class="box">
-    <h2><span class="sw" style="background:var(--mem)"></span>Membrane pare-vapeur</h2>
-    <label class="chk"><input type="checkbox" id="mem-on" data-b="mem.on" data-re ${S.mem.on?"checked":""}> Poser une membrane côté chaud</label>
-    ${S.mem.on?`<label class="chk wcfg"><input type="checkbox" data-wcfg="noMem" ${!w.noMem?"checked":""}> Membrane sur <b>${esc(w.name)}</b></label>${S.walls.some(x=>x.noMem)?`<p class="hint" style="margin:0 0 6px">Sans membrane : ${esc(S.walls.filter(x=>x.noMem).map(x=>x.name).join(", "))}</p>`:""}`:""}
-    ${S.mem.on?`
-    <div class="row" style="grid-template-columns:1fr">
-      <label class="f">Produit<select id="mem-n" data-act="memn">${opt(MEM.map(m=>m.n),S.mem.n)}</select></label>
-    </div>
-    <div class="row">
-      <label class="f">Largeur rouleau (cm)<input id="mem-w" type="number" step="1" data-b="mem.rollW" data-cm value="${S.mem.rollW/10}"></label>
-      <label class="f">Longueur rouleau (m)<input id="mem-l" type="number" step="1" data-b="mem.rollL" data-m value="${S.mem.rollL/1000}"></label>
-      <label class="f">Recouvrement (cm)<input id="mem-r" type="number" step="1" data-b="mem.recouv" data-cm value="${S.mem.recouv/10}"></label>
-    </div>
-    <div class="row" style="grid-template-columns:1fr"><label class="f">Sens de pose<select data-b="mem.dir" data-re><option value="v"${S.mem.dir!=="h"?" selected":""}>Déroulée sur la hauteur : lés verticaux de ${cm(S.mem.rollW)} cm</option><option value="h"${S.mem.dir==="h"?" selected":""}>Déroulée sur la longueur : lés horizontaux</option></select></label></div>
-    <p class="hint">${S.mem.dir!=="h"?"Chaque lé est coupé à la hauteur du mur + 10 cm de retour en haut et en bas, posé côte à côte avec recouvrement vertical collé au KB1.":"Lés horizontaux, recouvrements collés à l'adhésif."} Jonctions avec sol, plafond et murs au mastic. Film translucide quadrillé : le quadrillage aide à couper droit et à repérer les montants.</p>`:""}
   </section>
 
   <section class="box">
@@ -1696,15 +1696,35 @@ function renderPiece(r){
 
 function finSteps(r){
   const F=S.fin, m2=r.netArea*r.pla.faces;
-  const eJ=ENDUITS.find(x=>x.n===F.jt.n)||ENDUITS[1], eR=ENDUITS.find(x=>x.n===F.rat.n)||ENDUITS[0];
-  const st=[{k:"bandes",t:"Bandes et vis",prod:eJ.n,q:`${fr(m2*F.jt.conso,1)} ${eJ.u}`,
-    d:`Bande papier sur ${fr(r.joints,1)} m de joints, noyée dans l'enduit. Têtes de vis recouvertes. Deux passes : collage de la bande, puis passe de finition élargie à 25–30 cm.`}];
+  const eJ=ENDUITS.find(x=>x.n===F.jt.n)||ENDUITS[1], eR=ENDUITS.find(x=>x.n===F.rat.n)||ENDUITS[0], pe=r.peint, tint=(r.wall&&r.wall.teinte)?(NUANCIER.find(c=>c[1]===r.wall.teinte)||[r.wall.teinte])[0]:"";
+  const st=[{k:"prep",t:"Préparer la pièce",prod:"Bâche, ruban de masquage, éclairage rasant",q:"—",
+    d:"Avant l'enduit : pièce hors d'eau, chauffée et ventilée, plaques sèches et propres.",
+    how:["Température entre 10 et 30 °C dans la pièce et sur les murs, air pas trop humide (fenêtres fermées si pluie, chauffage doux).","Vérifier toutes les plaques : vis enfoncées juste sous le carton (sans le déchirer), aucune tête qui dépasse ; recouper au cutter le carton arraché.","Dépoussiérer les plaques à la balayette, protéger sol, fenêtres et menuiseries (bâche + ruban de masquage).","Installer une lampe baladeuse posée au sol ou tenue contre le mur : la lumière rasante montre tous les défauts."],
+    tools:["Bâche, ruban de masquage","Lampe baladeuse LED","Cutter, tournevis/visseuse"]},
+   {k:"bandes",t:"Bandes et vis",prod:eJ.n+" + bande papier",q:`${fr(m2*F.jt.conso,1)} ${eJ.u} · ${fr(r.joints*1.05,1)} m de bande`,
+    d:`Bande papier sur ${fr(r.joints,1)} m de joints, noyée dans l'enduit ${eJ.n}. En 3 passes, avec séchage complet entre chaque.`,
+    how:[`Passe 1 (collage) : remplir le creux des bords amincis avec ${eJ.n} au couteau de 10–15 cm, poser la bande papier bien centrée, la serrer au couteau en chassant l'air et l'excédent (il doit rester une fine couche sous la bande). Enduire aussi toutes les têtes de vis.`,
+      "Angles rentrants (mur/mur, mur/plafond) : plier la bande en deux sur sa marque centrale, enduire les deux côtés de l'angle, plaquer la bande et serrer une face après l'autre.",
+      "Angles sortants : cornière d'angle (bande armée métal ou cornière PVC) enduite des deux côtés.",
+      "Bords coupés (sans amincis) et bouts de plaques : bande quand même, mais passes plus larges et plus fines (on ne peut pas remplir de creux).",
+      "Laisser sécher complètement (l'enduit devient blanc uniforme, en général 24 h — voir le seau).",
+      "Passe 2 (garnissage) : recouvrir la bande avec un couteau de 20 cm, en débordant de 5 cm de chaque côté. Repasser les têtes de vis. Séchage.",
+      "Passe 3 (finition) : couteau de 25–30 cm, passe très fine et large pour fondre le joint dans la plaque. Égrener au grain 120–180 si besoin, sans attaquer le carton."],
+    tools:["Couteaux à enduire 10, 20 et 30 cm","Auge / taloche inox","Bande papier à joint","Cornière d'angle pour les angles sortants","Cale à poncer grain 120–180"]}];
   if(F.rat.on) for(let k=0;k<F.rat.couches;k++) st.push({k:k%2?"rat2":"rat1",t:`Ratissage passe ${k+1}`,prod:eR.n,q:`${fr(m2*F.rat.conso,1)} ${eR.u}`,
-    d: k===0 ? "Passe tirée à la lisseuse ou au couteau de 40 cm, sens horizontal, sur toute la surface. Laisser sécher selon la fiche produit." : "Passe croisée dans l'autre sens, puis ponçage au grain 220 à la ponceuse girafe et dépoussiérage."});
+    d: k===0 ? `Passe tirée à la lisseuse sur tout le mur avec ${eR.n} : elle unifie le carton des plaques et les joints.` : "Passe croisée, plus fine, puis ponçage et dépoussiérage : le mur doit être parfaitement lisse en lumière rasante.",
+    how: k===0 ? ["Bien mélanger l'enduit dans le seau (malaxeur à petite vitesse), sans ajouter d'eau sauf si la fiche le permet.","Charger la lisseuse inox (40–60 cm) sur le bord, tirer l'enduit en passes horizontales de bas en haut, lame presque à plat à la fin pour serrer.","Travailler par bandes d'environ 1 m, frais dans frais, en commençant par le haut du mur ; reprendre tout de suite les angles au couteau à angle.","Retirer les surépaisseurs et les traînées pendant que c'est frais. Séchage complet avant la passe suivante (en général 12–24 h)."]
+      : ["Passe croisée (sens vertical) très fine, lame bien serrée : elle bouche les petites marques de la première.","Après séchage : poncer à la ponceuse girafe (aspiration branchée) ou à la cale, grain 180 puis 220, sans insister sur les angles.","Contrôler à la lampe rasante, reprendre au couteau les creux, re-poncer localement.","Dépoussiérer entièrement (aspirateur + brosse douce) : la poussière empêche l'accroche de la peinture."],
+    tools: k===0 ? ["Lisseuse inox 40–60 cm","Couteau à angle","Malaxeur + perceuse"] : ["Ponceuse girafe avec aspirateur","Abrasif grain 180 et 220","Lampe rasante"]});
   if(F.peint.on && F.prim.on) st.push({k:"prim",t:"Impression",prod:F.prim.n,q:`${fr(m2/(F.prim.r||10),1)} L`,
-    d:"Une couche au rouleau sur fond sec et dépoussiéré. Elle bloque le fond et fait ressortir les défauts à reprendre."});
-  if(F.peint.on && r.peint) for(let k=0;k<F.peint.couches;k++) st.push({k:"peint",t:`Peinture couche ${k+1}`,prod:r.peint.n,q:`${fr(m2/(r.peint.r||10),1)} L`,
-    d: k===0 ? "Rechampir les angles au pinceau, puis rouleau 180 mm en passes croisées." : "Couche de finition, lissée dans le même sens en fin de passe."});
+    d:"Une couche d'impression au rouleau sur fond sec et dépoussiéré. Elle bloque le fond (enduit et carton boivent différemment) et fait ressortir les défauts à reprendre.",
+    how:["Rechampir au pinceau les angles, le pourtour du plafond, des menuiseries et des boîtiers (5–10 cm).","Rouleau microfibre poils 12 mm : charger, essorer sur la grille, appliquer en W puis lisser du haut vers le bas.","Après séchage (voir pot, souvent quelques heures) : reprendre à l'enduit les défauts révélés, poncer, dépoussiérer et réimprimer ces zones."],
+    tools:["Pinceau à rechampir 50 mm","Rouleau microfibre 12 mm + bac/grille","Perche télescopique"]});
+  if(F.peint.on && pe) for(let k=0;k<F.peint.couches;k++) st.push({k:"peint",t:`Peinture couche ${k+1}`,prod:pe.n+(tint?` · teinte ${tint}`:""),q:`${fr(m2/(pe.r||10),1)} L`,
+    d: k===0 ? "Première couche bien garnie, rechampi d'abord puis rouleau en passes croisées." : "Couche de finition, mêmes gestes, lissée dans le même sens partout pour un rendu uniforme.",
+    how: k===0 ? ["Mélanger la peinture (et mélanger ensemble les pots d'une même teinte si plusieurs pots).","Rechampir au pinceau angles, plafond, plinthes, menuiseries et prises, sur 5–10 cm, une seule zone à la fois pour garder le bord humide.","Rouleau microfibre 12 mm : déposer en 3 bandes verticales sur environ 1 m², croiser horizontalement, puis lisser de haut en bas sans recharger.","Avancer frais dans frais, mur par mur, sans s'arrêter au milieu d'un mur.","Laisser sécher le temps indiqué sur le pot avant la 2e couche (souvent 4–6 h), pièce aérée mais sans courant d'air."]
+      : ["Mêmes gestes que la couche 1 : rechampi puis rouleau, lissage final de haut en bas dans le même sens partout.","Contrôler en lumière rasante, retoucher seulement pendant que c'est frais.","Retirer les rubans de masquage tant que la peinture est encore un peu fraîche.","Rouleau et pinceau : rincer à l'eau (peinture acrylique Flügger)."],
+    tools:["Pinceau à rechampir","Rouleau microfibre 12 mm + manchon neuf","Bac et grille","Perche télescopique"]});
   return st;
 }
 function screwPts(r){
@@ -2603,7 +2623,10 @@ function renderPlan(r){
     ex.innerHTML=`<section class="box"><h2>Étapes de finition</h2>
       <div class="steps" id="steps">${steps.map((s2,i)=>`<button type="button" data-step="${i}" aria-pressed="${i===si}">${i+1}. ${esc(s2.t)}</button>`).join("")}</div>
       <div class="stepcard"><div><b>${esc(cur.t)}</b><p>${esc(cur.d)}</p></div>
-      <div><span class="cap">Produit</span><b style="font-size:17px">${esc(cur.prod)}</b><span class="cap">Quantité pour ce mur</span><b>${cur.q}</b></div></div></section>`;
+      <div><span class="cap">Produit</span><b style="font-size:17px">${esc(cur.prod)}</b><span class="cap">Quantité pour ce mur</span><b>${cur.q}</b></div></div>
+      ${cur.how?`<h3 style="margin:14px 0 6px;font-size:15px">Comment faire</h3><ol style="margin:0;padding-left:20px;line-height:1.5">${cur.how.map(x=>`<li style="margin:4px 0">${esc(x)}</li>`).join("")}</ol>`:""}
+      ${cur.tools?`<p class="cap" style="margin:10px 0 0"><b>Outils :</b> ${cur.tools.map(esc).join(" · ")}</p>`:""}
+      <p class="hint" style="margin-top:10px">Les temps de séchage dépendent de la température et de l'humidité : suivez toujours ceux écrits sur le seau ou le pot.</p></section>`;
   } else if(v==="iso"||v==="oss"||v==="mem"){ ex.innerHTML=cutListHtml(r,v); }
   else ex.innerHTML="";
 }
@@ -5768,7 +5791,7 @@ document.getElementById("side").addEventListener("change",e=>{ const el=e.target
 /* ---------- Accueil (logo puis menu) et parcours étape par étape ---------- */
 const SCREENS=[
   {k:"murs",ic:"📏",t:"Mes pièces et murs",d:"Pièces, longueurs, hauteurs, portes et fenêtres",side:["murs","ouv"],views:["piece","logement","all","3d"],v:"piece",main:[]},
-  {k:"mat",ic:"🧱",t:"Isolant, ossature, plaques",d:"Fibre de bois, Vario Xtra, rails et montants, placo",side:["oss","iso","mem","pla"],views:["all","iso","mem","oss","pla","coupe","3d"],v:"iso",main:[]},
+  {k:"mat",ic:"🧱",t:"Isolant, membrane, ossature, plaques",d:"Fibre de bois, Vario Xtra, puis rails et montants, placo",side:["iso","mem","oss","pla"],views:["all","iso","mem","oss","pla","coupe","3d"],v:"iso",main:[]},
   {k:"res",ic:"🔌",t:"Électricité et plomberie",d:"Prises, interrupteurs, eau, évacuations, gaines",side:["elec"],views:["res","elec","visite"],v:"res",main:[]},
   {k:"amen",ic:"🍳",t:"Cuisine, plafond, sol, meubles",d:"Cuisine IKEA, plafond, luminaires, VMC, sol, MDF, créations placo",side:["plaf","cuis","sol","lum","meub","crea","bc"],views:["room3d","plafond","logement","visite"],v:"room3d",main:[]},
   {k:"fin",ic:"🎨",t:"Enduits et peinture",d:"Mildecor MIL'12 / MIL'13, primaire, peintures, béton ciré",side:["fin","bc"],views:["fin","visite"],v:"fin",main:[]},
