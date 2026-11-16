@@ -843,15 +843,21 @@ function compute(wall){
 
   // Isolant
   const ins=[], insPieces=[], murMode=iso.pose==="mur";
+  const HI=(()=>{ if(!wall.upJ||isCol(wall)) return H; const c=ceilCfg(wall.room||""); return c&&c.on&&c.mode==="sol"?Math.max(H,upTopOf(c,H)):H; })();
   let chevQty=0, appuis=0; const chevs=[];
   if(iso.on && murMode){
     const W2=iso.W||600, Lg=iso.Lg||1200, A=W2*Lg; let col=0;
     const xi0=-FC.pre, xi1=L+(FC.post??FC.cut);
+    /* calepinage sur la hauteur finale (jusqu'en haut entre les solives si le mur y monte), en réutilisant la chute du haut de la colonne précédente */
+    let carry=0, prevJ=[]; const jointsOf=h1=>{ const J=[]; let y=h1; while(y<HI-5){ J.push(y); y+=Lg; } return J; }, okJ=J=>J.every(a=>prevJ.every(b=>Math.abs(a-b)>=200));
     for(let x=xi0; x<xi1-1; x+=W2, col++){
       const w=Math.min(W2,xi1-x); let y=0, first=true;
-      while(H-y>5){
-        const h = (first && col%2===1) ? Math.min(Lg/2,H-y) : Math.min(Lg,H-y);
-        const p={x,y,w,h};
+      const cand=col===0?[Lg]:[...(carry>=300&&carry<Lg-1?[carry]:[]),...(col%2===1?[Lg/2,Lg]:[Lg,Lg/2]),Lg/3,Lg*2/3];
+      const h1=Math.min(HI,cand.find(c=>okJ(jointsOf(Math.min(c,HI))))||(col%2===1?Lg/2:Lg)), fromCarry=carry>=300&&Math.abs(h1-carry)<1;
+      prevJ=jointsOf(h1); let topH=0;
+      while(HI-y>5){
+        const h = first ? Math.min(h1,HI-y) : Math.min(Lg,HI-y);
+        const p={x,y,w,h}; if(first&&fromCarry) p.chute=true; topH=h;
         const inside=ops.some(o=>p.x>=o.x-1&&p.x+p.w<=o.x1+1&&p.y>=o.y-1&&p.y+p.h<=o.y1+1);
         if(!inside){
           p.cut = h<Lg-1 || w<W2-1 || ops.some(o=>p.x<o.x1&&p.x+p.w>o.x&&p.y<o.y1&&p.y+p.h>o.y);
@@ -866,9 +872,10 @@ function compute(wall){
         }
         y+=h; first=false;
       }
+      carry=Math.max(topH<Lg-1?Lg-topH:0, !fromCarry&&h1<Lg-1&&h1<HI?Lg-h1:0);
     }
     { const by={}; ins.forEach(p=>{ const notch=ops.some(o=>p.x<o.x1&&p.x+p.w>o.x&&p.y<o.y1&&p.y+p.h>o.y); p.notch=notch; const k=`${cm(p.w)} × ${cm(p.h)} cm`+(notch?" (à entailler autour de l'ouverture)":p.w>=W2-1&&p.h>=Lg-1?" (entier)":""); by[k]=(by[k]||0)+1; });
-      okk(`Découpe des panneaux (largeur × hauteur) : ${Object.entries(by).map(([k,n])=>`${n} × ${k}`).join(" ; ")}. Panneau de ${cm(W2)} × ${cm(Lg)} cm posé debout, hauteur de mur ${cm(H)} cm.`,"Plan de découpe"); }
+      okk(`Découpe des panneaux (largeur × hauteur) : ${Object.entries(by).map(([k,n])=>`${n} × ${k}`).join(" ; ")}. Panneau de ${cm(W2)} × ${cm(Lg)} cm posé debout, hauteur d'isolant ${cm(HI)} cm${HI>H+1?` (mur ${cm(H)} cm + ${cm(HI-H)} cm entre les solives)`:""}${ins.some(p=>p.chute)?" ; les chutes du haut sont réutilisées en bas de la colonne suivante":""}.`,"Plan de découpe"); }
     const D=iso.decol||0;
     if(iso.ep>D+5) ko(`Isolant de ${iso.ep} mm pour un décollement de ${D} mm : l'ossature comprimerait l'isolant. Décollez l'ossature d'au moins ${iso.ep} mm.`);
     else okk(`Isolant de ${iso.ep} mm logé dans les ${D} mm entre le mur et l'ossature${D-iso.ep>15?` (lame d'air de ${D-iso.ep} mm)`:""}.`);
@@ -896,7 +903,7 @@ function compute(wall){
     if(e===400 && iso.W>=560) ko(`Entraxe 40 cm : les panneaux de ${cm(iso.W)} cm sont recoupés à la largeur de l'entre-axe, avec une chute à chaque panneau.`);
   }
   const insBins = iso.on ? ffd(insPieces, iso.Lg) : [];
-  const insArea = murMode ? ((L+(FC.post??FC.cut)+FC.pre)*H - ops.reduce((a,o)=>a+Math.max(0,Math.min(o.x1,L)-Math.max(o.x,0))*Math.max(0,o.y1-Math.max(o.y,0)),0))/1e6 : ins.reduce((a,p)=>a+p.w*p.h,0)/1e6;
+  const insArea = murMode ? ((L+(FC.post??FC.cut)+FC.pre)*HI - ops.reduce((a,o)=>a+Math.max(0,Math.min(o.x1,L)-Math.max(o.x,0))*Math.max(0,o.y1-Math.max(o.y,0)),0))/1e6 : ins.reduce((a,p)=>a+p.w*p.h,0)/1e6;
   let insPanels = Math.ceil(insBins.length*(1+(iso.perte||0)/100));
 
   // Plaques
@@ -985,14 +992,15 @@ function compute(wall){
   }
 
   // Membrane pare-vapeur
-  let les=[], memA=0, kb=0, dfit=0, dface=0;
+  let les=[], memA=0, kb=0, dfit=0, dface=0, band=0;
   if(mem.on){
     const rec=mem.recouv||100, rw=mem.rollW||1500, Hm=H+200, Lm=L+200;
     const vert=mem.dir!=="h", n=Math.max(1,Math.ceil(((vert?Lm:Hm)-rec)/(rw-rec)));
     for(let k=0;k<n;k++){ const p0=-100+k*(rw-rec); if(vert) les.push({x0:Math.max(0,p0),x1:Math.min(L,p0+rw),y0:0,y1:H,k,v:1}); else les.push({y0:Math.max(0,p0),y1:Math.min(H,p0+rw),k}); }
     memA = n*(vert?Hm:Lm)*rw/1e6;
     kb = (n-1)*(vert?Hm:Lm) + ops.reduce((a,o)=>a+2*(o.w+o.h),0) + (murMode ? appuis*200 : pts.length*300);
-    dfit = 2*L + 2*H;
+    dfit = 2*L + 2*H; band = 2*(L+200);
+    okk(`Bandes d'attente (technique Isover) : avant les rails et l'isolant, une bande Vario Xtra Band de 30 cm collée au sol au mastic DoubleFit et une en haut${HI>H+1?` (sous le plancher, entre les solives)`:" (au plafond)"}, qui dépassent de 5 cm devant le trait du rail. Le rail se visse par-dessus. Les lés, coupés hauteur + 20 cm, se collent ensuite sur ces bandes : étanchéité à l'air continue en pied et en tête de mur.`,"Préconisation Isover");
     dface = murMode ? 0 : studs.reduce((a,s)=>a+(s.y1-s.y0),0);
     if(murMode) okk("Membrane posée sur l'isolant, derrière l'ossature : gaines et tuyaux passent dans le vide technique sans percer la membrane.","Étanchéité à l'air");
     if(vert){ const per=Math.floor((mem.rollL||40000)/Hm); okk(`Membrane déroulée sur la hauteur : ${n} lé${n>1?"s":""} vertica${n>1?"ux":"l"} de ${cm(rw)} cm de large, coupé${n>1?"s":""} à ${cm(Hm)} cm (hauteur + 10 cm de retour en haut et en bas). Un rouleau de ${fr((mem.rollL||40000)/1000,0)} m donne ${per} lés de cette longueur. Recouvrements verticaux de ${cm(rec)} cm collés au KB1, périphérie au mastic DoubleFit.`,"Préconisation Isover"); }
@@ -1029,7 +1037,7 @@ function compute(wall){
       if(plaBias) plates.forEach(p=>{ if(p.x+p.w>=L-1){ p.dB=biasD(p.y); p.dT=biasD(p.y+p.h); p.prof=prof(p); if(Math.max(...p.prof.map(q=>q[1]))>2){ p.bias=true; p.cut=true; } } });
       okk(`Mur pas droit (${Mm.length>1?`${Mm.length} mesures tous les ${cm(LmS)} cm, de ${cm(mn)} à ${cm(Math.max(...M.map(m=>m[1])))}`:M.map(m=>cm(m[1])).join(" / ")} cm) : ossature et rails calés sur la plus courte (${cm(mn)} cm). La fibre de la dernière colonne est recoupée en biais pour suivre la pierre (jusqu'à ${cm(Math.max(...M.map(m=>m[1]))-mn)} cm de plus)${plaBias?", les plaques de la dernière colonne aussi (bout du mur contre la pierre ou du placo collé)":" ; les plaques gardent la même largeur sur toute la hauteur, car elles sont vissées sur une ossature d'aplomb et s'arrêtent contre le doublage d'aplomb du mur suivant"}.`); } } }
   checks.sort((a,b)=>a.ok-b.ok);
-  return {biasD,plaBias,wall,adj,corniere,L,H,ops,studs,rails,ins,plates,checks,murMode,chevQty,chevs,appuis,Sm,Sp,W,pla,peint,pts,renf,les,memA,kb,dfit,dface,
+  return {band,HI,biasD,plaBias,wall,adj,corniere,L,H,ops,studs,rails,ins,plates,checks,murMode,chevQty,chevs,appuis,Sm,Sp,W,pla,peint,pts,renf,les,memA,kb,dfit,dface,
     studPieces,studBins,railBins,railTotal,insBins,insArea,insPanels,plateCount,netArea,joints,
     cutStuds:studs.filter(s=>s.kind==="coupe").length, eclN, dep, depAuto};
 }
@@ -1063,6 +1071,7 @@ function materials(r){
     const packA=(mem.rollW*mem.rollL)/1e6;
     add("Membrane", mem.n, `lés de ${cm(mem.rollW)} cm, recouvrement ${cm(mem.recouv)} cm, retours 10 cm`, Math.ceil(r.memA), "m²", packA, `rouleau(x) de ${fr(packA)} m²`);
     add("Membrane", "Adhésif Vario KB1", "recouvrements, tour des ouvertures, traversées", Math.ceil(r.kb/1000), "m", 40, "rouleau(x) de 40 m");
+    add("Membrane", "Vario Xtra Band 30 cm", "bandes d'attente en bas (sol) et en haut, posées avant les rails", Math.ceil((r.band||0)/1000), "m", 30, "rouleau(x) de 30 m");
     add("Membrane", "Mastic Vario DoubleFit 310 ml", "jonctions sol, plafond et murs", Math.ceil(r.dfit/1000), "m", 8, "cartouche(s), ≈ 8 m chacune");
     add("Membrane", "Adhésif double face", "fixation de la membrane sur les montants", Math.ceil(r.dface/1000), "m", 50, "rouleau(x) de 50 m");
   }
@@ -1735,11 +1744,14 @@ function chantierSteps(w,r){
     const v=mem.dir!=="h", n=r.les.length, Hm=H+200, per=Math.floor((mem.rollL||40000)/Hm);
     st.push({k:"mem",t:`Poser la membrane ${mem.n}`,d:[v?`${n} lé(s) verticaux de ${cm(mem.rollW)} cm, coupés à ${cm(Hm)} cm (10 cm de retour en haut et en bas). Un rouleau de ${fr((mem.rollL||40000)/1000,0)} m donne ${per} lés.`:`${n} lé(s) horizontaux.`,
       `Recouvrement de ${cm(mem.recouv||100)} cm collé au KB1 : ${Math.ceil(r.kb/1000)} m d'adhésif ; périphérie au mastic DoubleFit : ${Math.ceil(r.dfit/1000)} m.`,
+      `Avant tout (avant les rails et la fibre) : bandes d'attente Vario Xtra Band 30 cm, une au sol collée sur un cordon de DoubleFit de 1 cm juste derrière le trait du rail, une en haut ; elles dépassent de 5 cm devant le trait, face adhésive vers le haut. Recouvrement entre bandes collé au mastic. Rail vissé par-dessus, puis bande recoupée au cutter au ras du rail.`,
+      "Les lés se collent ensuite sur les bandes d'attente en haut et en bas (retirer la protection de l'adhésif), angles rabattus l'un sur l'autre.",
       "Face imprimée côté pièce. Fixer provisoirement sur la fibre (agrafes dans la zone de recouvrement), tendre sans plis, retours collés sur sol, plafond et murs voisins.","Tour des ouvertures : découper en étoile, rabattre dans le tableau et coller au KB1."]});
   }
   const ra=r.rails.filter(x=>x.kind==="bas"||x.kind==="haut"), tr=r.rails.filter(x=>x.kind==="traverse");
   st.push({k:"rails",t:"Tracer et fixer les rails haut et bas",d:[r.murMode?`Tracer au sol et au plafond à ${cm(D)} cm de la pierre (face arrière du rail), au laser ou cordeau, puis reporter à l'aplomb.`:"Tracer au sol et au plafond, reporter à l'aplomb au laser.",
     `Rails : ${r.railTotal?fr(r.railTotal/1000,2)+" m":ra.map(x=>cm(x.len)).join(" + ")+" cm"}, ${r.railBins.length} longueur(s) de 3 m. Fixation tous les 60 cm maxi et à 10 cm des extrémités, bande résiliente ou mastic sous le rail bas.`,
+    ...(r.les&&r.les.length?["Posez d'abord les bandes d'attente de membrane (Vario Xtra Band 30 cm) au sol et en haut, collées au DoubleFit, dépassant de 5 cm devant le trait : le rail se visse par-dessus."]:[]),
     r.appuis?`${r.appuis} appui(s) intermédiaire(s) pour tenir les montants à mi-hauteur (pattes à la pierre, sans traverser l'isolant ni la membrane, ou avec manchette).`:"Contre-cloison autoportante : montants tenus par les rails seulement."]});
   const ax=[...new Set(r.studs.filter(s=>s.kind!=="coupe").map(s=>Math.round(s.x)))].sort((a,b)=>a-b);
   st.push({k:"studs",t:`Poser les montants ${oss.g} mm`,d:[`${ax.length} montants pleine hauteur, coupés à ${cm(H-jeuM())} cm (${jeuM()?`hauteur − ${fr(jeuM(),0)} mm de jeu`:"toute la hauteur, au contact du fond des rails haut et bas"}), ${r.studBins.length} longueur(s) de ${cm(r.Sm)} cm. Axes depuis le début du mur : ${ax.map(x=>cm(x)).join(" · ")} cm.`,
@@ -2390,8 +2402,8 @@ function renderPlan(r){
     parts.push(R(p.x+3,p.y+3,p.w-6,p.h-6,`fill="url(#tx-fibre)" stroke="#7a5326"`,`stroke-width="${fs*.06}" ${p.cut?`stroke-dasharray="${fs*.3} ${fs*.2}"`:""}`));
   });
   const UPi=(v==="iso"||v==="all")?wallUp(S.walls[S.cur],r):null;
-  if(v==="iso"&&r.murMode) r.ins.forEach(p0=>{ if(p0.w<fs*2.2||p0.h<fs*1.6) return; const e=upExt(UPi,r,p0), p=e&&e.cont?{...p0,h:e.hT,cut:true,notch:e.jn.length>0}:p0, cx=p.x+p.w/2, cy=Y(p0.y+p0.h)+fs*(e?2:1.25);
-    parts.push(`<g style="pointer-events:none"><rect x="${cx-fs*2.3}" y="${cy-fs*0.95}" width="${fs*4.6}" height="${fs*(p.cut?1.9:1.3)}" rx="${fs*.2}" fill="#ffffffdd" stroke="${p.cut?"#b4541a":"#7a5326"}" stroke-width="${fs*.05}"/>${T(cx,cy+fs*0.05,`<tspan font-weight="700">${cm(p.w)}×${cm(p.h)}</tspan>`,"middle",`font-size="${fs*0.72}"`)}${p.cut?T(cx,cy+fs*0.75,p.notch?"entaille":"à couper","middle",`font-size="${fs*0.6}"`):""}</g>`); });
+  if(v==="iso"&&r.murMode) r.ins.forEach(p0=>{ if(p0.w<fs*2.2||p0.h<fs*1.6) return; const e=upExt(UPi,r,p0), p=e&&e.cont?{...p0,h:e.hT,cut:true,notch:e.jn.length>0}:p0, cx=p.x+p.w/2, cy=Y(Math.min(p0.y+p0.h,UPi?UPi.H:H))+fs*(e?2:1.25);
+    parts.push(`<g style="pointer-events:none"><rect x="${cx-fs*2.3}" y="${cy-fs*0.95}" width="${fs*4.6}" height="${fs*(p.cut?1.9:1.3)}" rx="${fs*.2}" fill="#ffffffdd" stroke="${p.cut?"#b4541a":"#7a5326"}" stroke-width="${fs*.05}"/>${T(cx,cy+fs*0.05,`<tspan font-weight="700">${cm(p.w)}×${cm(p.h)}</tspan>`,"middle",`font-size="${fs*0.72}"`)}${p.cut?T(cx,cy+fs*0.75,p.notch?"entaille":p0.chute?"chute réutilisée":"à couper","middle",`font-size="${fs*0.6}"`):""}</g>`); });
 
   const studOp = v==="pla" ? .35 : v==="fin" ? 0 : (v==="iso" && r.murMode) ? 0 : 1;
   r.studs.forEach(s=>parts.push(R(s.x,s.y0,FL,s.y1-s.y0,`fill="url(#g-metal)" stroke="${s.kind==="cadre"?"#4c5a66":"#7d8790"}"`,`stroke-width="${s.kind==="cadre"?fs*.08:fs*.04}" opacity="${studOp}"`)));
@@ -2439,6 +2451,8 @@ function renderPlan(r){
     });
     r.les.slice(1).forEach(l=>{ const c=l.v?l.x0+Math.min(rec,l.x1-l.x0)/2:l.y0+Math.min(rec,l.y1-l.y0)/2;
       parts.push(l.v?R(c-30,0,60,H,`fill="#ffffff" stroke="#9a9a96"`,`stroke-width="${fs*.04}"`):R(0,c-30,L,60,`fill="#ffffff" stroke="#9a9a96"`,`stroke-width="${fs*.04}"`)); });
+    const band=(y0,tx)=>{ parts.push(R(0,y0,L,100,`fill="#2f7fd0" fill-opacity=".28" stroke="#1d4f8f"`,`stroke-width="${fs*.07}" stroke-dasharray="${fs*.5} ${fs*.2}"`)); parts.push(`<text x="${L/2}" y="${Y(y0+50)+fs*.25}" text-anchor="middle" font-size="${fs*.62}" font-weight="700" style="fill:#1d4f8f;paint-order:stroke;stroke:#fff;stroke-width:${fs*.12}px">${tx}</text>`); };
+    if(r.les.length){ band(0,"bande d'attente B1 (Vario Xtra Band 30 cm) collée au sol, lé collé dessus"); if(!(r.HI>H+1&&wallUp(S.walls[S.cur],r))) band(H-100,"bande d'attente B2 en haut, lé collé dessus"); }
   }
 
   if(v==="pla") screwPts(r).forEach(([x,y])=>parts.push(`<circle cx="${x}" cy="${Y(y)}" r="${Math.max(9,fs*.13)}" fill="#5f6468"/>`));
@@ -2514,18 +2528,22 @@ function renderPlan(r){
     parts.push(T((f0+f1)/2,fy-fs*.4,`fibre de bois : ${cm(f1-f0)} cm${f0<-1?` (dont ${cm(-f0)} avant l'ossature)`:""}${f1>L+1?` (${cm(f1-L)} après l'ossature)`:""}`,"middle",`font-weight="700" style="fill:${fc}"`)); }
   // Cotes de hauteur sur le côté (1re colonne de panneaux / plaques, ouvertures, points)
   const pcs=cutPieces(r,v), first=pcs.filter(q=>q.x<=1);
-  let vt=[0,H];
+  const HC=r.HI>H+1&&v!=="fin"&&v!=="res"&&wallUp(S.walls[S.cur],r)?r.HI:H, HV=(v==="iso"||v==="all")?HC:H;
+  let vt=[0,H,HV];
   if(first.length&&(v==="iso"||v==="pla"||v==="fin")) vt=vt.concat(first.flatMap(q=>[q.y,q.y+q.h]));
   else if(v==="res") vt=vt.concat(r.pts.map(q=>q.y));
   else vt=vt.concat(r.ops.flatMap(o=>[Math.max(0,o.y),Math.min(H,o.y1)]));
-  vt=[...new Set(vt.map(t=>Math.round(clamp(t,0,H))))].sort((a,b)=>a-b).filter((t,i,a)=>i===0||t===H||t-a[i-1]>=40);
+  vt=[...new Set(vt.map(t=>Math.round(clamp(t,0,HV))))].sort((a,b)=>a-b).filter((t,i,a)=>i===0||t===H||t===HV||t-a[i-1]>=40);
   const vx=-fs*1.1;
-  parts.push(line(vx,0,vx,H,.05,"var(--chalk)"));
+  parts.push(line(vx,Y(HV),vx,Y(0),.05,"var(--chalk)"));
   vt.forEach(t=>parts.push(line(vx-fs*.4,Y(t),vx+fs*.4,Y(t),.07,"var(--chalk)")));
   for(let i=0;i<vt.length-1;i++){ const a=vt[i],b=vt[i+1]; if(b-a>fs*2.2){ const ym=Y((a+b)/2); parts.push(T(vx-fs*.35,ym,cm(b-a),"middle",`font-size="${fs*.8}" style="fill:var(--chalk)" transform="rotate(-90 ${vx-fs*.35} ${ym})"`)); } }
   const hx=-fs*3.4;
   parts.push(line(hx,0,hx,H,.06,"var(--ink)")+line(hx-fs*.5,0,hx+fs*.5,0,.07,"var(--ink)")+line(hx-fs*.5,H,hx+fs*.5,H,.07,"var(--ink)"));
-  parts.push(T(hx-fs*.5,H/2,`${cm(H)} cm`,"middle",`font-weight="600" transform="rotate(-90 ${hx-fs*.5} ${H/2})"`));
+  parts.push(T(hx-fs*.5,H/2,`${cm(H)} cm${r.HI>H+1&&HC>H?" · haut du mur":""}`,"middle",`font-weight="600" transform="rotate(-90 ${hx-fs*.5} ${H/2})"`));
+  if(HC>H){ const fx=-fs*5.4, ym=Y(HC/2); parts.push(line(fx,Y(HC),fx,Y(0),.07,"#7a5326")+line(fx-fs*.5,Y(0),fx+fs*.5,Y(0),.08,"#7a5326")+line(fx-fs*.5,Y(HC),fx+fs*.5,Y(HC),.08,"#7a5326"));
+    parts.push(`<text x="${fx-fs*.5}" y="${ym}" text-anchor="middle" font-size="${fs*.95}" font-weight="800" style="fill:#7a5326" transform="rotate(-90 ${fx-fs*.5} ${ym})">${cm(HC)} cm · hauteur finale (jusqu'au plancher)</text>`);
+}
   // Hauteur écrite sur le côté de chaque panneau / plaque, et zones à toucher pour la fiche de coupe
   pcs.forEach((q,i)=>{
     if((v==="iso"||v==="pla")&&q.h>fs*3.2&&q.w>fs*1.4){ const tx=q.x+fs*.75, ty=Y(q.y+q.h/2); parts.push(`<text x="${tx}" y="${ty}" text-anchor="middle" font-size="${fs*.85}" font-weight="700" fill="${q.cut?"#b4541a":"#3d3a33"}" transform="rotate(-90 ${tx} ${ty})" style="pointer-events:none">↕ ${cm(q.h)}</text>`); }
@@ -2539,6 +2557,7 @@ function renderPlan(r){
     if(UP.keep) parts.push(R(0,H,L,UP.jb-H,`fill="#d9d2c4" stroke="#8a8375"`,`stroke-width="${sw}" stroke-dasharray="${fs*.3} ${fs*.2}"`));
     if(v!=="pla"&&v!=="oss") parts.push(R(f0,H,f1-f0,UP.top-H,`fill="url(#tx-fibre)" stroke="#7a5326"`,`stroke-width="${sw}"`));
     if(v==="mem"||v==="all") parts.push(R(f0,H,f1-f0,UP.top-H,`fill="url(#tx-mem)" fill-opacity=".55" stroke="#2f7fd0"`,`stroke-width="${sw}"`));
+    if(v==="mem"&&r.les.length) parts.push(R(f0,UP.top-50,f1-f0,50,`fill="#2f7fd0" fill-opacity=".45" stroke="#1d4f8f"`,`stroke-width="${sw}" stroke-dasharray="${fs*.5} ${fs*.2}"`)+`<text x="${f1-fs*.3}" y="${Y(UP.top)-fs*.2}" text-anchor="end" font-size="${fs*.5}" font-weight="700" style="fill:#1d4f8f">B2 sous le plancher</text>`);
     if(UP.par){ parts.push(R(0,UP.jb,L,UP.jh,`fill="none" stroke="#7a5428"`,`stroke-width="${fs*.08}" stroke-dasharray="${fs*.6} ${fs*.3}"`)); parts.push(`<text x="${L/2}" y="${Y(UP.jb+UP.jh/2)+fs*.3}" text-anchor="middle" font-size="${fs*.7}" style="fill:#7a5428">1re solive devant, à ${cm(UP.near)} cm de la pierre : l'isolant monte entre le mur et elle</text>`); }
     else UP.xs.forEach(x=>{ const a=Math.max(f0,x-UP.jw/2), b=Math.min(f1,x+UP.jw/2); if(b<=a) return;
       parts.push(R(a,UP.jb,b-a,UP.jh,`fill="#b98a55" stroke="#7a5428"`,`stroke-width="${sw}"`));
@@ -2557,7 +2576,7 @@ function renderPlan(r){
     parts.push(`<text x="${L/2}" y="${Y(UP.top)-fs*.45}" text-anchor="middle" font-size="${fs*.75}" font-weight="600" style="fill:#7a5326">Isolant${v==="mem"||v==="all"||v==="iso"?" + membrane":""} jusqu'à ${cm(UP.top)} cm entre les solives</text>`); }
   const fP=(v==="iso"||v==="all")&&r.adj.fib?r.adj.fib:{pre:0,cut:0};
   if(fP.pre||fP.cut) parts.push(`<text x="${L/2}" y="${-padT*0.3-UE}" text-anchor="middle" font-size="${fs*.7}" style="fill:var(--muted)">fibre continue dans les angles : ${fP.pre?`${cm(fP.pre)} cm avant le doublage`:""}${fP.pre&&fP.post?" · ":""}${fP.post?`${cm(fP.post)} cm après, jusqu'à la pierre`:fP.cut?`${fP.pre?" · ":""}s'arrête contre la fibre du mur suivant`:""} · longueur de fibre ${cm(L+fP.pre+(fP.post??fP.cut))} cm</text>`);
-  const vb=[-padL-fP.pre,-padT-UE,L+padL+padR+fP.pre+Math.max(fP.cut,fP.post||0)+(UP?fs*3:0),H+padT+padB+UE].join(" ");
+  const vb=[-padL-fP.pre-(HC>H?fs*1.6:0),-padT-UE,L+padL+padR+(HC>H?fs*1.6:0)+fP.pre+Math.max(fP.cut,fP.post||0)+(UP?fs*3:0),H+padT+padB+UE].join(" ");
   document.getElementById("plan").innerHTML=`<svg viewBox="${vb}" role="img" aria-label="Calepinage du mur ${esc(S.walls[S.cur].name)}">${parts.join("")}</svg>`;
 
   const lg={
@@ -2593,7 +2612,7 @@ function cutListHtml(r,v){
     const P=cutPieces(r,"iso"), W=S.iso.W, Lg=S.iso.Lg;
     return `<section class="box"><h2>Liste de coupe de l'isolant</h2><p class="cap" style="margin:0 0 8px">${P.length} morceaux, panneaux de ${cm(W)} × ${cm(Lg)} cm. Position = coin bas gauche du morceau, depuis le début du mur et depuis le sol. Touchez une ligne pour la fiche.</p>`+
       tb(["N°","Position","Largeur","Hauteur","Coupe"],P.map((q,i)=>{ const ops=r.ops.filter(o=>q.x<o.x1&&q.x+q.w>o.x&&q.y<o.y1&&q.y+q.h>o.y);
-        const c=[q.bias?(q.prof&&q.prof.length>2?`suit la pierre : ${cm(q.w+Math.min(...q.prof.map(z=>z[1])))} à ${cm(q.w+Math.max(...q.prof.map(z=>z[1])))} (gabarit)`:`en biais : ${cm(q.w+q.dB)} en bas, ${cm(q.w+q.dT)} en haut`):q.w<W-1?`largeur ${cm(q.w)}`:"",q.up?`hauteur continue ${cm(q.h)} (${cm(q.h0)} + ${cm(q.h-q.h0)} entre solives)`:q.h<Lg-1?`hauteur ${cm(q.h)}`:"",...(q.jn||[]).map(n=>`entaille ${cm(n.w)}×${cm(n.h)} à ${cm(n.x)} du bord gauche`),...ops.map(o=>`entaille ${opName(o,o.i)}`)].filter(Boolean).join(", ")||"entier";
+        const c=[q.chute?"dans la chute du haut de la colonne précédente":"",q.bias?(q.prof&&q.prof.length>2?`suit la pierre : ${cm(q.w+Math.min(...q.prof.map(z=>z[1])))} à ${cm(q.w+Math.max(...q.prof.map(z=>z[1])))} (gabarit)`:`en biais : ${cm(q.w+q.dB)} en bas, ${cm(q.w+q.dT)} en haut`):q.w<W-1?`largeur ${cm(q.w)}`:"",q.up?`hauteur continue ${cm(q.h)} (${cm(q.h0)} + ${cm(q.h-q.h0)} entre solives)`:q.h<Lg-1?`hauteur ${cm(q.h)}`:"",...(q.jn||[]).map(n=>`entaille ${cm(n.w)}×${cm(n.h)} à ${cm(n.x)} du bord gauche`),...ops.map(o=>`entaille ${opName(o,o.i)}`)].filter(Boolean).join(", ")||"entier";
         return `<tr data-pcl="${i}" style="cursor:pointer"><td><b>I${q.n}</b></td><td>${cm(q.x)} / ${cm(q.y)} cm</td><td class="n"><b>${cm(q.w)}</b></td><td class="n"><b>${cm(q.h)}</b></td><td class="n" style="${q.up?"white-space:normal;min-width:180px":""}">${c}</td></tr>`; }))+gabaritHtml(P,"I")+(()=>{ const U=wallUp(S.walls[S.cur],r); return U?upBaysHtml(U,r,"iso"):""; })()+`</section>`; }
   if(v==="oss"){ const P=cutPieces(r,"oss");
     const rails=r.rails.map(x=>({k:x.kind,len:x.len||Math.abs((x.x1||0)-(x.x0||0)),x0:x.x0,y:x.y0}));
@@ -2603,7 +2622,7 @@ function cutListHtml(r,v){
   if(v==="mem"){ if(!r.memOn) return `<section class="box"><h2>Liste de coupe de la membrane</h2><p class="hint">Pas de membrane sur ce mur.</p></section>`;
     const UM=wallUp(S.walls[S.cur],r), Hm=(UM?UM.top:r.H)+200;
     return `<section class="box"><h2>Liste de coupe de la membrane</h2><p class="cap" style="margin:0 0 8px">Lés ${S.mem.dir!=="h"?"verticaux":"horizontaux"} de ${cm(S.mem.rollW)} cm, recouvrement ${cm(S.mem.recouv||100)} cm.</p>`+
-      tb(["Lé","Position","Largeur posée","Longueur à couper"],r.les.map(l=>l.v?`<tr><td><b>Lé ${l.k+1}</b></td><td>${cm(l.x0)} → ${cm(l.x1)} cm</td><td class="n">${cm(l.x1-l.x0)}</td><td class="n"><b>${cm(Hm)}</b> <small>(${UM?`jusqu'à ${cm(UM.top)} cm + 10 cm en bas + 10 cm de retour contre le plancher`:"hauteur + 2 × 10 cm"})</small></td></tr>`:`<tr><td><b>Lé ${l.k+1}</b></td><td>h ${cm(l.y0)} → ${cm(l.y1)} cm</td><td class="n">${cm(l.y1-l.y0)}</td><td class="n"><b>${cm(r.L+200)}</b></td></tr>`))+(UM?upBaysHtml(UM,r,"mem"):"")+`</section>`; }
+      tb(["Lé","Position","Largeur posée","Longueur à couper"],r.les.map(l=>l.v?`<tr><td><b>Lé ${l.k+1}</b></td><td>${cm(l.x0)} → ${cm(l.x1)} cm</td><td class="n">${cm(l.x1-l.x0)}</td><td class="n"><b>${cm(Hm)}</b> <small>(${UM?`jusqu'à ${cm(UM.top)} cm + 10 cm en bas + 10 cm de retour contre le plancher`:"hauteur + 2 × 10 cm"})</small></td></tr>`:`<tr><td><b>Lé ${l.k+1}</b></td><td>h ${cm(l.y0)} → ${cm(l.y1)} cm</td><td class="n">${cm(l.y1-l.y0)}</td><td class="n"><b>${cm(r.L+200)}</b></td></tr>`))+`<h3 style="margin:12px 0 6px;font-size:15px">Bandes d'attente (avant les rails)</h3>`+tb(["Bande","Où","Largeur","Longueur à couper"],[`<tr><td><b>B1</b></td><td>en bas, collée au sol (DoubleFit), dépasse de 5 cm devant le rail bas</td><td class="n">30</td><td class="n"><b>${cm(r.L+200)}</b></td></tr>`,`<tr><td><b>B2</b></td><td>${UM?`en haut, sous le plancher : en morceaux entre les solives, retournés de 5 cm sur leurs flancs`:"en haut, collée au plafond, dépasse de 5 cm devant le rail haut"}</td><td class="n">30</td><td class="n"><b>${UM&&!UM.par?upBays(UM,r).bays.map(b=>cm(b.w+100)).join(" + "):cm(r.L+200)}</b></td></tr>`])+(UM?upBaysHtml(UM,r,"mem"):"")+`</section>`; }
   return "";
 }
 function gabaritHtml(list,pre){ const B=list.filter(q=>q.bias&&q.prof&&q.prof.length>2); if(!B.length) return "";
@@ -2659,7 +2678,8 @@ function upBays(U,r){ if(!U) return null; const L=r.L, X=r.ins&&r.ins.length?r.i
   bays.forEach((b,i)=>{ b.n=i+1; b.w=b.x1-b.x0; b.h=hJ; b.edge=b.x0<=f0+1||b.x1>=f1-1; b.cutW=b.w+(b.edge&&J.length?5:10); });
   return {f0,f1,hB,hJ,J,bays}; }
 /* morceau d'isolant du haut prolongé d'une seule pièce jusqu'en haut (entre les solives), avec entaille à chaque solive */
-function upExt(U,r,q){ if(!U||!q||q.y+q.h<U.H-1) return null; const Lg=S.iso.Lg||1220, dh=U.top-U.H, hT=q.h+dh, nh=Math.max(0,U.top-U.jb);
+function upExt(U,r,q){ if(U&&q&&r.HI>U.H+1){ if(q.y+q.h<=U.H+1) return null; const t=q.y+q.h, nh=Math.max(0,t-Math.max(U.jb,q.y)); const jn=U.par||!nh?[]:U.xs.map(x=>[Math.max(0,x-U.jw/2-q.x),Math.min(q.w,x+U.jw/2-q.x)]).filter(s=>s[1]-s[0]>1).map(s=>({x:s[0],w:s[1]-s[0],h:nh})); return {cont:true,hT:q.h,h0:Math.max(0,U.H-q.y),jn,real:true}; }
+  if(!U||!q||q.y+q.h<U.H-1) return null; const Lg=S.iso.Lg||1220, dh=U.top-U.H, hT=q.h+dh, nh=Math.max(0,U.top-U.jb);
   if(hT>Lg+1) return {cont:false,hT};
   const jn=U.par?[]:U.xs.map(x=>[Math.max(0,x-U.jw/2-q.x),Math.min(q.w,x+U.jw/2-q.x)]).filter(s=>s[1]-s[0]>1).map(s=>({x:s[0],w:s[1]-s[0],h:nh}));
   if(jn.some(n=>n.w>=q.w-1)) return {cont:false,hT};
@@ -5314,7 +5334,7 @@ document.getElementById("scan-file").addEventListener("change",e=>{ const f=e.ta
 /* ---------- Fiche de coupe au toucher (vue 2D isolant / plaques) ---------- */
 let CUTSEL=null;
 function cutPieces(r,v){
-  if(v==="iso"||(v==="all"&&r.isoOn)){ const U=wallUp(S.walls[S.cur],r); return (r.ins||[]).map((q,i)=>{ const e=upExt(U,r,q); return e&&e.cont?{...q,kind:"iso",n:i+1,h0:q.h,h:e.hT,jn:e.jn,up:U.top}:{...q,kind:"iso",n:i+1}; }); }
+  if(v==="iso"||(v==="all"&&r.isoOn)){ const U=wallUp(S.walls[S.cur],r); return (r.ins||[]).map((q,i)=>{ const e=upExt(U,r,q); return e&&e.cont?{...q,kind:"iso",n:i+1,h0:e.real?e.h0:q.h,h:e.hT,jn:e.jn,up:U.top}:{...q,kind:"iso",n:i+1}; }); }
   if(v==="oss") return r.studs.map((q,i)=>({x:q.x,y:q.y0,w:FL,h:q.y1-q.y0,kind:"oss",sk:q.kind,n:i+1})).sort((a,b)=>a.x-b.x||a.y-b.y).map((q,i)=>({...q,n:i+1}));
   if(v==="pla"||v==="fin") return r.plates.filter(q=>q.layer===1).map((q,i)=>({...q,kind:"pla",n:q.n||i+1}));
   return [];
