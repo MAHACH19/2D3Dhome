@@ -1019,14 +1019,15 @@ function compute(wall){
 
   // Mur pas droit (3 mesures) : l'isolant, collé à la pierre, suit la vraie longueur à chaque hauteur ; les plaques aussi quand le bout du mur est contre de la pierre ou du placo collé
   let biasD=null, plaBias=false;
-  { const M=(wall.L3||[]).map((v,k)=>v>0?[[100,H/2,H-100][k],v]:null).filter(Boolean);
+  { const LmS=+wall.LmS||50, Mm=(wall.Lm||[]).map((v,k)=>v>0?[Math.min(H,k*LmS),v]:null).filter(Boolean), M=Mm.length>1?Mm:(wall.L3||[]).map((v,k)=>v>0?[[100,H/2,H-100][k],v]:null).filter(Boolean);
     if(M.length>1){ const mn=Math.min(...M.map(m=>m[1])); if(Math.max(...M.map(m=>m[1]))-mn>=5){
       biasD=y=>{ if(y<=M[0][0]) return M[0][1]-mn; for(let k=1;k<M.length;k++) if(y<=M[k][0]){ const [y0,a]=M[k-1],[y1,b]=M[k]; return a+(b-a)*(y-y0)/(y1-y0)-mn; } return M[M.length-1][1]-mn; };
       const rwB=roomWalls(wall._src||wall), iB=rwB.findIndex(x=>x===wall._src||x.name===wall.name), nxt=iB>=0&&(iB<rwB.length-1||wall.angle!=="libre")?rwB[(iB+1)%rwB.length]:null;
       plaBias=!!nxt&&nxt!==(wall._src||wall)&&(isCol(nxt)||nxt.noDbl);
-      if(murMode&&iso.on){ const xe=Math.max(...ins.map(p=>p.x+p.w)); ins.forEach(p=>{ if(p.x+p.w>=xe-1){ p.dB=biasD(p.y); p.dT=biasD(p.y+p.h); if(Math.max(p.dB,p.dT)>2){ p.bias=true; p.cut=true; } } }); }
-      if(plaBias) plates.forEach(p=>{ if(p.x+p.w>=L-1){ p.dB=biasD(p.y); p.dT=biasD(p.y+p.h); if(Math.max(p.dB,p.dT)>2){ p.bias=true; p.cut=true; } } });
-      okk(`Mur pas droit (${M.map(m=>cm(m[1])).join(" / ")} cm) : ossature et rails calés sur la plus courte (${cm(mn)} cm). La fibre de la dernière colonne est recoupée en biais pour suivre la pierre (jusqu'à ${cm(Math.max(...M.map(m=>m[1]))-mn)} cm de plus)${plaBias?", les plaques de la dernière colonne aussi (bout du mur contre la pierre ou du placo collé)":" ; les plaques gardent la même largeur sur toute la hauteur, car elles sont vissées sur une ossature d'aplomb et s'arrêtent contre le doublage d'aplomb du mur suivant"}.`); } } }
+      const prof=p=>{ const ys=[p.y,...M.map(m=>m[0]).filter(y=>y>p.y+1&&y<p.y+p.h-1),p.y+p.h]; return ys.map(y=>[y,biasD(y)]); };
+      if(murMode&&iso.on){ const xe=Math.max(...ins.map(p=>p.x+p.w)); ins.forEach(p=>{ if(p.x+p.w>=xe-1){ p.dB=biasD(p.y); p.dT=biasD(p.y+p.h); p.prof=prof(p); if(Math.max(...p.prof.map(q=>q[1]))>2){ p.bias=true; p.cut=true; } } }); }
+      if(plaBias) plates.forEach(p=>{ if(p.x+p.w>=L-1){ p.dB=biasD(p.y); p.dT=biasD(p.y+p.h); p.prof=prof(p); if(Math.max(...p.prof.map(q=>q[1]))>2){ p.bias=true; p.cut=true; } } });
+      okk(`Mur pas droit (${Mm.length>1?`${Mm.length} mesures tous les ${cm(LmS)} cm, de ${cm(mn)} à ${cm(Math.max(...M.map(m=>m[1])))}`:M.map(m=>cm(m[1])).join(" / ")} cm) : ossature et rails calés sur la plus courte (${cm(mn)} cm). La fibre de la dernière colonne est recoupée en biais pour suivre la pierre (jusqu'à ${cm(Math.max(...M.map(m=>m[1]))-mn)} cm de plus)${plaBias?", les plaques de la dernière colonne aussi (bout du mur contre la pierre ou du placo collé)":" ; les plaques gardent la même largeur sur toute la hauteur, car elles sont vissées sur une ossature d'aplomb et s'arrêtent contre le doublage d'aplomb du mur suivant"}.`); } } }
   checks.sort((a,b)=>a.ok-b.ok);
   return {biasD,plaBias,wall,adj,corniere,L,H,ops,studs,rails,ins,plates,checks,murMode,chevQty,chevs,appuis,Sm,Sp,W,pla,peint,pts,renf,les,memA,kb,dfit,dface,
     studPieces,studBins,railBins,railTotal,insBins,insArea,insPanels,plateCount,netArea,joints,
@@ -1155,6 +1156,10 @@ function renderSide(){ renderQuick();
       <label class="f">Longueur (cm)<input id="w-L" type="number" min="10" step="0.5" data-b="w.L" data-cm value="${w.L/10}"></label>
       <label class="f">Hauteur sous plafond (cm)<input id="w-H" type="number" min="10" step="0.5" data-b="w.H" data-cm value="${w.H/10}"></label>
     </div>
+    <details class="l3"${w.Lm&&w.Lm.some(v=>v>0)?" open":""} style="margin:0 0 8px"><summary style="cursor:pointer"><b>Mesures précises : longueur tous les 5 cm, du sol au plafond</b></summary>
+      ${(()=>{ const st=+w.LmS||50, n=Math.floor(w.H/st)+1, m=(w.Lm||[]).filter(v=>v>0); return `<p class="hint" style="margin:0 0 6px">Mesure le mur brut (pierre à pierre) à chaque hauteur. ${m.length} / ${n} remplies${m.length?` · de ${cm(Math.min(...m))} à ${cm(Math.max(...m))} cm, ossature calée sur ${cm(Math.min(...m))} cm, fibre (et plaques contre la pierre) découpées point par point`:""}.</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px 8px">${Array.from({length:n},(_,k)=>`<label class="f" style="margin:0"><span class="cap">à ${cm(Math.min(w.H,k*st))} cm</span><input type="number" inputmode="decimal" min="10" step="0.1" data-lmk="${k}" value="${w.Lm&&w.Lm[k]?w.Lm[k]/10:""}" placeholder="${w.L/10}"></label>`).join("")}</div>`; })()}
+    </details>
     <details class="l3"${w.L3?" open":""} style="margin:0 0 8px"><summary style="cursor:pointer"><b>Mur pas droit : 3 mesures de longueur</b></summary>
       <div class="row" style="grid-template-columns:repeat(3,1fr)">${["En bas","Au milieu","En haut"].map((t,k)=>`<label class="f">${t} (cm)<input type="number" min="10" step="0.1" data-l3="${k}" value="${w.L3&&w.L3[k]?w.L3[k]/10:""}" placeholder="${w.L/10}"></label>`).join("")}</div>
       ${(()=>{ const m=(w.L3||[]).filter(x=>x>0); if(!m.length) return `<p class="hint" style="margin:0">Mesure le mur brut (pierre à pierre) à environ 10 cm du sol, à mi-hauteur et à 10 cm du plafond. L'appli prend la plus courte pour l'ossature et les plaques.</p>`; const mn=Math.min(...m), mx=Math.max(...m);
@@ -1705,7 +1710,7 @@ function cutList(r){
     if(p.trimL>0) notes.push(`bord aminci coupé côté gauche (retirer ${cm(p.trimL)} cm)`);
     if(p.trimR>0) notes.push(p.bias?`bord aminci coupé côté droit (retirer ${cm(Math.max(0,p.trimR-p.dB))} cm en bas, ${cm(Math.max(0,p.trimR-p.dT))} cm en haut)`:`bord aminci coupé côté droit (retirer ${cm(p.trimR)} cm)`);
     if(p.h<Sp-1) notes.push(`hauteur coupée à ${cm(p.h)} cm (plaque de ${cm(Sp)} cm)`);
-    if(p.bias) notes.push(`bord droit en biais pour suivre le mur : largeur ${cm(p.w+p.dB)} cm en bas, ${cm(p.w+p.dT)} cm en haut`);
+    if(p.bias) notes.push(p.prof&&p.prof.length>2?`bord droit qui suit la pierre : largeur de ${cm(p.w+Math.min(...p.prof.map(q=>q[1])))} à ${cm(p.w+Math.max(...p.prof.map(q=>q[1])))} cm, gabarit point par point sous la liste`:`bord droit en biais pour suivre le mur : largeur ${cm(p.w+p.dB)} cm en bas, ${cm(p.w+p.dT)} cm en haut`);
     r.ops.forEach(o=>{
       const x0=Math.max(p.x,o.x), x1=Math.min(p.x+p.w,o.x1), y0=Math.max(p.y,o.y), y1=Math.min(p.y+p.h,o.y1);
       if(x1>x0+1 && y1>y0+1) notes.push(`encoche ${opName(o,o.i)} : ${cm(x1-x0)}×${cm(y1-y0)} cm, à ${cm(x0-p.x)} cm du bord gauche et ${cm(y0-p.y)} cm du bas`);
@@ -2381,7 +2386,7 @@ function renderPlan(r){
   parts.push(R(0,0,L,H,`style="fill:var(--wall);stroke:var(--ink)"`,`stroke-width="${fs*.08}"`));
 
   if(v==="all"||v==="iso") r.ins.forEach(p=>{
-    if(p.bias){ const x0=p.x+3, y0=p.y+3, y1=p.y+p.h-3; parts.push(`<polygon points="${x0},${Y(y0)} ${p.x+p.w+p.dB-3},${Y(y0)} ${p.x+p.w+p.dT-3},${Y(y1)} ${x0},${Y(y1)}" fill="url(#tx-fibre)" stroke="#7a5326" stroke-width="${fs*.06}" stroke-dasharray="${fs*.3} ${fs*.2}"/>`); return; }
+    if(p.bias){ const x0=p.x+3, y0=p.y+3, y1=p.y+p.h-3, pr=(p.prof||[[p.y,p.dB],[p.y+p.h,p.dT]]).map(([y,d])=>`${p.x+p.w+d-3},${Y(Math.max(y0,Math.min(y1,y)))}`).join(" "); parts.push(`<polygon points="${x0},${Y(y0)} ${pr} ${x0},${Y(y1)}" fill="url(#tx-fibre)" stroke="#7a5326" stroke-width="${fs*.06}" stroke-dasharray="${fs*.3} ${fs*.2}"/>`); return; }
     parts.push(R(p.x+3,p.y+3,p.w-6,p.h-6,`fill="url(#tx-fibre)" stroke="#7a5326"`,`stroke-width="${fs*.06}" ${p.cut?`stroke-dasharray="${fs*.3} ${fs*.2}"`:""}`));
   });
   if(v==="iso"&&r.murMode) r.ins.forEach(p=>{ if(p.w<fs*2.2||p.h<fs*1.6) return; const cx=p.x+p.w/2, cy=Y(p.y+p.h)+fs*1.25;
@@ -2403,7 +2408,7 @@ function renderPlan(r){
 
   if(v==="pla"||v==="all"){
     r.plates.filter(p=>p.layer===1).forEach(p=>{
-      if(v==="pla"&&p.bias) parts.push(`<polygon points="${p.x+4},${Y(p.y)} ${p.x+p.w+p.dB-4},${Y(p.y)} ${p.x+p.w+p.dT-4},${Y(p.y+p.h)} ${p.x+4},${Y(p.y+p.h)}" fill="url(#tx-plaque)" stroke="#9d9585" stroke-width="${fs*.07}"/>`);
+      if(v==="pla"&&p.bias) parts.push(`<polygon points="${p.x+4},${Y(p.y)} ${(p.prof||[[p.y,p.dB],[p.y+p.h,p.dT]]).map(([y,d])=>`${p.x+p.w+d-4},${Y(y)}`).join(" ")} ${p.x+4},${Y(p.y+p.h)}" fill="url(#tx-plaque)" stroke="#9d9585" stroke-width="${fs*.07}"/>`);
       if(v==="pla"){
         if(!p.bias) parts.push(R(p.x+4,p.y,p.w-8,p.h,`fill="url(#tx-plaque)" stroke="#9d9585"`,`stroke-width="${fs*.07}"`));
         if(p.cut) parts.push(R(p.x+4,p.y,p.w-8,p.h,`fill="url(#hat)"`,`opacity=".35"`));
@@ -2528,9 +2533,21 @@ function renderPlan(r){
     parts.push(`<rect data-pc="${i}" x="${hx0}" y="${Y(q.y+q.h)}" width="${hw}" height="${q.h}" fill="${sel?"#1d63c433":"transparent"}" ${sel?`stroke="#1d63c4" stroke-width="${fs*.14}"`:""} style="cursor:pointer" pointer-events="all"/>`);
   });
 
+  const UP=(v==="iso"||v==="mem"||v==="all"||v==="oss"||v==="pla")?wallUp(S.walls[S.cur],r):null, UE=UP?UP.top-H+fs*1.6:0;
+  if(UP){ const X=r.ins&&r.ins.length?r.ins.flatMap(p=>[p.x,p.x+p.w]):[0,L], f0=Math.max(0,Math.min(...X)), f1=Math.min(L,Math.max(...X)), sw=fs*.06;
+    if(UP.keep) parts.push(R(0,H,L,UP.jb-H,`fill="#d9d2c4" stroke="#8a8375"`,`stroke-width="${sw}" stroke-dasharray="${fs*.3} ${fs*.2}"`));
+    if(v!=="pla"&&v!=="oss") parts.push(R(f0,H,f1-f0,UP.top-H,`fill="url(#tx-fibre)" stroke="#7a5326"`,`stroke-width="${sw}"`));
+    if(v==="mem"||v==="all") parts.push(R(f0,H,f1-f0,UP.top-H,`fill="url(#tx-mem)" fill-opacity=".55" stroke="#2f7fd0"`,`stroke-width="${sw}"`));
+    if(UP.par){ parts.push(R(0,UP.jb,L,UP.jh,`fill="none" stroke="#7a5428"`,`stroke-width="${fs*.08}" stroke-dasharray="${fs*.6} ${fs*.3}"`)); parts.push(`<text x="${L/2}" y="${Y(UP.jb+UP.jh/2)+fs*.3}" text-anchor="middle" font-size="${fs*.7}" style="fill:#7a5428">1re solive devant, à ${cm(UP.near)} cm de la pierre : l'isolant monte entre le mur et elle</text>`); }
+    else UP.xs.forEach(x=>{ const a=Math.max(0,x-UP.jw/2), b=Math.min(L,x+UP.jw/2); if(b<=a) return;
+      parts.push(R(a,UP.jb,b-a,UP.jh,`fill="#b98a55" stroke="#7a5428"`,`stroke-width="${sw}"`));
+      if(v==="mem"||v==="all"||v==="iso"){ const y0=Y(UP.jb), y1=Y(UP.jb+UP.jh); parts.push(`<path d="M${a-fs*.12} ${y0} L${a-fs*.12} ${y1-fs*.12} L${b+fs*.12} ${y1-fs*.12} L${b+fs*.12} ${y0}" fill="none" stroke="#2f7fd0" stroke-width="${fs*.14}"/>`); }
+      if(b-a>fs) parts.push(`<text x="${(a+b)/2}" y="${Y(UP.jb+UP.jh/2)}" text-anchor="middle" font-size="${fs*.55}" transform="rotate(-90 ${(a+b)/2} ${Y(UP.jb+UP.jh/2)})" style="fill:#fff">solive</text>`); });
+    parts.push(`<line x1="${L+fs*.4}" y1="${Y(UP.top)}" x2="${L+fs*1.2}" y2="${Y(UP.top)}" stroke="#7a5326" stroke-width="${sw}"/><text x="${L+fs*.4}" y="${Y(UP.top)-fs*.35}" font-size="${fs*.75}" font-weight="700" style="fill:#7a5326">${cm(UP.top)} cm</text>`);
+    parts.push(`<text x="${L/2}" y="${Y(UP.top)-fs*.45}" text-anchor="middle" font-size="${fs*.75}" font-weight="600" style="fill:#7a5326">Isolant${v==="mem"||v==="all"||v==="iso"?" + membrane":""} jusqu'à ${cm(UP.top)} cm entre les solives</text>`); }
   const fP=(v==="iso"||v==="all")&&r.adj.fib?r.adj.fib:{pre:0,cut:0};
-  if(fP.pre||fP.cut) parts.push(`<text x="${L/2}" y="${-padT*0.3}" text-anchor="middle" font-size="${fs*.7}" style="fill:var(--muted)">fibre continue dans les angles : ${fP.pre?`${cm(fP.pre)} cm avant le doublage`:""}${fP.pre&&fP.post?" · ":""}${fP.post?`${cm(fP.post)} cm après, jusqu'à la pierre`:fP.cut?`${fP.pre?" · ":""}s'arrête contre la fibre du mur suivant`:""} · longueur de fibre ${cm(L+fP.pre+(fP.post??fP.cut))} cm</text>`);
-  const vb=[-padL-fP.pre,-padT,L+padL+padR+fP.pre+Math.max(fP.cut,fP.post||0),H+padT+padB].join(" ");
+  if(fP.pre||fP.cut) parts.push(`<text x="${L/2}" y="${-padT*0.3-UE}" text-anchor="middle" font-size="${fs*.7}" style="fill:var(--muted)">fibre continue dans les angles : ${fP.pre?`${cm(fP.pre)} cm avant le doublage`:""}${fP.pre&&fP.post?" · ":""}${fP.post?`${cm(fP.post)} cm après, jusqu'à la pierre`:fP.cut?`${fP.pre?" · ":""}s'arrête contre la fibre du mur suivant`:""} · longueur de fibre ${cm(L+fP.pre+(fP.post??fP.cut))} cm</text>`);
+  const vb=[-padL-fP.pre,-padT-UE,L+padL+padR+fP.pre+Math.max(fP.cut,fP.post||0)+(UP?fs*3:0),H+padT+padB+UE].join(" ");
   document.getElementById("plan").innerHTML=`<svg viewBox="${vb}" role="img" aria-label="Calepinage du mur ${esc(S.walls[S.cur].name)}">${parts.join("")}</svg>`;
 
   const lg={
@@ -2549,7 +2566,7 @@ function renderPlan(r){
       <p class="cap" style="margin:0 0 8px">${cl.length} plaques posées sur ce mur, dont ${full} entières. Cotes prises depuis le coin bas gauche de chaque plaque, vue de face côté pièce.</p>
       <div class="tbl-wrap"><table class="cutp"><thead><tr><th>Plaque</th><th>Position</th><th style="text-align:right">Dimensions</th><th>Découpes</th></tr></thead><tbody>
       ${cl.map(c=>`<tr><td><b>${c.nm}</b>${c.layer===2?"<small>2e couche</small>":""}</td><td class="n" style="text-align:left">à ${cm(c.x)} cm du coin</td><td class="n">${cm(c.w)} × ${cm(c.h)} cm</td><td>${c.notes.length?c.notes.map(esc).join("<br>"):"plaque entière"}</td></tr>`).join("")}
-      </tbody></table></div></section>`;
+      </tbody></table></div>${gabaritHtml(r.plates.filter(p=>p.layer===1).map(p=>({...p,nm:(cl.find(c=>Math.abs(c.x-p.x)<1&&Math.abs((c.y||0)-p.y)<1)||{}).nm||""})),"")}</section>`;
   } else if(v==="fin"){
     const steps=finSteps(r), si=clamp(S.finStep||0,0,steps.length-1), cur=steps[si];
     ex.innerHTML=`<section class="box"><h2>Étapes de finition</h2>
@@ -2566,8 +2583,8 @@ function cutListHtml(r,v){
     const P=cutPieces(r,"iso"), W=S.iso.W, Lg=S.iso.Lg;
     return `<section class="box"><h2>Liste de coupe de l'isolant</h2><p class="cap" style="margin:0 0 8px">${P.length} morceaux, panneaux de ${cm(W)} × ${cm(Lg)} cm. Position = coin bas gauche du morceau, depuis le début du mur et depuis le sol. Touchez une ligne pour la fiche.</p>`+
       tb(["N°","Position","Largeur","Hauteur","Coupe"],P.map((q,i)=>{ const ops=r.ops.filter(o=>q.x<o.x1&&q.x+q.w>o.x&&q.y<o.y1&&q.y+q.h>o.y);
-        const c=[q.bias?`en biais : ${cm(q.w+q.dB)} en bas, ${cm(q.w+q.dT)} en haut`:q.w<W-1?`largeur ${cm(q.w)}`:"",q.h<Lg-1?`hauteur ${cm(q.h)}`:"",...ops.map(o=>`entaille ${opName(o,o.i)}`)].filter(Boolean).join(", ")||"entier";
-        return `<tr data-pcl="${i}" style="cursor:pointer"><td><b>I${q.n}</b></td><td>${cm(q.x)} / ${cm(q.y)} cm</td><td class="n"><b>${cm(q.w)}</b></td><td class="n"><b>${cm(q.h)}</b></td><td class="n">${c}</td></tr>`; }))+`</section>`; }
+        const c=[q.bias?(q.prof&&q.prof.length>2?`suit la pierre : ${cm(q.w+Math.min(...q.prof.map(z=>z[1])))} à ${cm(q.w+Math.max(...q.prof.map(z=>z[1])))} (gabarit)`:`en biais : ${cm(q.w+q.dB)} en bas, ${cm(q.w+q.dT)} en haut`):q.w<W-1?`largeur ${cm(q.w)}`:"",q.h<Lg-1?`hauteur ${cm(q.h)}`:"",...ops.map(o=>`entaille ${opName(o,o.i)}`)].filter(Boolean).join(", ")||"entier";
+        return `<tr data-pcl="${i}" style="cursor:pointer"><td><b>I${q.n}</b></td><td>${cm(q.x)} / ${cm(q.y)} cm</td><td class="n"><b>${cm(q.w)}</b></td><td class="n"><b>${cm(q.h)}</b></td><td class="n">${c}</td></tr>`; }))+gabaritHtml(P,"I")+(()=>{ const U=wallUp(S.walls[S.cur],r); return U?`<p class="cap" style="margin:10px 0 0"><b>Remontée entre les solives :</b> la fibre continue au-dessus du mur, de ${cm(U.H)} à ${cm(U.top)} cm du sol (bandes de ${cm(U.top-U.H)} cm de haut)${U.par?", dans la travée entre le mur et la 1re solive.":`, recoupées entre les solives (${U.xs.length} solive(s) traversent ce mur).`}</p>`:""; })()+`</section>`; }
   if(v==="oss"){ const P=cutPieces(r,"oss");
     const rails=r.rails.map(x=>({k:x.kind,len:x.len||Math.abs((x.x1||0)-(x.x0||0)),x0:x.x0,y:x.y0}));
     return `<section class="box"><h2>Liste de coupe de l'ossature</h2><p class="cap" style="margin:0 0 8px">${P.length} montants ${S.oss.g} mm. Axe = milieu du montant, mesuré depuis le début du mur. Touchez une ligne pour la fiche.</p>`+
@@ -2579,6 +2596,9 @@ function cutListHtml(r,v){
       tb(["Lé","Position","Largeur posée","Longueur à couper"],r.les.map(l=>l.v?`<tr><td><b>Lé ${l.k+1}</b></td><td>${cm(l.x0)} → ${cm(l.x1)} cm</td><td class="n">${cm(l.x1-l.x0)}</td><td class="n"><b>${cm(Hm)}</b> <small>(hauteur + 2 × 10 cm)</small></td></tr>`:`<tr><td><b>Lé ${l.k+1}</b></td><td>h ${cm(l.y0)} → ${cm(l.y1)} cm</td><td class="n">${cm(l.y1-l.y0)}</td><td class="n"><b>${cm(r.L+200)}</b></td></tr>`))+`</section>`; }
   return "";
 }
+function gabaritHtml(list,pre){ const B=list.filter(q=>q.bias&&q.prof&&q.prof.length>2); if(!B.length) return "";
+  return `<h3 style="margin:12px 0 6px;font-size:15px">Gabarits de découpe (bord qui suit la pierre)</h3><p class="cap" style="margin:0 0 6px">Largeur du morceau à chaque hauteur, mesurée depuis son bord gauche. Hauteur comptée depuis le bas du morceau.</p>`+
+    B.map(q=>`<details style="margin:0 0 6px"><summary style="cursor:pointer"><b>${pre}${q.nm||q.n||""}</b> · ${cm(q.w+Math.min(...q.prof.map(z=>z[1])))} → ${cm(q.w+Math.max(...q.prof.map(z=>z[1])))} cm</summary><div style="display:flex;flex-wrap:wrap;gap:4px 12px;font:13px ui-monospace,monospace;margin-top:4px">${q.prof.map(([y,d])=>`<span>h ${cm(y-q.y)} → <b>${cm(q.w+d)}</b></span>`).join("")}</div></details>`).join(""); }
 document.getElementById("extra").addEventListener("click",e=>{ const t=e.target.closest("[data-pcl]"); if(!t) return; CUTSEL={v:S.view,i:+t.dataset.pcl,w:S.cur}; renderOut(); cutSheet(); });
 
 /* ---------- Géométrie de la pièce, plafond et maquette 3D ---------- */
@@ -2615,7 +2635,13 @@ function clipRect(P,x0,y0,x1,y1){
 }
 /* Plafond sous solives bois (réglages propres à chaque pièce) : solives 100×200 parallèles à un mur, entraxes mesurés travée par travée,
    isolant fibre de bois + membrane entre les solives, fourrures F45 sur cavaliers vissés sous les solives, plaques sous les F45 */
-const CEIL_SOL={ref:"", s0:300, se:600, sx:"", jw:100, jh:200, fh:22, memPose:"entre", lat:"depose", latT:25};
+const CEIL_SOL={ref:"", s0:300, se:600, sx:"", jw:100, jh:200, fh:22, memPose:"entre", lat:"depose", latT:25, upTop:0};
+function upTopOf(c,H){ return +c.upTop>0?+c.upTop:H+(c.lat==="garde"?(+c.latT||25):0)+(+c.jh||200); }
+function wallUp(w,r){ if(!w||!w.upJ||isCol(w)) return null; const room=w.room||"", c=ceilCfg(room); if(!c.on||c.mode!=="sol") return null; const R=computeCeil(room); if(!R.ok||!R.sol) return null;
+  const g=R.g, sg=g.segs.find(q=>q.w===w); if(!sg) return null; const sR=R.sR, k=sg.dx*sR.nx+sg.dy*sR.ny, X0=R.FW([sg.x0,sg.y0])[0], dx=(r.adj&&r.adj.dx)||0;
+  const H=r.H, keep=c.lat==="garde", jb=Math.min(upTopOf(c,H)-R.jh, H+(keep?(+c.latT||25):0)), top=upTopOf(c,H), par=Math.abs(k)<.05;
+  const xs=par?[]:R.axes.map(a=>(a-X0)/k+dx).filter(x=>x>-R.jw&&x<r.L+R.jw).sort((a,b)=>a-b);
+  const near=par?Math.min(...R.axes.map(a=>Math.abs(a-X0))):0; return {H,top,jb,jw:R.jw,jh:R.jh,keep,latT:+c.latT||25,xs,par,near}; }
 function upWalls(room){ return S.walls.filter(w=>(w.room||"")===room&&w.upJ&&!isCol(w)); }
 function latScrew(c){ const n=(+c.latT||25)+35+3; return "4 × "+(n<=50?50:n<=60?60:n<=70?70:80)+" mm"; }
 function ceilJoists(c,maxX){ const ax=[]; let x=+c.s0||300; const L=String(c.sx||"").trim().split(/[;\s]+/).map(t=>parseFloat(t.replace(/,$/,"").replace(",","."))).filter(v=>v>0).map(v=>Math.round(v*10));
@@ -2696,7 +2722,7 @@ function ceilSol(res,o){ const {g,c,P,x0,x1,y0,y1,area,pl,fur,plates,ck,BW,sR,FW
   if(c.mem) ck(true, c.memPose==="entre"?"Membrane hygrovariable entre les solives, sous l'isolant : agrafée sur les flancs des solives, rubans KB1 en continu sur le bois des deux côtés de chaque solive, et raccordée à la membrane des murs. Plus simple et plus étanche si vous préférez : une seule membrane continue sous les solives (les cavaliers se vissent au travers).":"Membrane hygrovariable continue sous les solives, côté chaud ; les cavaliers se vissent au travers. Recouvrements 10 cm scotchés KB1, raccord aux murs au DoubleFit.","Étanchéité à l'air");
   ck(true,c.lat==="garde"?"Murs : rails hauts et plaques des murs s'arrêtent sous l'ancien plafond, rails vissés à travers dans les solives (ou une lambourde). L'isolant et la membrane des murs montent jusqu'à l'ancien plafond ; la membrane des murs se raccorde à celle du plafond (DoubleFit / KB1).":"Murs : l'isolant fibre de bois et la membrane des murs montent entre les solives jusqu'en haut ; les rails hauts et les plaques des murs s'arrêtent sous les solives. Membrane des murs raccordée à celle du plafond.","Jonction murs / plafond");
   upWalls(o.room).forEach(w=>{ const sg=g.segs.find(q=>q.w===w); if(!sg) return; const par=Math.abs(sg.dx*sR.dx+sg.dy*sR.dy)>.98, Lw=withWallCfg(w,()=>wallLayers(w)), fb=Lw.find(l=>l.k==="fibre"), band=Math.round(((fb?fb.o1:150)+60)/10)*10;
-    ck(true,`Mur « ${w.name} » : son isolant fibre de bois et sa membrane remontent entre les solives jusqu'au plancher du dessus (${fr((jh+(c.lat==="garde"?(+c.latT||25):0))/10,1)} cm de plus), ${par?"dans la travée entre le mur et la 1re solive, sur toute la longueur":"dans chaque travée, panneaux recoupés à la largeur entre solives et bien serrés contre le bois"}.${c.lat==="garde"?` Ouvrez une bande d'ancien plafond d'environ ${band/10} cm le long de ce mur pour passer.`:""} La membrane du mur monte avec l'isolant, se retourne sur la membrane du plafond entre les solives et se scotche KB1 sur les flancs des solives : enveloppe continue, sans fuite d'air.`,"Étanchéité à l'air"); });
+    ck(true,`Mur « ${w.name} » : son isolant fibre de bois et sa membrane remontent entre les solives jusqu'à ${cm(upTopOf(c,g.H))} cm du sol (${fr((upTopOf(c,g.H)-g.H)/10,1)} cm au-dessus du haut du mur), ${par?"dans la travée entre le mur et la 1re solive, sur toute la longueur":"dans chaque travée, panneaux recoupés à la largeur entre solives et bien serrés contre le bois"}.${c.lat==="garde"?` Ouvrez une bande d'ancien plafond d'environ ${band/10} cm le long de ce mur pour passer.`:""} ${c.mem?"La membrane du mur monte avec l'isolant, se retourne sur la membrane du plafond entre les solives et se scotche KB1 sur les flancs des solives : enveloppe continue, sans fuite d'air.":"La membrane du mur monte avec l'isolant et se fixe sur le pourtour de chaque solive (agrafes + KB1 sur le bois, manchette autour de la solive), puis en haut contre le plancher : pas d'air qui passe."}`,"Étanchéité à l'air"); });
   // rail haut des murs parallèles aux solives : doit tomber sous une solive
   g.segs.forEach((sg,k)=>{ const par=Math.abs(sg.dx*sR.dx+sg.dy*sR.dy)>.98; if(!par) return; const w=sg.w; let L0=null; try{ L0=withWallCfg(w,()=>wallLayers(w)).find(l=>l.k==="oss"); }catch(e){} if(!L0) return;
     const off=(L0.o0+L0.o1)/2, m=[sg.x0+sg.dx*sg.w.L/2+sg.nx*off, sg.y0+sg.dy*sg.w.L/2+sg.ny*off], X=FW(m)[0], near=axes.length?axes.reduce((b,a)=>Math.abs(a-X)<Math.abs(b-X)?a:b,axes[0]):null;
@@ -2728,7 +2754,7 @@ function ceilMaterials(room){
   const isoArea=R.sol?R.isoA:area, upA=R.sol?per*R.jh/1000:0;
   if(c.iso){ const iso=ISO.find(i=>i.n===c.isoN)||S.iso, panA=iso.W*iso.Lg/1e6;
     add(`${iso.f} ${iso.n} · ${c.ep} mm · ${cm(iso.W)}×${cm(iso.Lg)} cm`, R.sol?`entre solives ${fr(isoArea,2)} m² (recoupé par travée), R = ${fr(c.ep/1000/iso.lambda,2)} m²·K/W`:`plafond ${fr(area,2)} m², R = ${fr(c.ep/1000/iso.lambda,2)} m²·K/W`, R.sol?Math.ceil(R.bays.reduce((t,B)=>{ const bw=Math.min(B.b,iso.W)+10, per=Math.max(1,Math.floor(iso.W/bw)), rows=Math.ceil(B.b/(iso.W)); return t+B.L/iso.Lg/per*rows; },0)*(1+(S.iso.perte||5)/100)):Math.ceil(isoArea*(1+(S.iso.perte||5)/100)/panA), "panneaux"); }
-  const UW=R.sol?upWalls(room):[], upH=R.sol?(R.jh+(c.lat==="garde"?(+c.latT||25):0)):0, upL=UW.reduce((t,w)=>t+w.L,0)/1000;
+  const UW=R.sol?upWalls(room):[], upH=R.sol?Math.max(0,upTopOf(c,R.g.H)-R.g.H):0, upL=UW.reduce((t,w)=>t+w.L,0)/1000;
   if(R.sol&&S.iso.on&&UW.length){ const iw=ISO.find(i=>i.n===S.iso.n)||S.iso, pA=iw.W*iw.Lg/1e6; add(`${iw.f} ${iw.n} · ${S.iso.ep} mm`, `remontée de l'isolant des murs ${UW.map(w=>w.name).join(", ")} entre les solives (${fr(upL,2)} m × ${fr(upH/10,1)} cm)`, Math.ceil(upL*upH/1000*1.15/pA), "panneaux"); }
   if(c.mem&&R.sol){ const m=S.mem, packA=m.rollW*m.rollL/1e6, mA=(c.memPose==="entre"?isoArea*1.05+R.jLen*2*0.05:area*1.12)+upL*(upH/1000+.15);
     add(m.n, c.memPose==="entre"?`entre les solives (retours 5 cm agrafés sur les flancs)${UW.length?" + remontée des murs "+UW.map(w=>w.name).join(", "):""}`:`sous les solives${UW.length?" + remontée des murs "+UW.map(w=>w.name).join(", "):""}`, Math.ceil(mA), "m²", packA, `rouleau(x) de ${fr(packA)} m²`);
@@ -3069,6 +3095,7 @@ function ceilPanel(w){
     <div class="row"><label class="f">Ossature sous solives : cavalier + F45 (cm)<input type="number" min="1" step="0.1" data-ceil="fh" data-cmv value="${c.fh/10}"></label>
       <label class="f">Ancien lattis + placo<select data-ceil="lat"><option value="depose"${c.lat!=="garde"?" selected":""}>Déposés</option><option value="garde"${c.lat==="garde"?" selected":""}>Conservés</option></select></label></div>
     ${c.lat==="garde"?`<div class="row"><label class="f">Épaisseur lattis + ancien placo (cm)<input type="number" min="0.5" step="0.1" data-ceil="latT" data-cmv value="${(+c.latT||25)/10}"></label></div>`:""}
+    <div class="row"><label class="f">Isolant des murs monte jusqu'à (cm du sol)<input type="number" min="100" step="0.5" data-ceil="upTop" data-cmv value="${upTopOf(c,g.H)/10}"></label></div>
     <div class="f" style="margin:6px 0"><span class="cap">Isolant + membrane du mur qui remontent entre les solives (cocon étanche) :</span>
       <div style="display:flex;flex-wrap:wrap;gap:2px 14px">${g.segs.map(q=>`<label class="chk" style="margin:0"><input type="checkbox" data-upj="${q.i}" ${q.w.upJ?"checked":""}${isCol(q.w)?" disabled":""}> ${esc(q.w.name)}</label>`).join("")}</div></div>
     <p class="hint">La hauteur des murs est prise sous ${c.lat==="garde"?"l'ancien plafond":"les solives"} : rails hauts et plaques des murs s'arrêtent dessous ; isolant et membrane des murs montent ${c.lat==="garde"?"jusqu'à l'ancien plafond":"entre les solives"}.</p>`:""}`:""}
@@ -4925,6 +4952,8 @@ function onField(e){
     if(el.dataset.act==="plan"){ const p=PLA.find(p=>p.n===v); Object.assign(S.pla,p,{lens:[...p.lens]}); }
     renderAll(); return;
   }
+  if(el.dataset.lmk!==undefined){ const w=S.walls[S.cur], k=+el.dataset.lmk, v=parseFloat(String(el.value).replace(",",".")); w.Lm=(w.Lm||[]).slice(); while(w.Lm.length<=k) w.Lm.push(0); w.Lm[k]=v>=1?Math.round(v*10):0;
+    const m=w.Lm.filter(x=>x>0); if(!m.length) delete w.Lm; else w.L=Math.min(...m); const iL=document.getElementById("w-L"); if(iL) iL.value=w.L/10; renderOut(); return; }
   if(el.dataset.l3!==undefined){ const w=S.walls[S.cur], k=+el.dataset.l3, v=parseFloat(String(el.value).replace(",",".")); w.L3=(w.L3||[0,0,0]).slice(0,3); w.L3[k]=v>=1?Math.round(v*10):0;
     const m=w.L3.filter(x=>x>0); if(!m.length) delete w.L3; else w.L=Math.min(...m); const iL=document.getElementById("w-L"); if(iL) iL.value=w.L/10; renderOut(); return; }
   if(!el.dataset.b) return;
@@ -4935,7 +4964,7 @@ function onField(e){
   else if(el.dataset.num!==undefined){ val=parseFloat(el.value); if(isNaN(val)) return; }
   else val=el.value;
   setPath(el.dataset.b,val);
-  if(el.dataset.b==="w.L"){ const w=S.walls[S.cur]; if(w&&w.L3) delete w.L3; }
+  if(el.dataset.b==="w.L"){ const w=S.walls[S.cur]; if(w&&w.L3) delete w.L3; if(w&&w.Lm) delete w.Lm; }
   if(el.dataset.b==="w.name") document.querySelector(`[data-wall="${S.cur}"]`).textContent=val||"Mur";
   if(el.dataset.b.endsWith(".type")){
     const ps=el.dataset.b.split("."), i=+ps[2];
@@ -5094,7 +5123,7 @@ const IKEA_MAHDI={"source":"Planificateur de cuisine IKEA, 13/11/2026 (design 47
 function ikeaAuto(force){ try{ const rw=S.walls.filter(w=>(w.room||"")==="cuisine"); if(!rw.some(w=>/lin[eé]aire/i.test(w.name))||!rw.some(w=>/salon/i.test(w.name))) return "";
   if(!force&&(S.kitIkea||(S.kit&&S.kit.cuisine&&S.kit.cuisine.items&&S.kit.cuisine.items.length))) return "";
   const m=kitImport(JSON.parse(JSON.stringify(IKEA_MAHDI))); S.kitIkea=1; save(); return m; }catch(e){ return ""; } }
-setTimeout(()=>{ let ch=!!ikeaAuto(false); try{ if(!S.upj){ S.upj=1; S.walls.forEach(w=>{ if(!isCol(w)&&(/lin[eé]aire/i.test(w.name||"")||/fen/i.test(w.name||"")||w.openings.some(o=>o.type==="Fenêtre"))) w.upJ=true; }); ch=true; } }catch(e){} try{ if(!S.latg){ S.latg=1; Object.values(S.ceil||{}).forEach(c=>{ if(c&&c.mode==="sol"){ c.lat="garde"; if(!c.latT) c.latT=25; } }); ch=true; } }catch(e){} try{ if(!S.solv){ S.solv=1; [...new Set(S.walls.map(x=>x.room||""))].forEach(n=>{ const c=ceilCfg(n); if(c.on&&c.mode==="susp") return; Object.assign(c,{on:true,mode:"sol",iso:true,isoN:S.iso.n,ep:200,mem:true,memPose:"entre",e:500,len:2500,lat:"garde",latT:25}); }); ch=true; } }catch(e){} try{ if(!S.p250){ S.p250=1; S.pla.lens=[2500]; ch=true; } }catch(e){} try{ if(!S.credOff){ S.walls.filter(w=>(w.room||"")==="cuisine"&&/lin[eé]aire/i.test(w.name)&&w.tile&&w.tile.on).forEach(w=>{ w.tile.on=false; ch=true; }); S.credOff=1; save(); } }catch(e){} try{ if(!S.fl8001){ const D=["#f7f6f2","#efe9df",""]; S.fin.peint.teinte="#f3f4f1"; S.walls.forEach(w=>{ if(!w.teinte||D.includes(String(w.teinte).toLowerCase())) w.teinte="#f3f4f1"; }); S.fl8001=1; save(); ch=true; } }catch(e){} try{ if(!S.belfast){ const BN=SOLS.find(q=>q.grain==="belfast").n; [...new Set(S.walls.map(w=>w.room||""))].forEach(rm=>{ const F=floorCfg(rm); F.on=true; F.n=BN; F.c=""; F.L=0; F.W=0; F.pose=""; if(S.bc&&S.bc[rm]) S.bc[rm].sol=false; }); S.belfast=1; save(); ch=true; } }catch(e){} if(ch) renderAll(); },300);
+setTimeout(()=>{ let ch=!!ikeaAuto(false); try{ if(!S.noiso){ S.noiso=1; Object.values(S.ceil||{}).forEach(c=>{ if(c&&c.mode==="sol"){ c.iso=false; c.mem=false; c.upTop=2810; } }); ch=true; } }catch(e){} try{ if(!S.upj){ S.upj=1; S.walls.forEach(w=>{ if(!isCol(w)&&(/lin[eé]aire/i.test(w.name||"")||/fen/i.test(w.name||"")||w.openings.some(o=>o.type==="Fenêtre"))) w.upJ=true; }); ch=true; } }catch(e){} try{ if(!S.latg){ S.latg=1; Object.values(S.ceil||{}).forEach(c=>{ if(c&&c.mode==="sol"){ c.lat="garde"; if(!c.latT) c.latT=25; } }); ch=true; } }catch(e){} try{ if(!S.solv){ S.solv=1; [...new Set(S.walls.map(x=>x.room||""))].forEach(n=>{ const c=ceilCfg(n); if(c.on&&c.mode==="susp") return; Object.assign(c,{on:true,mode:"sol",iso:false,isoN:S.iso.n,ep:200,mem:false,upTop:2810,memPose:"entre",e:500,len:2500,lat:"garde",latT:25}); }); ch=true; } }catch(e){} try{ if(!S.p250){ S.p250=1; S.pla.lens=[2500]; ch=true; } }catch(e){} try{ if(!S.credOff){ S.walls.filter(w=>(w.room||"")==="cuisine"&&/lin[eé]aire/i.test(w.name)&&w.tile&&w.tile.on).forEach(w=>{ w.tile.on=false; ch=true; }); S.credOff=1; save(); } }catch(e){} try{ if(!S.fl8001){ const D=["#f7f6f2","#efe9df",""]; S.fin.peint.teinte="#f3f4f1"; S.walls.forEach(w=>{ if(!w.teinte||D.includes(String(w.teinte).toLowerCase())) w.teinte="#f3f4f1"; }); S.fl8001=1; save(); ch=true; } }catch(e){} try{ if(!S.belfast){ const BN=SOLS.find(q=>q.grain==="belfast").n; [...new Set(S.walls.map(w=>w.room||""))].forEach(rm=>{ const F=floorCfg(rm); F.on=true; F.n=BN; F.c=""; F.L=0; F.W=0; F.pose=""; if(S.bc&&S.bc[rm]) S.bc[rm].sol=false; }); S.belfast=1; save(); ch=true; } }catch(e){} if(ch) renderAll(); },300);
 document.addEventListener("click",e=>{ if(!e.target.closest("[data-ikea]")) return; if(S.kit&&S.kit.cuisine&&S.kit.cuisine.items.length&&!confirm("Remplacer les meubles de la cuisine par ceux du plan IKEA du 13/11/2026 ?")) return; const m=ikeaAuto(true); renderAll(); if(m) alert(m); });
 function loadProject(txt){
   let d; try{ d=JSON.parse(txt); }catch(e){ ioMsg("Ce texte n'est pas un projet valide : copiez-le en entier depuis le bouton « Copier le projet »."); return; }
