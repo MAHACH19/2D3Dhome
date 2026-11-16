@@ -5090,16 +5090,29 @@ document.getElementById("jump").addEventListener("click",()=>{ const sd=document
 })();
 /* Dessins (murs, plaques, ossature…) : toujours en entier sur la largeur de l'écran ; pincer à deux doigts pour zoomer (jusqu'à ×6), glisser pour se déplacer, double-tap pour revenir */
 const PZ={z:1};
-(()=>{ const pl=document.getElementById("plan"); if(!pl) return; const P=new Map(); let g=null, lastTap=0;
-  const ok=()=>!["room3d","logement","visite"].includes(S.view), sv=()=>pl.querySelector(":scope > svg");
+(()=>{ const pl=document.getElementById("plan"); if(!pl) return; const P=new Map(); let g=null, lastTap=0, raf=0, wheelT=0, wg=null;
+  const ok=()=>!["room3d","logement","visite"].includes(S.view), sv=()=>pl.querySelector(":scope > svg"), clampZ=z=>Math.max(1,Math.min(6,z));
   const apply=()=>{ const s=sv(); if(!s) return; if(!ok()||PZ.z<=1.01){ s.style.width=""; s.style.maxHeight=""; return; } s.style.width=(PZ.z*100)+"%"; s.style.maxHeight="none"; s.style.minWidth="0"; };
   new MutationObserver(apply).observe(pl,{childList:true}); pl.style.touchAction="pan-x pan-y";
+  /* pendant le geste : simple transformation GPU (pas de recalcul du dessin) ; à la fin : vraie taille, net */
+  const begin=(mx,my,d0)=>{ const s=sv(); if(!s) return null; s.style.transform=""; const r0=s.getBoundingClientRect(); s.style.transformOrigin="0 0"; s.style.willChange="transform";
+    return {s,d0,z0:PZ.z,z:PZ.z,l0:r0.left,t0:r0.top,sl:pl.scrollLeft,wy:window.scrollY,px:mx-r0.left,py:my-r0.top,mx,my}; };
+  const draw=()=>{ raf=0; const q=g||wg; if(!q||!q.s) return; const f=q.z/q.z0, L=q.l0-(pl.scrollLeft-q.sl), T=q.t0-(window.scrollY-q.wy);
+    q.s.style.transform=`translate(${q.mx-L-q.px*f}px,${q.my-T-q.py*f}px) scale(${f})`; };
+  const sched=()=>{ if(!raf) raf=requestAnimationFrame(draw); };
+  const commit=q=>{ if(!q||!q.s) return; if(raf){ cancelAnimationFrame(raf); raf=0; } const f=q.z/q.z0; q.s.style.transform=""; q.s.style.willChange=""; PZ.z=q.z; apply();
+    const r1=q.s.getBoundingClientRect(); pl.scrollLeft+=r1.left+q.px*f-q.mx; const dy=r1.top+q.py*f-q.my; if(Math.abs(dy)>1) window.scrollBy(0,dy); };
+  const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
   pl.addEventListener("pointerdown",e=>{ if(!ok()) return; P.set(e.pointerId,[e.clientX,e.clientY]);
-    if(P.size===2){ const [a,b]=[...P.values()], R=pl.getBoundingClientRect(), mx=(a[0]+b[0])/2-R.left, my=(a[1]+b[1])/2-R.top; g={d0:Math.max(1,Math.hypot(a[0]-b[0],a[1]-b[1])),z0:PZ.z,ax:(pl.scrollLeft+mx)/PZ.z,mx,ay:(pl.scrollTop+my)/PZ.z,my}; }
-    else if(P.size===1){ const t=performance.now(); if(t-lastTap<300&&PZ.z>1){ PZ.z=1; apply(); } lastTap=t; } });
+    if(P.size===2){ const [a,b]=[...P.values()], [mx,my]=mid(a,b); g=begin(mx,my,Math.max(1,Math.hypot(a[0]-b[0],a[1]-b[1]))); }
+    else if(P.size===1){ const t=performance.now(); if(t-lastTap<300&&PZ.z>1){ const s=sv(); if(s){ s.style.transition="transform .18s ease-out"; s.style.transformOrigin="0 0"; s.style.transform=`scale(${1/PZ.z})`; setTimeout(()=>{ s.style.transition=""; s.style.transform=""; PZ.z=1; apply(); },180); } else { PZ.z=1; apply(); } } lastTap=t; } });
   pl.addEventListener("pointermove",e=>{ if(!P.has(e.pointerId)) return; P.set(e.pointerId,[e.clientX,e.clientY]); if(!g||P.size<2) return; e.preventDefault();
-    const [a,b]=[...P.values()], d=Math.max(1,Math.hypot(a[0]-b[0],a[1]-b[1])); PZ.z=Math.max(1,Math.min(6,g.z0*d/g.d0)); apply(); pl.scrollLeft=g.ax*PZ.z-g.mx; pl.scrollTop=g.ay*PZ.z-g.my; },{passive:false});
-  const up=e=>{ P.delete(e.pointerId); if(P.size<2) g=null; }; pl.addEventListener("pointerup",up); pl.addEventListener("pointercancel",up); })();
+    const [a,b]=[...P.values()], d=Math.max(1,Math.hypot(a[0]-b[0],a[1]-b[1])), [mx,my]=mid(a,b); g.z=clampZ(g.z0*d/g.d0); g.mx=mx; g.my=my; sched(); },{passive:false});
+  const up=e=>{ P.delete(e.pointerId); if(P.size<2&&g){ const q=g; g=null; commit(q); } }; pl.addEventListener("pointerup",up); pl.addEventListener("pointercancel",up);
+  /* ordinateur : Ctrl + molette (ou pincement du pavé tactile) */
+  pl.addEventListener("wheel",e=>{ if(!ok()||!e.ctrlKey) return; e.preventDefault(); const mx=e.clientX, my=e.clientY;
+    if(!wg) wg=begin(mx,my,1); if(!wg) return; wg.z=clampZ(wg.z*Math.exp(-e.deltaY*0.0025)); wg.mx=mx; wg.my=my; sched();
+    clearTimeout(wheelT); wheelT=setTimeout(()=>{ const q=wg; wg=null; commit(q); },160); },{passive:false}); })();
 (()=>{ const pl=document.getElementById("plan"); let drag=null;
   const R3P=new Map(), r3Two=()=>{ const [a,b]=[...R3P.values()]; return {d:Math.max(1,Math.hypot(a[0]-b[0],a[1]-b[1])),cx:(a[0]+b[0])/2,cy:(a[1]+b[1])/2}; };
   pl.addEventListener("pointerdown",e=>{ if(S.view!=="room3d") return; R3P.set(e.pointerId,[e.clientX,e.clientY]);
@@ -5107,7 +5120,7 @@ const PZ={z:1};
     drag={x:e.clientX,y:e.clientY,yaw:S.r3.yaw,pitch:S.r3.pitch,moved:false}; });
   window.addEventListener("pointermove",e=>{ if(R3P.has(e.pointerId)) R3P.set(e.pointerId,[e.clientX,e.clientY]); if(!drag) return;
     if(drag.pinch){ if(R3P.size<2) return; const t=r3Two(), Z=Math.max(0.4,Math.min(8,drag.z0*t.d/drag.t0.d)); S.r3.zoom=Z;
-      S.r3.panX=drag.px-(t.cx-drag.t0.cx)*drag.k/Z; S.r3.panY=drag.py-(t.cy-drag.t0.cy)*drag.k/Z; renderRoom3D(); return; }
+      S.r3.panX=drag.px-(t.cx-drag.t0.cx)*drag.k/Z; S.r3.panY=drag.py-(t.cy-drag.t0.cy)*drag.k/Z; if(!window.__r3raf) window.__r3raf=requestAnimationFrame(()=>{ window.__r3raf=0; renderRoom3D(); }); return; }
     const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(Math.abs(dx)+Math.abs(dy)>5) drag.moved=true; if(!drag.moved) return;
     S.r3.yaw=Math.round(((drag.yaw-dx*0.5+540)%360)-180); S.r3.pitch=Math.max(10,Math.min(85,Math.round(drag.pitch+dy*0.3))); renderRoom3D(); });
   const r3Up=e=>{ R3P.delete(e.pointerId); if(drag&&drag.pinch&&R3P.size) return; if(drag&&drag.moved){ pl.dataset.dragged="1"; setTimeout(()=>delete pl.dataset.dragged,50); save(); } drag=null; };
