@@ -419,6 +419,17 @@ section.box{border-radius:12px}
 </div>
 
 <script>
+/* Bandeau d'erreur : si quelque chose plante (surtout dans l'APK), on voit le message et on peut revenir à une vue sûre */
+(function(){ var shown=0; function show(msg){ if(shown>2) return; shown++; try{ var d=document.getElementById("errbar"); if(!d){ d=document.createElement("div"); d.id="errbar"; d.style.cssText="position:fixed;left:8px;right:8px;top:8px;z-index:99999;background:#b3261e;color:#fff;padding:10px 12px;border-radius:10px;font:14px/1.35 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3)"; (document.body||document.documentElement).appendChild(d); }
+  d.innerHTML='<b>Erreur dans l\'appli</b> (envoyez une capture de ce bandeau) :<br><code style="word-break:break-word;font-size:12px">'+String(msg).replace(/[<&]/g,function(c){return c==="<"?"&lt;":"&amp;";}).slice(0,400)+'</code><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="errsafe" style="background:#fff;color:#b3261e;border:0;border-radius:8px;padding:6px 10px;font-weight:700">Revenir à la vue « Tout »</button><button type="button" id="errclose" style="background:transparent;color:#fff;border:1px solid #fff;border-radius:8px;padding:6px 10px">Fermer</button></div>';
+  document.getElementById("errclose").onclick=function(){ d.remove(); };
+  document.getElementById("errsafe").onclick=function(){ try{ var k="calepinage-murs-v2", S=JSON.parse(localStorage.getItem(k)||"{}"); S.view="tout"; localStorage.setItem(k,JSON.stringify(S)); }catch(e){} location.reload(); };
+ }catch(e){} }
+ window.addEventListener("error",function(e){ show((e.message||"erreur")+(e.lineno?" (ligne "+e.lineno+")":"")); });
+ window.addEventListener("unhandledrejection",function(e){ show("Promesse : "+(e.reason&&e.reason.message||e.reason)); });
+})();
+</script>
+<script>
 /* ---------- Catalogues (dimensions modifiables dans l'interface) ---------- */
 const OSS = {
   "Placo — Placostil":   {rail:g=>`Rail Stil R${g}`, mont:g=>`Montant Stil M${g}-35`},
