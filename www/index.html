@@ -3301,6 +3301,7 @@ function reverseRoom(room){
   });
 }
 function renderLogement(){
+  applyLinks();
   const cw=S.walls[S.cur], curRoom=cw.room||"", parts=[`<defs>${texDefs()}</defs>`], B=[];
   const Yf=y=>-y, pp=Q=>Q.map(p=>{ B.push(p); return `${p[0].toFixed(0)},${Yf(p[1]).toFixed(0)}`; }).join(" ");
   const labels=[];
@@ -3312,6 +3313,8 @@ function renderLogement(){
       const O=g.outer[k], M=g.mid[k], I=g.inner[k];
       parts.push(`<polygon points="${pp([O.a,O.b,M.b,M.a])}" fill="url(#tx-stone)" stroke="#6f675b" stroke-width="12"/>`);
       parts.push(`<polygon points="${pp([M.a,M.b,I.b,I.a])}" fill="#c4914f" stroke="#7a5326" stroke-width="8"/>`);
+      if(s.w.id&&(s.w.id===LK.wa||s.w.id===LK.wb)) parts.push(`<polygon points="${pp([O.a,O.b,I.b,I.a])}" fill="none" stroke="#d6452b" stroke-width="60"/>`);
+      if(S.links&&S.links.some(l=>l.wa===s.w.id||l.wb===s.w.id)) parts.push(`<polyline points="${pp([[(O.a[0]+M.a[0])/2,(O.a[1]+M.a[1])/2],[(O.b[0]+M.b[0])/2,(O.b[1]+M.b[1])/2]])}" fill="none" stroke="#2e8b57" stroke-width="40" stroke-dasharray="120 80"/>`);
       s.w.openings.forEach(o=>{ const a=Math.max(0,o.x), b=Math.min(s.w.L,o.x+o.w), Q=(x,off)=>[s.x0+s.dx*x+s.nx*off, s.y0+s.dy*x+s.ny*off];
         const tk=g.Ts?g.Ts[g.segs.indexOf(s)]:g.T; parts.push(`<polygon points="${pp([Q(a,-g.STN),Q(b,-g.STN),Q(b,tk),Q(a,tk)])}" fill="${o.type==="Porte"?"#fff":"#bfe0f5"}" stroke="#555" stroke-width="8"/>`); });
     });
@@ -3332,11 +3335,49 @@ function renderLogement(){
       <label class="f">Position Y (cm)<input type="number" step="1" data-lay="y" value="${Math.round(L.y/10)}"></label>
     </div>
     <div class="row">
-      <label class="f">Rotation<select data-lay="rot">${[0,90,180,270].map(v=>`<option value="${v}"${L.rot===v?" selected":""}>${v}°</option>`).join("")}</select></label>
+      <label class="f">Rotation<select data-lay="rot">${[...new Set([0,90,180,270,L.rot])].map(v=>`<option value="${v}"${L.rot===v?" selected":""}>${fr(v,v%1?1:0)}°</option>`).join("")}</select></label>
       <button type="button" data-goview="room3d" data-all="1" style="align-self:end">Voir tout le logement en 3D</button>
     </div>
-    <p class="cap" style="margin:10px 0 0">Chaque pièce garde ses murs et ses angles. Placez-les ici les unes par rapport aux autres : les murs mitoyens se superposent quand les pièces sont collées.</p></section>`;
+    <p class="cap" style="margin:10px 0 0">Chaque pièce garde ses murs et ses angles. Placez-les ici les unes par rapport aux autres : les murs mitoyens se superposent quand les pièces sont collées.</p></section>${linkHtml(curRoom)}`;
 }
+/* ---------- Connecter les pièces (appartement) : un mur de cette pièce contre un mur d'une autre pièce, séparés par l'épaisseur du mur commun ---------- */
+const LK={wa:"",b:"",wb:"",e:300,al:"auto",d:0};
+const wById=id=>S.walls.find(w=>w.id===id);
+function doorC(w){ const o=(w.openings||[]).find(o=>o.type==="Porte"); return o?o.x+o.w/2:null; }
+function linkPlace(l){ const wa=wById(l.wa), wb=wById(l.wb); if(!wa||!wb) return false; const ra=wa.room||"", rb=wb.room||""; if(ra===rb) return false;
+  const ga=geomXf(roomGeom(ra),ra), sa=ga.segs.find(q=>q.w===wa), gb=roomGeom(rb), sb=gb.segs.find(q=>q.w===wb); if(!sa||!sb) return false;
+  const LA=wa.L, LB=wb.L, cA=doorC(wa), cB=doorC(wb);
+  const d=l.al==="porte"&&cA!=null&&cB!=null?cA+cB-LB:l.al==="fin"?LA-LB:l.al==="centre"?(LA-LB)/2:l.al==="manuel"?(+l.d||0):0;
+  const dB=[-sa.dx,-sa.dy], S0=[sa.x0+sa.dx*(d+LB)-sa.nx*(+l.e||0), sa.y0+sa.dy*(d+LB)-sa.ny*(+l.e||0)];
+  let th=(Math.atan2(dB[1],dB[0])-Math.atan2(sb.dy,sb.dx))*180/Math.PI; th=((th%360)+360)%360; th=Math.round(th*10)/10; if(th>=359.95) th=0;
+  const a=th*Math.PI/180, c=Math.cos(a), sn=Math.sin(a), L=roomLayout(rb);
+  L.rot=th; L.x=Math.round(S0[0]-(sb.x0*c-sb.y0*sn)); L.y=Math.round(S0[1]-(sb.x0*sn+sb.y0*c)); l.dUsed=d; return true; }
+function applyLinks(){ const Ls=S.links||[]; for(let k=0;k<Ls.length;k++) Ls.forEach(linkPlace); } // plusieurs passes : une chaîne A → B → C se met en place quel que soit l'ordre
+const linkRoom=(l,k)=>{ const w=wById(l[k]); return w?(w.room||""):null; };
+function linkHtml(cur){ const rooms=roomNames().filter(n=>n!==cur), wa=S.walls.filter(w=>(w.room||"")===cur);
+  if(!rooms.length) return `<section class="box"><h2>Connecter les pièces</h2><p class="cap" style="margin:0">Ajoutez une deuxième pièce pour la connecter à « ${esc(cur)} » et former l'appartement.</p></section>`;
+  if(!wa.some(w=>w.id===LK.wa)) LK.wa=wid(wa[0]); if(!rooms.includes(LK.b)) LK.b=rooms[0]; const wbL=S.walls.filter(w=>(w.room||"")===LK.b); if(!wbL.some(w=>w.id===LK.wb)) LK.wb=wid(wbL[0]); wbL.forEach(wid); wa.forEach(wid);
+  const A=wById(LK.wa), B=wById(LK.wb), both=doorC(A)!=null&&doorC(B)!=null, sh=w=>esc((w.name||"").replace((w.room||"")+" — ","")), o=(v,t,sel)=>`<option value="${v}"${sel?" selected":""}>${t}</option>`;
+  const al=LK.al==="auto"?(both?"porte":"debut"):LK.al;
+  const list=(S.links||[]).map((l,i)=>{ const a=wById(l.wa), b=wById(l.wb); if(!a||!b) return ""; return `<li><b>${esc(a.room||"")}</b> · ${sh(a)} ⟷ <b>${esc(b.room||"")}</b> · ${sh(b)} <span class="cap">(mur de ${cm(+l.e||0)} cm, ${l.al==="porte"?"portes alignées":l.al==="fin"?"alignés par la fin":l.al==="centre"?"centrés":l.al==="manuel"?`décalage ${cm(+l.d||0)} cm`:"alignés par le début"})</span> <button type="button" data-lkdel="${i}" style="padding:3px 8px;font-size:12px">Détacher</button></li>`; }).join("");
+  return `<section class="box"><h2>Connecter les pièces (appartement)</h2>
+    <p class="cap" style="margin:0 0 8px">Choisissez le mur de « ${esc(cur)} » et le mur de la pièce voisine qui sont dos à dos : la pièce voisine se place et tourne toute seule, de l'autre côté du mur commun. Les murs choisis sont en rouge sur le plan.</p>
+    <div class="row"><label class="f">Mur de ${esc(cur)}<select data-lk="wa">${wa.map(w=>o(w.id,sh(w)+` (${cm(w.L)} cm)${doorC(w)!=null?" · porte":""}`,w.id===LK.wa)).join("")}</select></label>
+      <label class="f">Pièce voisine<select data-lk="b">${rooms.map(n=>o(esc(n),esc(n),n===LK.b)).join("")}</select></label></div>
+    <div class="row"><label class="f">Son mur<select data-lk="wb">${wbL.map(w=>o(w.id,sh(w)+` (${cm(w.L)} cm)${doorC(w)!=null?" · porte":""}`,w.id===LK.wb)).join("")}</select></label>
+      <label class="f">Épaisseur du mur commun (cm)<input type="number" min="0" step="0.5" data-lk="e" value="${(+LK.e||0)/10}"></label></div>
+    <div class="row"><label class="f">Alignement<select data-lk="al">${o("porte","Sur la porte commune"+(both?"":" (pas de porte sur les deux murs)"),al==="porte")}${o("debut","Début de mon mur = fin du sien",al==="debut")}${o("fin","Fin de mon mur = début du sien",al==="fin")}${o("centre","Murs centrés",al==="centre")}${o("manuel","Décalage manuel",al==="manuel")}</select></label>
+      ${al==="manuel"?`<label class="f">Décalage le long de mon mur (cm)<input type="number" step="0.5" data-lk="d" value="${(+LK.d||0)/10}"></label>`:`<span></span>`}</div>
+    <button type="button" class="pri" data-lkgo="1">Connecter</button>
+    ${list?`<h3 style="margin:14px 0 6px;font-size:15px">Connexions</h3><ul style="margin:0;padding-left:18px">${list}</ul><p class="cap" style="margin:6px 0 0">Une pièce connectée suit la pièce à laquelle elle est attachée : déplacez la première, les autres suivent. Les murs mitoyens sont en pointillé vert.</p>`:""}
+    <p class="cap" style="margin:8px 0 0">Le métré « Tout le chantier » additionne toutes les pièces de l'appartement, et « Voir tout le logement en 3D » les montre ensemble.</p></section>`; }
+document.addEventListener("change",e=>{ const el=e.target, k=el.dataset&&el.dataset.lk; if(!k||S.view!=="logement") return; LK[k]=k==="e"||k==="d"?Math.round((parseFloat(String(el.value).replace(",","."))||0)*10):el.value; if(k==="b") LK.wb=""; renderOut(); });
+document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-lkgo],[data-lkdel]"); if(!b||S.view!=="logement") return;
+  if(b.dataset.lkdel!==undefined){ S.links.splice(+b.dataset.lkdel,1); save(); renderOut(); return; }
+  const A=wById(LK.wa), B=wById(LK.wb); if(!A||!B) return; const al=LK.al==="auto"?(doorC(A)!=null&&doorC(B)!=null?"porte":"debut"):LK.al;
+  S.links=(S.links||[]).filter(l=>{ const lb=wById(l.wb); return lb&&(lb.room||"")!==(B.room||""); }); // une pièce n'est attachée qu'à un seul endroit
+  { let r=A.room||"", n=0; while(n++<50){ const up=S.links.find(l=>linkRoom(l,"wb")===r); if(!up) break; if(linkRoom(up,"wa")===(B.room||"")){ S.links.splice(S.links.indexOf(up),1); break; } r=linkRoom(up,"wa"); } } // pas de boucle
+  S.links.push({wa:LK.wa,wb:LK.wb,e:+LK.e||0,al,d:+LK.d||0}); LOGVB=null; save(); renderOut(); });
 let LOGVB=null;
 
 /* ---------- Cuisine IKEA (système METOD) ---------- */
@@ -5188,6 +5229,7 @@ document.getElementById("jump").addEventListener("click",()=>{ const sd=document
   pl.addEventListener("pointerdown",e=>{ if(S.view!=="logement") return; const g=e.target.closest("[data-room]"); if(!g) return; const room=g.dataset.room, L=roomLayout(room), svg=pl.querySelector("svg"), vb=JSON.parse(pl.dataset.vb||"[0,0,1,1]");
     LOGVB=vb; lg={room,x:e.clientX,y:e.clientY,L0:{...L},k:vb[2]/svg.clientWidth,moved:false}; });
   window.addEventListener("pointermove",e=>{ if(!lg) return; const dx=e.clientX-lg.x, dy=e.clientY-lg.y; if(Math.abs(dx)+Math.abs(dy)>4) lg.moved=true; if(!lg.moved) return;
+    if(lg.moved&&!lg.det){ lg.det=1; const n=(S.links||[]).length; S.links=(S.links||[]).filter(l=>{ const b=wById(l.wb); return !(b&&(b.room||"")===lg.room); }); lg.unl=n!==S.links.length; }
     const L=roomLayout(lg.room); L.x=Math.round((lg.L0.x+dx*lg.k)/50)*50; L.y=Math.round((lg.L0.y-dy*lg.k)/50)*50; renderLogement(); });
   window.addEventListener("pointerup",()=>{ if(!lg) return; const {room,moved}=lg; lg=null; LOGVB=null;
     if(!moved){ const i=S.walls.findIndex(x=>(x.room||"")===room); if(i>=0) S.cur=i; renderAll(); } else { save(); renderOut(); } });
