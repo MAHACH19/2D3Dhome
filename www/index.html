@@ -385,6 +385,7 @@ section.box{border-radius:12px}
           <div class="btns">
             <div class="tabs" role="group" aria-label="Portée du métré" id="scope">
               <button type="button" data-scope="wall">Ce mur</button>
+              <button type="button" data-scope="ceil">Plafond</button>
               <button type="button" data-scope="room">Cette pièce</button>
               <button type="button" data-scope="all">Tout le chantier</button>
             </div>
@@ -2852,7 +2853,7 @@ function ceilMaterials(room){
   const R=computeCeil(room); if(!R.ok) return [];
   const {c,area,per,pl,W,Leff}=R, rows=[], o=OSS[S.oss.four]||OSS["Générique"];
   const brand=(S.oss.four||"").split(" — ")[0];
-  const add=(des,det,q,u,pack,packName)=>{ if(q>0) rows.push({cat:"Plafond",des,det,q,u,pack,packName}); };
+  const add=(des,det,q,u,pack,packName)=>{ if(q>0) rows.push({cat:"Plafond",des,det,q,u,pack,packName,cont:u==="m"||u==="m²"}); };
   if(R.sol){
     add("Fourrure F45 · 300 cm", `${R.fur.length} lignes perpendiculaires aux solives, entraxe ${c.e/10} cm`, R.bars, "u");
     add("Cavalier F45 (fixation sous solive bois)", "un à chaque croisement fourrure / solive", R.cav, "u");
@@ -2871,16 +2872,16 @@ function ceilMaterials(room){
   if(R.sol&&S.iso.on&&UW.length&&S.iso.pose!=="mur"){ const iw=ISO.find(i=>i.n===S.iso.n)||S.iso, pA=iw.W*iw.Lg/1e6; add(`${iw.f} ${iw.n} · ${S.iso.ep} mm`, `remontée de l'isolant des murs ${UW.map(w=>w.name).join(", ")} entre les solives (${fr(upL,2)} m × ${fr(upH/10,1)} cm)`, Math.ceil(upL*upH/1000*1.15/pA), "panneaux"); }
   if(c.mem&&R.sol){ const m=S.mem, packA=m.rollW*m.rollL/1e6, mA=(c.memPose==="entre"?isoArea*1.05+R.jLen*2*0.05:area*1.12)+upL*(upH/1000+.15);
     add(m.n, c.memPose==="entre"?`entre les solives (retours 5 cm agrafés sur les flancs)${UW.length?" + remontée des murs "+UW.map(w=>w.name).join(", "):""}`:`sous les solives${UW.length?" + remontée des murs "+UW.map(w=>w.name).join(", "):""}`, Math.ceil(mA), "m²", packA, `rouleau(x) de ${fr(packA)} m²`);
-    add("Adhésif Vario KB1", c.memPose==="entre"?"le long de chaque solive, des deux côtés, + recouvrements":"recouvrements du plafond", Math.ceil((c.memPose==="entre"?R.jLen*2:0)+area/((m.rollW-(m.recouv||100))/1000)), "m", 40, "rouleau(x) de 40 m");
+    add("Adhésif Vario KB1", c.memPose==="entre"?"le long de chaque solive, des deux côtés, + recouvrements":"recouvrements du plafond", ((c.memPose==="entre"?R.jLen*2:0)+area/((m.rollW-(m.recouv||100))/1000)), "m", 40, "rouleau(x) de 40 m");
     add("Agrafes inox 10 mm", "membrane sur les solives, tous les 10 cm", Math.ceil(R.jLen*2*10*1.1/1000)*1000, "u", 1000, "boîte(s) de 1000");
-    add("Mastic Vario DoubleFit 310 ml", "jonction plafond / murs", Math.ceil(per), "m", 8, "cartouche(s), ≈ 8 m chacune"); }
+    add("Mastic Vario DoubleFit 310 ml", "jonction plafond / murs", per, "m", 8, "cartouche(s), ≈ 8 m chacune"); }
   else if(c.mem){ const m=S.mem, packA=m.rollW*m.rollL/1e6;
-    add(m.n, "plafond, lés + retours 10 cm sur les murs", Math.ceil(area*1.12+per*0.1), "m²", packA, `rouleau(x) de ${fr(packA)} m²`);
-    add("Adhésif Vario KB1", "recouvrements du plafond", Math.ceil(area/((m.rollW-(m.recouv||100))/1000)), "m", 40, "rouleau(x) de 40 m");
-    add("Mastic Vario DoubleFit 310 ml", "jonction plafond / murs", Math.ceil(per), "m", 8, "cartouche(s), ≈ 8 m chacune"); }
+    add(m.n, "plafond, lés + retours 10 cm sur les murs", (area*1.12+per*0.1), "m²", packA, `rouleau(x) de ${fr(packA)} m²`);
+    add("Adhésif Vario KB1", "recouvrements du plafond", (area/((m.rollW-(m.recouv||100))/1000)), "m", 40, "rouleau(x) de 40 m");
+    add("Mastic Vario DoubleFit 310 ml", "jonction plafond / murs", per, "m", 8, "cartouche(s), ≈ 8 m chacune"); }
   add(`${pl.f} ${pl.n} · ${cm(W)}×${cm(c.len)} cm`, `plafond ${c.couches} couche${c.couches>1?"s":""}, recoupées à ${cm(Leff)} cm`, R.pc, "u");
   add("Vis TTPC 25", "plafond ≈ 15 vis/m²", Math.ceil(area*15*c.couches/10)*10, "u");
-  add("Bande à joint papier", "joints du plafond et angle mur / plafond", Math.ceil((area*1.9+per)*1.05), "m");
+  add("Bande à joint papier", "joints du plafond et angle mur / plafond", area*1.9+per, "m");
   const F=S.fin, m2=area;
   const eJ=ENDUITS.find(x=>x.n===F.jt.n)||ENDUITS[1];
   rows.push({cat:"Plafond",des:`${eJ.n} · ${eJ.cont}`,det:"bandes du plafond",q:0,raw:m2*F.jt.conso,per:eJ.pk,rawU:eJ.u,u:"seau(x)"});
@@ -3192,8 +3193,21 @@ function renderCeil(){
     <div class="stats"><div class="stat"><b>${fr(R.area,2)} m²</b><span>Surface</span></div><div class="stat"><b>${R.bars}</b><span>Fourrures ${R.sol?"F45 ":""}3 m</span></div>${R.sol?`<div class="stat"><b>${R.nJ}</b><span>Solives</span></div><div class="stat"><b>${R.cav}</b><span>Cavaliers</span></div><div class="stat"><b>${cm(R.Hf)} cm</b><span>Hauteur finie</span></div>`:`<div class="stat"><b>${R.susp}</b><span>Suspentes</span></div>`}<div class="stat"><b>${R.pc}</b><span>Plaques</span></div><div class="stat"><b>${fr(R.per,2)} m</b><span>Cornière de rive</span></div></div>
     <div style="margin-top:10px">${[...R.checks,...lumChecks(room)].map(k=>`<div class="ck ${k.ok?"ok":"ko"}"><b>${k.ok?"✓":"!"}</b><span>${esc(k.t)}</span>${k.ref?`<em>${esc(k.ref)}</em>`:""}</div>`).join("")}</div>
     <p class="cap" style="margin:10px 0 0">Ordre de pose : ${R.sol?`${c.lat!=="garde"?"dépose de l'ancien placo et du lattis, ":`repérage et traçage des solives, ${c.iso||c.mem?(c.memPose==="sous"?"isolant par le dessus (ou soufflé), membrane continue sous l'ancien placo, ":"par le dessus : membrane puis isolant dans chaque travée, "):""}`}${c.lat==="garde"?"":`${c.iso?"isolant entre les solives (+ remontée de l'isolant des murs), ":""}${c.mem?(c.memPose==="sous"?"membrane continue sous les solives, ":"membrane entre les solives agrafée et scotchée sur les flancs, "):""}`}cornière de rive au laser, cavaliers sous chaque solive (2 vis), fourrures F45 clipsées avec éclisses décalées, plaques`:`cornière de rive au laser, suspentes, fourrures avec éclisses, ${c.iso?"isolant, ":""}${c.mem?"membrane, ":""}plaques`} (vissées tous les 30 cm maxi), puis bandes et finitions comme les murs. Le matériel du plafond est compté dans le métré « Cette pièce » et « Tous les murs ».</p>
-    </section>`;
+    </section>${ceilCutHtml(R,c)}`;
 }
+/* Listes de coupe du plafond (comme les murs) : plaques, fourrures, solives, cavaliers */
+function ceilCutHtml(R,c){ if(!R||!R.ok) return ""; const ref=R.sol&&R.sR?esc(R.sR.w.name||"mur de référence"):"", tb=(hd,rows)=>`<div class="tbl-wrap"><table class="cutl"><thead><tr>${hd.map((x,i)=>`<th${i>1?' style="text-align:right"':""}>${x}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+  const Lb=3000, bars=L=>{ const o=[]; let r=L; while(r>Lb+1){ o.push(Lb); r-=Lb; } o.push(r); return o; };
+  const P=(R.plates||[]).map(q=>{ const pl=q.polyL||[[q.x,q.y],[q.x+q.w,q.y],[q.x+q.w,q.y+q.h],[q.x,q.y+q.h]], xs=pl.map(v=>v[0]), ys=pl.map(v=>v[1]), x0=Math.min(...xs), y0=Math.min(...ys), w=Math.max(...xs)-x0, hh=Math.max(...ys)-y0;
+    const rect=pl.length===4&&pl.every(v=>(Math.abs(v[0]-x0)<1||Math.abs(v[0]-x0-w)<1)&&(Math.abs(v[1]-y0)<1||Math.abs(v[1]-y0-hh)<1)); return {n:q.n,x0,y0,w,hh,rect,pl}; });
+  const full=(c.len||2500), W=R.W||1200;
+  let s=`<section class="box"><h2>Liste de coupe des plaques du plafond</h2><p class="cap" style="margin:0 0 8px">${P.length} plaque(s) de ${cm(W)} × ${cm(full)} cm.${R.sol?` Position = coin de la plaque : <b>X</b> = distance depuis le mur « ${ref} » (les solives lui sont parallèles), <b>Y</b> = distance le long de ce mur depuis son début.`:" Position depuis le coin de la pièce."}</p>`+
+    tb(["Plaque","Position X / Y","Dimensions à couper","Découpe"],P.map(q=>`<tr><td><b>PL${q.n}</b></td><td>${cm(q.x0)} / ${cm(q.y0)} cm</td><td class="n"><b>${cm(q.w)} × ${cm(q.hh)}</b></td><td class="n" style="white-space:normal">${q.rect?(q.w>=W-1&&q.hh>=full-1?"plaque entière":[q.w<W-1?`largeur ${cm(q.w)}`:"",q.hh<full-1?`longueur ${cm(q.hh)}`:""].filter(Boolean).join(", ")):`suit le contour de la pièce : coins à ${q.pl.map(v=>`(${cm(v[0]-q.x0)} ; ${cm(v[1]-q.y0)})`).join(" ")} depuis son coin`}</td></tr>`))+`</section>`;
+  if(R.fur&&R.fur.length) s+=`<section class="box"><h2>Fourrures ${R.sol?"F45":"F530"} et ${R.sol?"cavaliers":"suspentes"}</h2><p class="cap" style="margin:0 0 8px">${R.fur.length} lignes à ${cm(c.e||500)} cm d'entraxe, longueurs de ${cm(Lb)} cm aboutées par éclisses (décaler les éclisses d'une ligne à l'autre).${R.sol?` Chaque ligne est à <b>Y</b> cm le long du mur « ${ref} » ; elle part à X = début et va jusqu'à X = fin (depuis ce mur).`:""}</p>`+
+    tb(["Ligne","Position","Longueur totale","Morceaux à couper",R.sol?"Cavaliers (X depuis le mur)":"Suspentes"],R.fur.map((f,i)=>{ const L=f.b-f.a, B=bars(L); return `<tr><td><b>F${i+1}</b></td><td>Y = ${cm(f.y)} cm · X ${cm(f.a)} → ${cm(f.b)}</td><td class="n"><b>${cm(L)}</b></td><td class="n">${B.map(cm).join(" + ")}</td><td class="n" style="white-space:normal">${(f.cav||[]).map(cm).join(" · ")||"—"}</td></tr>`; }))+`</section>`;
+  if(R.sol&&R.joists&&R.joists.length) s+=`<section class="box"><h2>Solives (repérage)</h2><p class="cap" style="margin:0 0 8px">Axe de chaque solive, mesuré depuis le mur « ${ref} ». Tracez-les au plafond avant de poser les cavaliers.</p>`+
+    tb(["Solive","Axe X","Entraxe avec la précédente","Longueur"],R.joists.map((j,i)=>`<tr><td><b>S${i+1}</b></td><td>${cm(j.x)} cm</td><td class="n">${i?cm(j.x-R.joists[i-1].x):"—"}</td><td class="n">${cm(j.b-j.a)}</td></tr>`))+`</section>`;
+  return s; }
 function ceilPanel(w){
   const room=w.room||"", c=ceilCfg(room), g=roomGeom(room);
   const isoN=[...new Set(ISO.map(i=>i.n))];
@@ -4925,19 +4939,19 @@ function renderOut(){
   const rv=document.getElementById("rval"); if(rv) rv.textContent=`R = ${fr(S.iso.ep/1000/S.iso.lambda,2)} m²·K/W`;
 
   // Métré
-  const src = S.scope==="wall" ? [materials(r)] : (S.scope==="room" ? roomWalls(w) : S.walls).map(x=>materials(compute(x)));
+  const part=S.scope==="wall"||S.scope==="ceil", src = S.scope==="wall" ? [materials(r)] : S.scope==="ceil" ? [ceilMaterials(w.room||"")] : (S.scope==="room" ? roomWalls(w) : S.walls).map(x=>materials(compute(x)));
   const roomExtra=n=>[ceilMaterials(n),kitMaterials(n),floorMaterials(n),wallTileMaterials(S.walls.filter(x=>(x.room||"")===n)),lumMaterials(n),netMaterials(n),meubMaterials(n),bcMaterials(n),creaMaterials(n)];
   if(S.scope==="room") src.push(...roomExtra(w.room||""));
   else if(S.scope==="all") roomNames().forEach(n=>{ src.push(ceilMaterials(n)); src.push(kitMaterials(n)); src.push(floorMaterials(n)); src.push(wallTileMaterials(S.walls.filter(x=>(x.room||"")===n))); src.push(lumMaterials(n)); src.push(netMaterials(n)); src.push(meubMaterials(n)); src.push(bcMaterials(n)); src.push(creaMaterials(n)); });
-  else src.push(wallTileMaterials([w]));
+  else if(S.scope==="wall") src.push(wallTileMaterials([w]));
   const map=new Map();
   src.forEach(list=>list.forEach(m=>{
     const k=m.des;
     if(map.has(k)){ const g=map.get(k); g.q+=m.q; g.raw=(g.raw||0)+(m.raw||0); g.det=""; }
-    else map.set(k,{...m, det: S.scope==="wall"?m.det:""});
+    else map.set(k,{...m, det: part?m.det:""});
   }));
   let rows=[...map.values()];
-  if(S.scope!=="wall"){ // vue pièce / chantier : un seul produit par ligne (formats et puissances regroupés, détail conservé)
+  if(!part){ // vue pièce / chantier : un seul produit par ligne (formats et puissances regroupés, détail conservé)
     const base=d=>d.replace(/ · [\d,.]+ ?[×x] ?[\d,.]+ cm$/,"").replace(/ · [\d,.]+ cm$/,"").replace(/ (≥ )?[\d,.]+ W$/,""), G=new Map();
     rows.forEach(m=>{ const b=m.paint||m.per?m.des:base(m.des), k=m.cat+"|"+m.u+"|"+b; if(!G.has(k)) G.set(k,{b,L:[]}); G.get(k).L.push(m); });
     rows=[...G.values()].map(({b,L})=>{ if(L.length<2) return L[0]; const f=L[0], pk=L.every(x=>x.pack===f.pack)?f.pack:undefined, O=S.owned||{}, Lb=L.filter(x=>!O[x.des]), Lq=Lb.length?Lb:L, sz=x=>x.des.slice(b.length).replace(/^ · |^ /,"");
@@ -4946,19 +4960,19 @@ function renderOut(){
   }
   /* Articles non unitaires (enduits, peintures, bandes, membrane, adhésifs, gaines…) : marge de sécurité, et sur « Ce mur » achat calculé pour toute la pièce, le mur ne payant que sa part */
   const MG=(S.marge??8)/100, roomL=new Map(), keyOf=m=>m.paint?"p|"+m.des:m.per?"s|"+m.des:"c|"+m.des, amt=m=>m.paint||m.per?m.raw:m.q;
-  if(S.scope==="wall"){ const rs=roomWalls(w).map(x=>{ let l; withWallCfg(x,()=>{ l=materials(compute(x)); }); return l; }); rs.push(...roomExtra(w.room||"")); rs.forEach(l=>l.forEach(m=>{ if(m.paint||m.per||m.cont||(m.u&&m.u!=="u")) roomL.set(keyOf(m),(roomL.get(keyOf(m))||0)+amt(m)); })); }
-  const roomOf=m=>{ const own=amt(m); return S.scope==="wall"?Math.max(own,roomL.get(keyOf(m))||own):own; }, pc=Math.round(MG*100);
+  if(part){ const rs=roomWalls(w).map(x=>{ let l; withWallCfg(x,()=>{ l=materials(compute(x)); }); return l; }); rs.push(...roomExtra(w.room||"")); rs.forEach(l=>l.forEach(m=>{ if(m.paint||m.per||m.cont||(m.u&&m.u!=="u")) roomL.set(keyOf(m),(roomL.get(keyOf(m))||0)+amt(m)); })); }
+  const roomOf=m=>{ const own=amt(m); return part?Math.max(own,roomL.get(keyOf(m))||own):own; }, pc=Math.round(MG*100);
   rows.forEach(m=>{
-    if(m.per){ const R=roomOf(m), need=R*(1+MG); m.q=Math.ceil(need/m.per-1e-9); if(S.scope==="wall"&&R>m.raw+1e-6) m.share=m.raw/R;
-      m.det=(m.det?m.det+" · ":"")+(m.share!==undefined?`achat pour toute la pièce ${w.room||""} : ${fr(R,1)} ${m.rawU} + ${pc} % = ${fr(need,1)} ${m.rawU} ; ce mur en utilise ${fr(m.raw,1)} ${m.rawU} (${Math.round(m.share*100)} %)`:`${fr(m.raw,1)} ${m.rawU} + ${pc} % de marge = ${fr(need,1)} ${m.rawU}`); }
+    if(m.per){ const R=roomOf(m), need=R*(1+MG); m.q=Math.ceil(need/m.per-1e-9); if(part&&R>m.raw+1e-6) m.share=m.raw/R;
+      m.det=(m.det?m.det+" · ":"")+(m.share!==undefined?`achat pour toute la pièce ${w.room||""} : ${fr(R,1)} ${m.rawU} + ${pc} % = ${fr(need,1)} ${m.rawU} ; ${S.scope==="ceil"?"le plafond":"ce mur"} en utilise ${fr(m.raw,1)} ${m.rawU} (${Math.round(m.share*100)} %)`:`${fr(m.raw,1)} ${m.rawU} + ${pc} % de marge = ${fr(need,1)} ${m.rawU}`); }
     else if(m.cont){ const own=m.q, R=roomOf(m), need=R*(1+MG), dec=m.u==="m²"?1:0;
-      m.q=m.pack?Math.ceil(need/m.pack-1e-9)*m.pack:Math.ceil(need*(dec?10:1)-1e-9)/(dec?10:1); if(S.scope==="wall"&&R>own+1e-6) m.share=own/R;
-      m.det=(m.det?m.det+" · ":"")+(m.share!==undefined?`pour toute la pièce : ${fr(R,1)} ${m.u} + ${pc} % ; ce mur : ${fr(own,1)} ${m.u} (${Math.round(m.share*100)} %)`:`${fr(own,1)} ${m.u} + ${pc} % de marge`); }
+      m.q=m.pack?Math.ceil(need/m.pack-1e-9)*m.pack:Math.ceil(need*(dec?10:1)-1e-9)/(dec?10:1); if(part&&R>own+1e-6) m.share=own/R;
+      m.det=(m.det?m.det+" · ":"")+(m.share!==undefined?`pour toute la pièce : ${fr(R,1)} ${m.u} + ${pc} % ; ${S.scope==="ceil"?"le plafond":"ce mur"} : ${fr(own,1)} ${m.u} (${Math.round(m.share*100)} %)`:`${fr(own,1)} ${m.u} + ${pc} % de marge`); }
   });
   // Peintures : achat optimisé en pots de plusieurs tailles, calculé sur la pièce entière (+ marge)
   rows=rows.flatMap(m=>{ if(!m.paint) return [m];
-    const L=Math.ceil(m.raw*(1+MG)*10)/10, Lb=S.scope==="wall"?Math.max(L,Math.ceil(roomOf(m)*(1+MG)*10)/10):L, share=Lb?L/Lb:1;
-    const best=potCombo(m.des,Lb), tag=S.scope==="wall"&&Lb>L+0.05?`achat groupé pour toute la pièce ${w.room||""} : ${fr(Lb,1)} L (marge ${pc} % comprise), ce mur en utilise ${fr(L,1)} L (${Math.round(share*100)} %)`:`${fr(L,1)} L nécessaires (marge ${pc} % comprise)`;
+    const L=Math.ceil(m.raw*(1+MG)*10)/10, Lb=part?Math.max(L,Math.ceil(roomOf(m)*(1+MG)*10)/10):L, share=Lb?L/Lb:1;
+    const best=potCombo(m.des,Lb), tag=part&&Lb>L+0.05?`achat groupé pour toute la pièce ${w.room||""} : ${fr(Lb,1)} L (marge ${pc} % comprise), ${S.scope==="ceil"?"le plafond":"ce mur"} en utilise ${fr(L,1)} L (${Math.round(share*100)} %)`:`${fr(L,1)} L nécessaires (marge ${pc} % comprise)`;
     return best.n.map((n,i)=>({cat:m.cat,des:`${m.des} · pot ${fr(best.v[i],best.v[i]%1?2:0)} L`,det:!n?"non retenu : entrez son prix pour comparer":(m.det?m.det+" · ":"")+tag+` · ${best.n.map((k,j)=>k?k+" × "+fr(best.v[j],best.v[j]%1?2:0)+" L":"").filter(Boolean).join(" + ")} = ${fr(best.tot,1)} L`+(best.est?" (choix estimé : saisissez le prix de chaque pot pour l'optimiser)":""),q:n,u:"pot(s)",share,potL:best.v[i]})); });
   const ORD=["Isolant","Membrane","Ossature","Électricité","Plomberie","Plaques","Plâtrerie","Finition","Peinture","Plafond","VMC","Sol","Béton ciré","Créations placo","Rideaux et LED","Cuisine IKEA","Mes meubles","Divers"];
   const oi=c=>{ const i=ORD.indexOf(c); return i<0?ORD.length:i; }; rows.sort((a,b)=>oi(a.cat)-oi(b.cat));
@@ -4970,10 +4984,10 @@ function renderOut(){
     return `<tr${own?' style="opacity:.55"':""}><td><input type="checkbox" aria-label="J'ai déjà ${esc(m.des)}" data-mown="${esc(m.des)}" ${own?"checked":""}></td><td class="cat">${m.cat}</td><td><textarea class="ren" rows="${Math.min(4,Math.ceil(nm.length/24))}" data-ren="${esc(m.des)}" placeholder="${esc(m.des)}" aria-label="Nom du produit (modifiable)" title="Touchez pour renommer le produit">${esc(nm)}</textarea><a href="https://www.google.com/search?tbm=isch&q=${img}" target="_blank" rel="noopener" style="color:var(--chalk);font-size:12px;white-space:nowrap">voir les photos</a><label class="cap" style="display:flex;gap:4px;align-items:center;margin-top:3px">Site<input list="storelist" data-mstore="${esc(m.des)}" value="${esc(storeOf(m))}" placeholder="nom du site ou du magasin" aria-label="Site ou magasin pour ${esc(nm)}" style="flex:1;min-width:0;width:auto;text-align:left;font-size:13px"></label>${nm!==m.des?`<small>calculé comme : ${esc(m.des)}</small>`:""}${m.det?`<small>${esc(m.det)}</small>`:""}</td>
       <td class="n">${fr(m.q,m.cat==="Divers"||(m.cat==="Sol"&&m.u==="m²")||(m.u==="L"&&!m.paint)?1:0)}</td><td>${m.u}</td>
       <td class="n"><input type="number" min="0" step="0.01" aria-label="Prix unitaire ${esc(m.des)}" data-price="${esc(m.des)}" value="${p||""}" placeholder="0"></td>
-      <td class="n">${own?"déjà":t?fr(t,2)+" €"+(m.share!==undefined&&m.share<0.999?`<small>part du mur</small>`:""):"—"}</td></tr>`;
+      <td class="n">${own?"déjà":t?fr(t,2)+" €"+(m.share!==undefined&&m.share<0.999?`<small>${S.scope==="ceil"?"part du plafond":"part du mur"}</small>`:""):"—"}</td></tr>`;
   }).join("");
   document.getElementById("tbl").innerHTML=`<thead><tr><th title="Je possède déjà">J'ai</th><th>Lot</th><th>Désignation</th><th style="text-align:right">Qté</th><th>Unité</th><th style="text-align:right">Prix u. €</th><th style="text-align:right">Total</th></tr></thead>
-    <tbody>${body}</tbody><tfoot><tr><td colspan="6">Total à acheter ${S.scope==="wall"?esc(w.name):S.scope==="room"?"pièce "+esc(w.room||"")+" ("+roomWalls(w).length+" murs"+(computeCeil(w.room||"").ok?" + plafond":"")+")":"tout le chantier ("+S.walls.length+" murs)"}</td><td class="n">${total?fr(total,2)+" €":"—"}</td></tr></tfoot>`;
+    <tbody>${body}</tbody><tfoot><tr><td colspan="6">Total à acheter ${S.scope==="wall"?esc(w.name):S.scope==="ceil"?"plafond "+esc(w.room||""):S.scope==="room"?"pièce "+esc(w.room||"")+" ("+roomWalls(w).length+" murs"+(computeCeil(w.room||"").ok?" + plafond":"")+")":"tout le chantier ("+S.walls.length+" murs)"}</td><td class="n">${total?fr(total,2)+" €":"—"}</td></tr></tfoot>`;
   document.getElementById("tbl").dataset.rows=JSON.stringify(rows);
   storeList(); renderShop(rows);
   save();
@@ -5341,7 +5355,7 @@ function renderShop(rows){
   const n=G.reduce((a,x)=>a+x.list.length,0), d=G.reduce((a,x)=>a+x.list.filter(m=>B[m.des]).length,0);
   el.innerHTML=!n?`<p class="hint">Rien à acheter pour cette portée.</p>`:`<div class="cap">${d}/${n} articles achetés</div>`+G.map(x=>`<div class="shopg"><h3><span>${esc(x.st)}</span><span class="cap">${x.list.length} article(s)${x.tot?" · ≈ "+fr(x.tot,2)+" €":""}</span></h3>${x.list.map(m=>`<div class="shopr${B[m.des]?" done":""}"><input type="checkbox" style="width:22px;height:22px" aria-label="Acheté ${esc(m.des)}" data-bought="${esc(m.des)}" ${B[m.des]?"checked":""}><span><b>${esc(qtyTxt(m))}</b> — ${esc(dname(m))} <span class="cap">(${esc(m.cat)})</span></span><input list="storelist" aria-label="Site ou magasin pour ${esc(dname(m))}" data-store="${esc(m.des)}" value="${esc(x.st)}" placeholder="site ou magasin" style="width:130px"></div>`).join("")}</div>`).join("");
 }
-function shopTitle(){ const w=S.walls[S.cur]; return "Liste de courses — "+(S.scope==="wall"?w.name:S.scope==="room"?"pièce "+(w.room||""):"tout le chantier"); }
+function shopTitle(){ const w=S.walls[S.cur]; return "Liste de courses — "+(S.scope==="wall"?w.name:S.scope==="ceil"?"plafond "+(w.room||""):S.scope==="room"?"pièce "+(w.room||""):"tout le chantier"); }
 function shopText(){ const rows=JSON.parse(document.getElementById("tbl").dataset.rows||"[]"), B=S.bought||{};
   return shopTitle()+"\n"+shopGroups(rows).map(x=>`\n== ${x.st} ==\n`+x.list.map(m=>`${B[m.des]?"[x]":"[ ]"} ${qtyTxt(m)} — ${dname(m)}${m.grp?" ("+m.det.replace(/^regroupé : /,"")+")":""}`).join("\n")).join("\n"); }
 document.getElementById("shoplist").addEventListener("change",e=>{ const el=e.target;
