@@ -388,6 +388,7 @@ section.box{border-radius:12px}
               <button type="button" data-scope="room">Cette pièce</button>
               <button type="button" data-scope="all">Tout le chantier</button>
             </div>
+            <label class="cap" style="display:inline-flex;align-items:center;gap:4px">Marge<select id="marge" aria-label="Marge sur les produits au poids, au volume ou au mètre"><option value="5">5 %</option><option value="8">8 %</option><option value="10">10 %</option></select></label>
             <button type="button" id="copy">Copier pour Excel</button>
           </div>
         </div>
@@ -1048,6 +1049,7 @@ function compute(wall){
 function materials(r){
   const {oss,iso,mem}=S, pla=r.pla, rows=[], o=OSS[oss.four]||OSS["Générique"];
   const add=(cat,des,det,q,u,pack,packName)=>{ if(q>0) rows.push({cat,des,det,q,u,pack,packName}); };
+  const addC=(cat,des,det,raw,u,pack,packName)=>{ if(raw>0) rows.push({cat,des,det,q:raw,u,pack,packName,cont:true}); }; // quantité continue (m, m²) : marge et part de la pièce appliquées au métré
   add("Ossature", `${o.mont(oss.g)} · ${cm(r.Sm)} cm`, `${r.studPieces.length} pièces dont ${r.cutStuds} recoupées, entraxe ${oss.e/10} cm`, r.studBins.length, "u");
   add("Ossature", `${o.rail(oss.g)} · ${cm(oss.railLen)} cm`, `${fr(r.railTotal/1000,2)} m linéaires (haut, bas, traverses${r.renf.length?", renforts":""})`, r.railBins.length, "u");
   add("Ossature", "Fixations des rails (chevilles ou clous)", "1 tous les 60 cm environ", Math.ceil(r.railTotal/600)+r.rails.length, "u");
@@ -1071,11 +1073,11 @@ function materials(r){
   } else add("Plaques", "Vis TTPC 25", "≈ 16 vis/m²", Math.ceil(m2*16/10)*10, "u");
   if(mem.on){
     const packA=(mem.rollW*mem.rollL)/1e6;
-    add("Membrane", mem.n, `lés de ${cm(mem.rollW)} cm, recouvrement ${cm(mem.recouv)} cm, retours 10 cm`, Math.ceil(r.memA), "m²", packA, `rouleau(x) de ${fr(packA)} m²`);
-    add("Membrane", "Adhésif Vario KB1", "recouvrements, tour des ouvertures, traversées", Math.ceil(r.kb/1000), "m", 40, "rouleau(x) de 40 m");
-    add("Membrane", "Vario Xtra Band 30 cm", r.murMode?"bandes d'attente en bas (sol) et en haut, posées avant la fibre":"bandes d'attente en bas (sol) et en haut, posées avant les rails", Math.ceil((r.band||0)/1000), "m", 30, "rouleau(x) de 30 m");
-    add("Membrane", "Mastic Vario DoubleFit 310 ml", "jonctions sol, plafond et murs", Math.ceil(r.dfit/1000), "m", 8, "cartouche(s), ≈ 8 m chacune");
-    add("Membrane", "Adhésif double face", "fixation de la membrane sur les montants", Math.ceil(r.dface/1000), "m", 50, "rouleau(x) de 50 m");
+    addC("Membrane", mem.n, `lés de ${cm(mem.rollW)} cm, recouvrement ${cm(mem.recouv)} cm, retours 10 cm`, r.memA, "m²", packA, `rouleau(x) de ${fr(packA)} m²`);
+    addC("Membrane", "Adhésif Vario KB1", "recouvrements, tour des ouvertures, traversées", r.kb/1000, "m", 40, "rouleau(x) de 40 m");
+    addC("Membrane", "Vario Xtra Band 30 cm", r.murMode?"bandes d'attente en bas (sol) et en haut, posées avant la fibre":"bandes d'attente en bas (sol) et en haut, posées avant les rails", (r.band||0)/1000, "m", 30, "rouleau(x) de 30 m");
+    addC("Membrane", "Mastic Vario DoubleFit 310 ml", "jonctions sol, plafond et murs", r.dfit/1000, "m", 8, "cartouche(s), ≈ 8 m chacune");
+    addC("Membrane", "Adhésif double face", "fixation de la membrane sur les montants", r.dface/1000, "m", 50, "rouleau(x) de 50 m");
   }
   const el=r.pts.filter(p=>p.d.c==="elec"), eau=r.pts.filter(p=>p.d.c==="eau");
   const tight=(mem.on && !r.murMode)?"étanche à l'air ":"";
@@ -1084,19 +1086,19 @@ function materials(r){
   { const A=appCfg(), by={}; el.forEach(p=>{ const d=APP_DES[p.type]; if(d) by[d]=(by[d]||0)+1; }); Object.entries(by).forEach(([d,q])=>add("Électricité", `${A.g} · ${d} + plaque ${A.f.toLowerCase()}`, "appareillage complet (mécanisme, enjoliveur, plaque)", q, "u")); }
   [16,20,25].forEach(g=>{
     const len=el.filter(p=>p.d.g===g).reduce((a,p)=>a+(r.H-p.y)+500,0);
-    add("Électricité", `Gaine ICTA Ø${g}`, "du point au plafond + 50 cm", Math.ceil(len/1000), "m", 100, "couronne(s) de 100 m");
+    addC("Électricité", `Gaine ICTA Ø${g}`, "du point au plafond + 50 cm", len/1000, "m", 100, "couronne(s) de 100 m");
   });
   const byT={}; eau.filter(p=>p.d.tube).forEach(p=>byT[p.d.tube]=(byT[p.d.tube]||0)+p.y+1000);
-  Object.entries(byT).forEach(([t,l])=>add("Plomberie", t, "du sol au point + 1 m", Math.ceil(l/1000), "m"));
+  Object.entries(byT).forEach(([t,l])=>addC("Plomberie", t, "du sol au point + 1 m", l/1000, "m"));
   const byE={}; eau.filter(p=>p.d.evac).forEach(p=>byE[p.d.evac]=(byE[p.d.evac]||0)+p.y+500);
-  Object.entries(byE).forEach(([t,l])=>add("Plomberie", t, "du sol au point + 50 cm", Math.ceil(l/1000), "m"));
+  Object.entries(byE).forEach(([t,l])=>addC("Plomberie", t, "du sol au point + 50 cm", l/1000, "m"));
   add("Plomberie", "Applique à visser (sortie de cloison)", "fixée sur renfort", eau.filter(p=>p.d.tube).length, "u");
   if(mem.on && !r.murMode){
     add("Membrane", "Manchette étanche passe-gaine", "traversées électriques", el.length, "u");
     add("Membrane", "Manchette étanche passe-tube", "traversées plomberie", eau.length, "u");
   }
-  add("Finition", "Bande à joint papier", "joints de la couche visible et angles rentrants", Math.ceil(r.joints*1.05), "m");
-  add("Finition", "Cornière d'angle / bande armée", "angles sortants", Math.ceil(r.corniere*1.05), "m");
+  addC("Finition", "Bande à joint papier", "joints de la couche visible et angles rentrants", r.joints, "m");
+  addC("Finition", "Cornière d'angle / bande armée", "angles sortants", r.corniere, "m");
   const F=S.fin;
   const addP=(cat,e,det,raw)=>{ if(raw>0) rows.push({cat,des:`${e.n} · ${e.cont}`,det,q:0,raw,per:e.pk,rawU:e.u,u:"seau(x)"}); };
   const eJ=ENDUITS.find(x=>x.n===F.jt.n)||ENDUITS[1];
@@ -4910,6 +4912,7 @@ function renderOut(){
   const w=S.walls[S.cur], r=compute(w);
   document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view===S.view));
   document.querySelectorAll("#scope button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.scope===S.scope));
+  { const mg=document.getElementById("marge"); if(mg) mg.value=String(S.marge??8); }
   renderPlan(r);
   document.getElementById("stats").innerHTML=[
     [fr(r.netArea,2)+" m²","Surface nette"],
@@ -4923,7 +4926,8 @@ function renderOut(){
 
   // Métré
   const src = S.scope==="wall" ? [materials(r)] : (S.scope==="room" ? roomWalls(w) : S.walls).map(x=>materials(compute(x)));
-  if(S.scope==="room"){ src.push(ceilMaterials(w.room||"")); src.push(kitMaterials(w.room||"")); src.push(floorMaterials(w.room||"")); src.push(wallTileMaterials(roomWalls(w))); src.push(lumMaterials(w.room||"")); src.push(netMaterials(w.room||"")); src.push(meubMaterials(w.room||"")); src.push(bcMaterials(w.room||"")); src.push(creaMaterials(w.room||"")); }
+  const roomExtra=n=>[ceilMaterials(n),kitMaterials(n),floorMaterials(n),wallTileMaterials(S.walls.filter(x=>(x.room||"")===n)),lumMaterials(n),netMaterials(n),meubMaterials(n),bcMaterials(n),creaMaterials(n)];
+  if(S.scope==="room") src.push(...roomExtra(w.room||""));
   else if(S.scope==="all") roomNames().forEach(n=>{ src.push(ceilMaterials(n)); src.push(kitMaterials(n)); src.push(floorMaterials(n)); src.push(wallTileMaterials(S.walls.filter(x=>(x.room||"")===n))); src.push(lumMaterials(n)); src.push(netMaterials(n)); src.push(meubMaterials(n)); src.push(bcMaterials(n)); src.push(creaMaterials(n)); });
   else src.push(wallTileMaterials([w]));
   const map=new Map();
@@ -4940,14 +4944,21 @@ function renderOut(){
       const q=Lq.reduce((a,x)=>a+x.q,0), pv=Lq.reduce((a,x)=>a+(Number(S.prices[x.des])||0)*x.q,0), Lo=L.filter(x=>O[x.des]);
       return {...f, des:b, q, det:"regroupé : "+Lq.map(x=>`${fr(x.q,x.q%1?1:0)} × ${sz(x)}`).join(" + ")+(Lb.length&&Lo.length?" · déjà en stock : "+Lo.map(x=>`${fr(x.q,x.q%1?1:0)} × ${sz(x)}`).join(" + "):""), pack:pk, packName:pk?f.packName:undefined, pfb:q?pv/q:0, grp:L.map(x=>x.des), ownAll:!Lb.length}; });
   }
+  /* Articles non unitaires (enduits, peintures, bandes, membrane, adhésifs, gaines…) : marge de sécurité, et sur « Ce mur » achat calculé pour toute la pièce, le mur ne payant que sa part */
+  const MG=(S.marge??8)/100, roomL=new Map(), keyOf=m=>m.paint?"p|"+m.des:m.per?"s|"+m.des:"c|"+m.des, amt=m=>m.paint||m.per?m.raw:m.q;
+  if(S.scope==="wall"){ const rs=roomWalls(w).map(x=>{ let l; withWallCfg(x,()=>{ l=materials(compute(x)); }); return l; }); rs.push(...roomExtra(w.room||"")); rs.forEach(l=>l.forEach(m=>{ if(m.paint||m.per||m.cont||(m.u&&m.u!=="u")) roomL.set(keyOf(m),(roomL.get(keyOf(m))||0)+amt(m)); })); }
+  const roomOf=m=>{ const own=amt(m); return S.scope==="wall"?Math.max(own,roomL.get(keyOf(m))||own):own; }, pc=Math.round(MG*100);
   rows.forEach(m=>{
-    if(m.per){ m.q=Math.ceil(m.raw/m.per-1e-9); m.det=(m.det?m.det+" · ":"")+`${fr(m.raw,1)} ${m.rawU} au total`; }
+    if(m.per){ const R=roomOf(m), need=R*(1+MG); m.q=Math.ceil(need/m.per-1e-9); if(S.scope==="wall"&&R>m.raw+1e-6) m.share=m.raw/R;
+      m.det=(m.det?m.det+" · ":"")+(m.share!==undefined?`achat pour toute la pièce ${w.room||""} : ${fr(R,1)} ${m.rawU} + ${pc} % = ${fr(need,1)} ${m.rawU} ; ce mur en utilise ${fr(m.raw,1)} ${m.rawU} (${Math.round(m.share*100)} %)`:`${fr(m.raw,1)} ${m.rawU} + ${pc} % de marge = ${fr(need,1)} ${m.rawU}`); }
+    else if(m.cont){ const own=m.q, R=roomOf(m), need=R*(1+MG), dec=m.u==="m²"?1:0;
+      m.q=m.pack?Math.ceil(need/m.pack-1e-9)*m.pack:Math.ceil(need*(dec?10:1)-1e-9)/(dec?10:1); if(S.scope==="wall"&&R>own+1e-6) m.share=own/R;
+      m.det=(m.det?m.det+" · ":"")+(m.share!==undefined?`pour toute la pièce : ${fr(R,1)} ${m.u} + ${pc} % ; ce mur : ${fr(own,1)} ${m.u} (${Math.round(m.share*100)} %)`:`${fr(own,1)} ${m.u} + ${pc} % de marge`); }
   });
-  // Peintures : achat optimisé en pots de plusieurs tailles, calculé sur la pièce entière
-  const roomL=new Map(); if(S.scope==="wall"){ const rs=roomWalls(w).map(x=>materials(compute(x))); rs.push(ceilMaterials(w.room||"")); rs.forEach(l=>l.forEach(m=>{ if(m.paint) roomL.set(m.des,(roomL.get(m.des)||0)+m.raw); })); }
+  // Peintures : achat optimisé en pots de plusieurs tailles, calculé sur la pièce entière (+ marge)
   rows=rows.flatMap(m=>{ if(!m.paint) return [m];
-    const L=Math.ceil(m.raw*10)/10, Lb=S.scope==="wall"?Math.max(L,Math.ceil((roomL.get(m.des)||L)*10)/10):L, share=Lb?L/Lb:1;
-    const best=potCombo(m.des,Lb), tag=S.scope==="wall"&&Lb>L+0.05?`achat groupé pour toute la pièce ${w.room||""} : ${fr(Lb,1)} L, ce mur en utilise ${fr(L,1)} L (${Math.round(share*100)} %)`:`${fr(L,1)} L nécessaires`;
+    const L=Math.ceil(m.raw*(1+MG)*10)/10, Lb=S.scope==="wall"?Math.max(L,Math.ceil(roomOf(m)*(1+MG)*10)/10):L, share=Lb?L/Lb:1;
+    const best=potCombo(m.des,Lb), tag=S.scope==="wall"&&Lb>L+0.05?`achat groupé pour toute la pièce ${w.room||""} : ${fr(Lb,1)} L (marge ${pc} % comprise), ce mur en utilise ${fr(L,1)} L (${Math.round(share*100)} %)`:`${fr(L,1)} L nécessaires (marge ${pc} % comprise)`;
     return best.n.map((n,i)=>({cat:m.cat,des:`${m.des} · pot ${fr(best.v[i],best.v[i]%1?2:0)} L`,det:!n?"non retenu : entrez son prix pour comparer":(m.det?m.det+" · ":"")+tag+` · ${best.n.map((k,j)=>k?k+" × "+fr(best.v[j],best.v[j]%1?2:0)+" L":"").filter(Boolean).join(" + ")} = ${fr(best.tot,1)} L`+(best.est?" (choix estimé : saisissez le prix de chaque pot pour l'optimiser)":""),q:n,u:"pot(s)",share,potL:best.v[i]})); });
   const ORD=["Isolant","Membrane","Ossature","Électricité","Plomberie","Plaques","Plâtrerie","Finition","Peinture","Plafond","VMC","Sol","Béton ciré","Créations placo","Rideaux et LED","Cuisine IKEA","Mes meubles","Divers"];
   const oi=c=>{ const i=ORD.indexOf(c); return i<0?ORD.length:i; }; rows.sort((a,b)=>oi(a.cat)-oi(b.cat));
@@ -5214,6 +5225,7 @@ document.getElementById("extra").addEventListener("click",e=>{ if(!e.target.clos
 document.getElementById("extra").addEventListener("click",e=>{ const b=e.target.closest("[data-v3]"); if(b&&S.view==="visite"&&V3.r&&!(V3.wrap&&V3.wrap.contains(b))) v3Cmd(b.dataset.v3); });
 document.getElementById("extra").addEventListener("click",e=>{ const b=e.target.closest("[data-step]"); if(b){ S.finStep=+b.dataset.step; renderOut(); } });
 document.getElementById("tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b){S.view=b.dataset.view; renderOut();} });
+document.getElementById("marge")&&document.getElementById("marge").addEventListener("change",e=>{ S.marge=+e.target.value; save(); renderOut(); });
 document.getElementById("scope").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b){S.scope=b.dataset.scope; renderOut();} });
 document.getElementById("tbl").addEventListener("input",e=>{ const el=e.target; if(el.dataset.price!==undefined){ S.prices[el.dataset.price]=el.value===""?"":(parseFloat(el.value)||0); save(); } });
 document.getElementById("tbl").addEventListener("change",e=>{
