@@ -389,6 +389,10 @@ section.box{border-radius:12px}
               <button type="button" data-scope="room">Cette pièce</button>
               <button type="button" data-scope="all">Tout le chantier</button>
             </div>
+            <div class="tabs" role="group" aria-label="Affichage du métré" id="mtab">
+              <button type="button" data-mtab="list">Liste</button>
+              <button type="button" data-mtab="steps">Prix par étape</button>
+            </div>
             <label class="cap" style="display:inline-flex;align-items:center;gap:4px">Marge<select id="marge" aria-label="Marge sur les produits au poids, au volume ou au mètre"><option value="5">5 %</option><option value="8">8 %</option><option value="10">10 %</option></select></label>
             <button type="button" id="copy">Copier pour Excel</button>
           </div>
@@ -4942,6 +4946,7 @@ function renderOut(){
   const w=S.walls[S.cur], r=compute(w);
   document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view===S.view));
   document.querySelectorAll("#scope button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.scope===S.scope));
+  document.querySelectorAll("#mtab button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mtab===(S.mtab||"list")));
   { const mg=document.getElementById("marge"); if(mg) mg.value=String(S.marge??8); }
   renderPlan(r);
   document.getElementById("stats").innerHTML=[
@@ -4999,7 +5004,7 @@ function renderOut(){
   rows.forEach(m=>{ if(m.pack){ const n=Math.ceil(m.q/m.pack); m.det=(m.det?m.det+" · ":"")+`soit ${n} ${m.packName}`; } });
   let total=0;
   const body=rows.map(m=>{
-    const own=ownOf(m), p=priceOf(m), t=own?0:p*m.q*(m.share??1), nm=dname(m); total+=t;
+    const own=ownOf(m), p=priceOf(m), t=own?0:p*m.q*(m.share??1), nm=dname(m); total+=t; m._t=t; m._own=own; m._p=p;
     const img=encodeURIComponent(nm.replace(/ · .*$/,"").replace(/\(.*?\)/g,""));
     return `<tr${own?' style="opacity:.55"':""}><td><input type="checkbox" aria-label="J'ai déjà ${esc(m.des)}" data-mown="${esc(m.des)}" ${own?"checked":""}></td><td class="cat">${m.cat}</td><td><textarea class="ren" rows="${Math.min(4,Math.ceil(nm.length/24))}" data-ren="${esc(m.des)}" placeholder="${esc(m.des)}" aria-label="Nom du produit (modifiable)" title="Touchez pour renommer le produit">${esc(nm)}</textarea><a href="https://www.google.com/search?tbm=isch&q=${img}" target="_blank" rel="noopener" style="color:var(--chalk);font-size:12px;white-space:nowrap">voir les photos</a><label class="cap" style="display:flex;gap:4px;align-items:center;margin-top:3px">Site<input list="storelist" data-mstore="${esc(m.des)}" value="${esc(storeOf(m))}" placeholder="nom du site ou du magasin" aria-label="Site ou magasin pour ${esc(nm)}" style="flex:1;min-width:0;width:auto;text-align:left;font-size:13px"></label>${nm!==m.des?`<small>calculé comme : ${esc(m.des)}</small>`:""}${m.det?`<small>${esc(m.det)}</small>`:""}</td>
       <td class="n">${fr(m.q,m.cat==="Divers"||(m.cat==="Sol"&&m.u==="m²")||(m.u==="L"&&!m.paint)?1:0)}</td><td>${m.u}</td>
@@ -5008,10 +5013,25 @@ function renderOut(){
   }).join("");
   document.getElementById("tbl").innerHTML=`<thead><tr><th title="Je possède déjà">J'ai</th><th>Lot</th><th>Désignation</th><th style="text-align:right">Qté</th><th>Unité</th><th style="text-align:right">Prix u. €</th><th style="text-align:right">Total</th></tr></thead>
     <tbody>${body}</tbody><tfoot><tr><td colspan="6">Total à acheter ${S.scope==="wall"?esc(w.name):S.scope==="ceil"?"plafond "+esc(w.room||""):S.scope==="room"?"pièce "+esc(w.room||"")+" ("+roomWalls(w).length+" murs"+(computeCeil(w.room||"").ok?" + plafond":"")+")":"tout le chantier ("+S.walls.length+" murs)"}</td><td class="n">${total?fr(total,2)+" €":"—"}</td></tr></tfoot>`;
+  if(S.mtab==="steps") document.getElementById("tbl").innerHTML=stepsHtml(rows,total,w);
   document.getElementById("tbl").dataset.rows=JSON.stringify(rows);
   storeList(); renderShop(rows);
   save();
 }
+/* Prix par étape : Isolant / Membrane / Élec / Placo (ossature, plaques, bandes, ratissage, peinture) / Autres */
+const STEPS=[["iso","Isolant","#c99a5b"],["mem","Membrane","#2f7fd0"],["elec","Élec","#d0a12f"],["placo","Placo","#6e7b8a"],["autre","Autres","#9a8f80"]];
+function stepOf(m){ const c=m.cat||"";
+  if(c==="Isolant") return "iso"; if(c==="Membrane") return "mem"; if(c==="Électricité"||c==="VMC") return "elec";
+  if(c==="Plafond"){ if(/Vario|KB1|DoubleFit|Agrafes|membrane/i.test(m.des)) return "mem"; if(ISO.some(i=>i.n&&m.des.includes(i.n))||/isolant(?! acrylique)/i.test(m.des)&&!/primaire/i.test(m.des)) return "iso"; if(/gaine|DCL|spot|boîte|câble/i.test(m.des)) return "elec"; return "placo"; }
+  if(["Ossature","Plaques","Plâtrerie","Finition","Peinture","Créations placo"].includes(c)) return "placo";
+  if(c==="Rideaux et LED"&&/LED|Alimentation|Câble/i.test(m.des)) return "elec"; if(/dans l'ossature/i.test(m.des)) return "placo";
+  return "autre"; }
+function stepsHtml(rows,total,w){ const G=STEPS.map(([k,n,col])=>({k,n,col,L:rows.filter(m=>stepOf(m)===k&&m.q>0)})).filter(g=>g.L.length), miss=rows.filter(m=>!m._own&&!m._p&&m.q>0).length;
+  const sum=g=>g.L.reduce((a,m)=>a+(m._t||0),0), bar=(v,col)=>total?`<div style="height:6px;border-radius:3px;background:var(--line);margin-top:4px"><div style="height:6px;border-radius:3px;width:${Math.round(v/total*100)}%;background:${col}"></div></div>`:"";
+  const head=`<thead><tr><th>Étape</th><th style="text-align:right">Articles</th><th style="text-align:right">Prix</th><th style="text-align:right">Part</th></tr></thead>`;
+  const sumRows=G.map(g=>{ const v=sum(g); return `<tr><td><b>${g.n}</b>${g.k==="placo"?`<small>ossature, plaques, bandes, ratissage, peinture</small>`:""}${bar(v,g.col)}</td><td class="n">${g.L.length}</td><td class="n"><b>${v?fr(v,2)+" €":"—"}</b></td><td class="n">${total&&v?Math.round(v/total*100)+" %":"—"}</td></tr>`; }).join("");
+  const det=G.map(g=>`<tr><td colspan="4" style="padding-top:14px"><b style="font-family:var(--f-display);text-transform:uppercase;letter-spacing:.06em">${g.n}</b> <span class="cap">${fr(sum(g),2)} €</span></td></tr>`+g.L.map(m=>`<tr${m._own?' style="opacity:.55"':""}><td>${esc(dname(m))}<small>${m.cat}</small></td><td class="n">${fr(m.q,m.q%1?1:0)} ${m.u}</td><td class="n">${m._own?"déjà":m._t?fr(m._t,2)+" €":"—"}</td><td class="n">${m.share!==undefined&&m.share<0.999?Math.round(m.share*100)+" %":""}</td></tr>`).join("")).join("");
+  return head+`<tbody>${sumRows}<tr><td colspan="4" class="cap" style="white-space:normal">${S.scope==="wall"||S.scope==="ceil"?`Les produits partagés (enduits, bandes, peinture, vis, membrane…) sont achetés pour toute la pièce avec la marge de ${Math.round((S.marge??8))} % ; ${S.scope==="ceil"?"le plafond":"ce mur"} ne compte que sa part (colonne de droite).`:`Marge de ${Math.round((S.marge??8))} % comprise sur les produits au poids, au volume, au mètre et les vis.`}${miss?` <b>${miss} article(s) sans prix</b> : saisissez-les dans l'onglet « Liste ».`:""}</td></tr>${det}</tbody><tfoot><tr><td colspan="2">Total ${S.scope==="wall"?esc(w.name):S.scope==="ceil"?"plafond "+esc(w.room||""):S.scope==="room"?"pièce "+esc(w.room||""):"chantier"}</td><td class="n">${total?fr(total,2)+" €":"—"}</td><td></td></tr></tfoot>`; }
 const POT_SIZES=[3,10];
 function potCombo(des,L){ // combinaison de pots la moins chère couvrant L litres
   const v=(S.potSizes&&S.potSizes[des])||POT_SIZES, pr=v.map(x=>Number(S.prices[`${des} · pot ${fr(x,x%1?2:0)} L`])||0), known=pr.map((p,i)=>p?p/Math.pow(v[i],0.8):0).filter(Boolean);
@@ -5260,6 +5280,7 @@ document.getElementById("extra").addEventListener("click",e=>{ const b=e.target.
 document.getElementById("extra").addEventListener("click",e=>{ const b=e.target.closest("[data-step]"); if(b){ S.finStep=+b.dataset.step; renderOut(); } });
 document.getElementById("tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b){S.view=b.dataset.view; renderOut();} });
 document.getElementById("marge")&&document.getElementById("marge").addEventListener("change",e=>{ S.marge=+e.target.value; save(); renderOut(); });
+document.getElementById("mtab").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b){S.mtab=b.dataset.mtab; renderOut();} });
 document.getElementById("scope").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b){S.scope=b.dataset.scope; renderOut();} });
 document.getElementById("tbl").addEventListener("input",e=>{ const el=e.target; if(el.dataset.price!==undefined){ S.prices[el.dataset.price]=el.value===""?"":(parseFloat(el.value)||0); save(); } });
 document.getElementById("tbl").addEventListener("change",e=>{
