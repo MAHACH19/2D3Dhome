@@ -5018,9 +5018,11 @@ function renderOut(){
   storeList(); renderShop(rows);
   save();
 }
-/* Prix par étape : Isolant / Membrane / Élec / Placo (ossature, plaques, bandes, ratissage, peinture) / Autres */
-const STEPS=[["iso","Isolant","#c99a5b"],["mem","Membrane","#2f7fd0"],["elec","Élec","#d0a12f"],["placo","Placo","#6e7b8a"],["autre","Autres","#9a8f80"]];
-function stepOf(m){ const c=m.cat||"";
+/* Prix par étape : Isolant / Membrane / Élec / Placo (ossature, vis, plaques, joints) / Ratissage / Finition peinture / Autres */
+const STEPS=[["iso","Isolant","#c99a5b"],["mem","Membrane","#2f7fd0"],["elec","Élec","#d0a12f"],["placo","Placo","#6e7b8a"],["rat","Ratissage","#b7a98f"],["peint","Finition peinture","#7aa37a"],["autre","Autres","#9a8f80"]];
+function stepOf(m){ const c=m.cat||"", F=S.fin||{}, eN=n=>(ENDUITS.find(x=>x.n===n)||{}).n, rN=F.rat&&F.rat.on?eN(F.rat.n)||ENDUITS[0].n:null, jN=F.jt?eN(F.jt.n)||ENDUITS[1].n:null;
+  if(m.paint||c==="Peinture"||(c==="Plafond"&&/primaire|peinture|Flügger|Flutex/i.test(m.des))) return "peint";
+  if(rN&&rN!==jN&&m.des.startsWith(rN+" · ")) return "rat";
   if(c==="Isolant") return "iso"; if(c==="Membrane") return "mem"; if(c==="Électricité"||c==="VMC") return "elec";
   if(c==="Plafond"){ if(/Vario|KB1|DoubleFit|Agrafes|membrane/i.test(m.des)) return "mem"; if(ISO.some(i=>i.n&&m.des.includes(i.n))||/isolant(?! acrylique)/i.test(m.des)&&!/primaire/i.test(m.des)) return "iso"; if(/gaine|DCL|spot|boîte|câble/i.test(m.des)) return "elec"; return "placo"; }
   if(["Ossature","Plaques","Plâtrerie","Finition","Peinture","Créations placo"].includes(c)) return "placo";
@@ -5029,7 +5031,7 @@ function stepOf(m){ const c=m.cat||"";
 function stepsHtml(rows,total,w){ const G=STEPS.map(([k,n,col])=>({k,n,col,L:rows.filter(m=>stepOf(m)===k&&m.q>0)})).filter(g=>g.L.length), miss=rows.filter(m=>!m._own&&!m._p&&m.q>0).length;
   const sum=g=>g.L.reduce((a,m)=>a+(m._t||0),0), bar=(v,col)=>total?`<div style="height:6px;border-radius:3px;background:var(--line);margin-top:4px"><div style="height:6px;border-radius:3px;width:${Math.round(v/total*100)}%;background:${col}"></div></div>`:"";
   const head=`<thead><tr><th>Étape</th><th style="text-align:right">Articles</th><th style="text-align:right">Prix</th><th style="text-align:right">Part</th></tr></thead>`;
-  const sumRows=G.map(g=>{ const v=sum(g); return `<tr><td><b>${g.n}</b>${g.k==="placo"?`<small>ossature, plaques, bandes, ratissage, peinture</small>`:""}${bar(v,g.col)}</td><td class="n">${g.L.length}</td><td class="n"><b>${v?fr(v,2)+" €":"—"}</b></td><td class="n">${total&&v?Math.round(v/total*100)+" %":"—"}</td></tr>`; }).join("");
+  const sumRows=G.map(g=>{ const v=sum(g); return `<tr><td><b>${g.n}</b>${g.k==="placo"?`<small>ossature, vis, plaques de plâtre, joints (bande + enduit)</small>`:g.k==="rat"?`<small>enduit de ratissage</small>`:g.k==="peint"?`<small>primaire et peinture</small>`:""}${bar(v,g.col)}</td><td class="n">${g.L.length}</td><td class="n"><b>${v?fr(v,2)+" €":"—"}</b></td><td class="n">${total&&v?Math.round(v/total*100)+" %":"—"}</td></tr>`; }).join("");
   const det=G.map(g=>`<tr><td colspan="4" style="padding-top:14px"><b style="font-family:var(--f-display);text-transform:uppercase;letter-spacing:.06em">${g.n}</b> <span class="cap">${fr(sum(g),2)} €</span></td></tr>`+g.L.map(m=>`<tr${m._own?' style="opacity:.55"':""}><td>${esc(dname(m))}<small>${m.cat}</small></td><td class="n">${fr(m.q,m.q%1?1:0)} ${m.u}</td><td class="n">${m._own?"déjà":m._t?fr(m._t,2)+" €":"—"}</td><td class="n">${m.share!==undefined&&m.share<0.999?Math.round(m.share*100)+" %":""}</td></tr>`).join("")).join("");
   return head+`<tbody>${sumRows}<tr><td colspan="4" class="cap" style="white-space:normal">${S.scope==="wall"||S.scope==="ceil"?`Les produits partagés (enduits, bandes, peinture, vis, membrane…) sont achetés pour toute la pièce avec la marge de ${Math.round((S.marge??8))} % ; ${S.scope==="ceil"?"le plafond":"ce mur"} ne compte que sa part (colonne de droite).`:`Marge de ${Math.round((S.marge??8))} % comprise sur les produits au poids, au volume, au mètre et les vis.`}${miss?` <b>${miss} article(s) sans prix</b> : saisissez-les dans l'onglet « Liste ».`:""}</td></tr>${det}</tbody><tfoot><tr><td colspan="2">Total ${S.scope==="wall"?esc(w.name):S.scope==="ceil"?"plafond "+esc(w.room||""):S.scope==="room"?"pièce "+esc(w.room||""):"chantier"}</td><td class="n">${total?fr(total,2)+" €":"—"}</td><td></td></tr></tfoot>`; }
 const POT_SIZES=[3,10];
