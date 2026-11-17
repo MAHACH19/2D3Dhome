@@ -1135,7 +1135,7 @@ function materials(r){
 /* ---------- Panneau de réglages ---------- */
 function opt(list,val){ return list.map(v=>`<option${v==val?" selected":""}>${esc(v)}</option>`).join(""); }
 function renderQuick(){ const q=document.getElementById("quick"); if(!q) return; const w=S.walls[S.cur];
-  q.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><select data-qroom aria-label="Pièce" style="max-width:100%;font-weight:600">${roomNames().map(n=>`<option${n===(w.room||"")?" selected":""}>${esc(n)}</option>`).join("")}</select>
+  q.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><select data-qroom aria-label="Pièce" style="max-width:100%;font-weight:600">${roomNames().map(n=>`<option${n===(w.room||"")?" selected":""}>${esc(n)}</option>`).join("")}<option value="__new">＋ Nouvelle pièce</option></select><button type="button" data-qnew style="padding:5px 10px;font-size:13px">＋ Pièce</button><label class="cap" style="display:inline-flex;gap:4px;align-items:center">Nom<input type="text" data-qrname value="${esc(w.room||"")}" aria-label="Nom de la pièce" style="width:130px"></label>
     ${S.walls.map((x,i)=>(x.room||"")===(w.room||"")?`<button type="button" data-qwall="${i}" aria-pressed="${i===S.cur}" style="padding:5px 10px;font-size:13px">${esc((x.name||"Mur "+(i+1)).replace((x.room||"")+" — ",""))}</button>`:"").join("")}
     <span class="cap">${S.walls.length} mur(s) au total, ${roomNames().length} pièce(s)</span></div>
     ${`<div class="qcfg"><span class="cap">Sur ce mur :</span>${(()=>{ const cur=isCol(w)?"colle":w.dbl==="contre"?"contre":"oss", off="background:var(--card);color:var(--ink);border-color:var(--line)";
@@ -5122,17 +5122,20 @@ function setPath(path,val){
   o[ks[ks.length-1]]=val;
 }
 const side=document.getElementById("side");
+/* pièces : création (4 murs 400 × 300) et renommage (tous les réglages de la pièce suivent) */
+function newRoom(){ const names=roomNames(); let k=names.length+1; while(names.includes("Pièce "+k)) k++; const nm="Pièce "+k, H=(S.walls[S.cur]||{}).H||2500;
+  [4000,3000,4000,3000].forEach((L,i)=>S.walls.push({name:`${nm} — mur ${i+1}`,room:nm,angle:"rentrant",L,H,plaN:"",peintN:"",openings:[],points:[],divers:[]}));
+  S.cur=S.walls.length-4; return nm; }
+function renameRoom(old,nv){ nv=(nv||"").trim(); if(!nv||nv===old||roomNames().includes(nv)) return false;
+  S.walls.forEach(x=>{ if((x.room||"")===old){ x.room=nv; if(x.name&&x.name.startsWith(old+" — ")) x.name=nv+x.name.slice(old.length); } });
+  ["ceil","layout","bc","crea","floor","kit","lum","meub"].forEach(k=>{ const o=S[k]; if(o&&o[old]!==undefined){ o[nv]=o[old]; delete o[old]; } }); return true; }
 function onField(e){
   const el=e.target;
   if(el.dataset.roomname!==undefined){ if(e.type!=="change") return;
     const w=S.walls[S.cur], old=w.room||"", nv=el.value.trim();
-    if(nv && nv!==old){ S.walls.forEach(x=>{ if((x.room||"")===old){ x.room=nv; if(x.name&&x.name.startsWith(old+" — ")) x.name=nv+x.name.slice(old.length); } });
-      if(S.ceil&&S.ceil[old]){ S.ceil[nv]=S.ceil[old]; delete S.ceil[old]; } }
-    renderAll(); return; }
+    renameRoom(old,nv); renderAll(); return; }
   if(el.dataset.rp==="pick"){
-    if(el.value==="__new"){ const names=roomNames(); let k=names.length+1; while(names.includes("Pièce "+k)) k++; const nm="Pièce "+k, H=S.walls[S.cur].H;
-      [4000,3000,4000,3000].forEach((L,i)=>S.walls.push({name:`${nm} — mur ${i+1}`,room:nm,angle:"rentrant",L,H,plaN:"",peintN:"",openings:[],points:[],divers:[]}));
-      S.cur=S.walls.length-4; }
+    if(el.value==="__new") newRoom();
     else { const i=S.walls.findIndex(x=>(x.room||"")===el.value); if(i>=0) S.cur=i; }
     renderAll(); return; }
   if(el.dataset.wcol){ const w=S.walls[S.cur]; if(el.value) w.teinte=el.value; else delete w.teinte; renderAll(); return; }
@@ -5285,7 +5288,11 @@ const PZ={z:1};
 })();
 side.addEventListener("focusout",e=>{ if(e.target.dataset && (e.target.dataset.cm!==undefined || e.target.dataset.list)) renderSide(); });
 document.getElementById("quick").addEventListener("click",e=>{ const b=e.target.closest("[data-qwall]"); if(!b) return; S.cur=+b.dataset.qwall; save(); renderAll(); });
-document.getElementById("quick").addEventListener("change",e=>{ const el=e.target; if(el.dataset.qroom===undefined) return; const i=S.walls.findIndex(x=>(x.room||"")===el.value); if(i>=0){ S.cur=i; save(); renderAll(); } });
+document.addEventListener("click",e=>{ if(!e.target.closest||!e.target.closest("[data-addroom]")) return; newRoom(); save(); goScreen("murs"); renderAll(); setTimeout(()=>{ const i=document.querySelector("#quick [data-qrname]"); if(i&&i.offsetParent){ i.scrollIntoView({block:"center"}); i.focus(); i.select(); } },50); });
+document.getElementById("quick").addEventListener("click",e=>{ if(!e.target.closest("[data-qnew]")) return; newRoom(); save(); renderAll(); const i=document.querySelector("#quick [data-qrname]"); if(i){ i.focus(); i.select(); } });
+document.getElementById("quick").addEventListener("change",e=>{ const el=e.target; if(el.dataset.qrname!==undefined){ const old=S.walls[S.cur].room||""; if(renameRoom(old,el.value)){ save(); renderAll(); } else el.value=old; return; }
+  if(el.dataset.qroom!==undefined&&el.value==="__new"){ newRoom(); save(); renderAll(); const i=document.querySelector("#quick [data-qrname]"); if(i){ i.focus(); i.select(); } return; }
+  if(el.dataset.qroom===undefined) return; const i=S.walls.findIndex(x=>(x.room||"")===el.value); if(i>=0){ S.cur=i; save(); renderAll(); } });
 side.addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b) return;
   const w=S.walls[S.cur];
@@ -6062,7 +6069,7 @@ function renderHome(){
     <div class="homein">${note}
     ${libPanel()}
     <div class="projcard"><div class="pc-top"><div><span class="cap">Projet en cours</span><b>${esc(projName(S))}</b><span class="cap">${rooms.length} pièce(s) · ${S.walls.length} mur(s) · ${fr(area,1)} m² de doublage</span></div><div class="ring" style="--p:${pct}"><span>${pct}%</span></div></div>
-      <div class="pc-btns"><button type="button" class="pri" data-go="${lsc?lsc.k:"murs"}">${ico("play",16)} ${lsc?"Reprendre : "+esc(lsc.t):"Commencer pas à pas"}</button><button type="button" class="lidar" data-scan="1">${ico("scan",18)} Scanner une pièce (LiDAR)</button></div></div>
+      <div class="pc-btns"><button type="button" class="pri" data-go="${lsc?lsc.k:"murs"}">${ico("play",16)} ${lsc?"Reprendre : "+esc(lsc.t):"Commencer pas à pas"}</button><button type="button" class="lidar" data-scan="1">${ico("scan",18)} Scanner une pièce (LiDAR)</button><button type="button" data-addroom="1">＋ Ajouter une pièce</button></div></div>
     ${GROUPS.map(([g,ks])=>`<h3 class="grp">${g}</h3><div class="tiles">${ks.map(tile).join("")}</div>`).join("")}
     <p class="cap foot">Calepinage — règles DTU 25.41, NF C 15-100 et préconisations fabricants vérifiées automatiquement. Vérifiez toujours les cotes sur place avant de couper.</p></div>`;
 }
