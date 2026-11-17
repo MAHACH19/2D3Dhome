@@ -3355,6 +3355,20 @@ function renderLogement(){
 const LK={wa:"",b:"",wb:"",e:300,al:"auto",d:0};
 const wById=id=>S.walls.find(w=>w.id===id);
 function doorC(w){ const o=(w.openings||[]).find(o=>o.type==="Porte"); return o?o.x+o.w/2:null; }
+/* Coller en glissant : à la fin d'un glisser-déposer, si un mur de la pièce déplacée est dos à dos avec un mur d'une autre pièce (moins de ~1 m), on les connecte tout seuls, calés sur la porte existante */
+function autoSnap(room){ let best=null; const gB=geomXf(roomGeom(room),room);
+  roomNames().forEach(ra=>{ if(ra===room) return; const gA=geomXf(roomGeom(ra),ra);
+    gA.segs.forEach(sa=>gB.segs.forEach(sb=>{ const dot=sa.dx*sb.dx+sa.dy*sb.dy; if(Math.abs(dot)<0.94) return; // dos à dos, ou dans le même sens (la pièce est alors retournée)
+      const dist=(sb.x0-sa.x0)*(-sa.nx)+(sb.y0-sa.y0)*(-sa.ny); if(dist<-300||dist>1300) return;
+      const uS=(sb.x0-sa.x0)*sa.dx+(sb.y0-sa.y0)*sa.dy, uE=uS+Math.sign(dot)*sb.w.L, u1=Math.min(uS,uE), ov=Math.min(sa.w.L,Math.max(uS,uE))-Math.max(0,u1); if(ov<400) return;
+      const sc=Math.abs(dist-300)-ov/10+(dot>0?200:0); if(!best||sc<best.sc) best={sc,sa,sb,u1}; })); });
+  if(!best) return false; const A=best.sa.w, B=best.sb.w, both=doorC(A)!=null&&doorC(B)!=null, prev=(S.links||[]).find(l=>l.wa===wid(A)||l.wb===wid(A));
+  S.links=(S.links||[]).filter(l=>{ const b=wById(l.wb); return b&&(b.room||"")!==room; });
+  { let r=A.room||"", n=0; while(n++<50){ const up=S.links.find(l=>linkRoom(l,"wb")===r); if(!up) break; if(linkRoom(up,"wa")===room){ S.links.splice(S.links.indexOf(up),1); break; } r=linkRoom(up,"wa"); } }
+  const oneDoor=doorC(A)!=null||doorC(B)!=null;
+  S.links.push({wa:wid(A),wb:wid(B),e:prev?prev.e:300,al:both?"porte":"manuel",d:Math.round(best.u1/10)*10,auto:1}); syncLinks(); applyLinks(); LK.wa=wid(A); LK.b=room; LK.wb=wid(B);
+  SNAPMSG=`« ${room} » collée contre « ${A.room||""} » : « ${(B.name||"").replace((B.room||"")+" — ","")} » contre « ${(A.name||"").replace((A.room||"")+" — ","")} »${both?", portes alignées":oneDoor?", la porte est recopiée de l'autre côté":""}. Vérifiez l'épaisseur du mur commun ci-dessous.`; return true; }
+let SNAPMSG="";
 function linkD(l,wa,wb){ const LA=wa.L, LB=wb.L, cA=doorC(wa), cB=doorC(wb);
   return l.al==="porte"&&cA!=null&&cB!=null?cA+cB-LB:l.al==="fin"?LA-LB:l.al==="centre"?(LA-LB)/2:l.al==="manuel"?(+l.d||0):0; }
 /* Mur commun : une seule série d'ouvertures. Une porte posée ou modifiée d'un côté apparaît de l'autre, en miroir (même trou, charnières et sens d'ouverture vus de l'autre pièce). */
@@ -3385,9 +3399,9 @@ function linkHtml(cur){ const rooms=roomNames().filter(n=>n!==cur), wa=S.walls.f
   if(!wa.some(w=>w.id===LK.wa)) LK.wa=wid(wa[0]); if(!rooms.includes(LK.b)) LK.b=rooms[0]; const wbL=S.walls.filter(w=>(w.room||"")===LK.b); if(!wbL.some(w=>w.id===LK.wb)) LK.wb=wid(wbL[0]); wbL.forEach(wid); wa.forEach(wid);
   const A=wById(LK.wa), B=wById(LK.wb), both=doorC(A)!=null&&doorC(B)!=null, sh=w=>esc((w.name||"").replace((w.room||"")+" — ","")), o=(v,t,sel)=>`<option value="${v}"${sel?" selected":""}>${t}</option>`;
   const al=LK.al==="auto"?(both?"porte":"debut"):LK.al;
-  const list=(S.links||[]).map((l,i)=>{ const a=wById(l.wa), b=wById(l.wb); if(!a||!b) return ""; return `<li><b>${esc(a.room||"")}</b> · ${sh(a)} ⟷ <b>${esc(b.room||"")}</b> · ${sh(b)} <span class="cap">(mur de ${cm(+l.e||0)} cm, ${l.al==="porte"?"portes alignées":l.al==="fin"?"alignés par la fin":l.al==="centre"?"centrés":l.al==="manuel"?`décalage ${cm(+l.d||0)} cm`:"alignés par le début"})</span> <button type="button" data-lkdel="${i}" style="padding:3px 8px;font-size:12px">Détacher</button></li>`; }).join("");
+  const list=(S.links||[]).map((l,i)=>{ const a=wById(l.wa), b=wById(l.wb); if(!a||!b) return ""; return `<li><b>${esc(a.room||"")}</b> · ${sh(a)} ⟷ <b>${esc(b.room||"")}</b> · ${sh(b)} <span class="cap">(mur de <input type="number" min="0" step="0.5" data-lke="${i}" value="${(+l.e||0)/10}" style="width:62px;padding:2px 4px"> cm, ${l.al==="porte"?"portes alignées":l.al==="fin"?"alignés par la fin":l.al==="centre"?"centrés":l.al==="manuel"?`décalage ${cm(+l.d||0)} cm`:"alignés par le début"})</span> <button type="button" data-lkdel="${i}" style="padding:3px 8px;font-size:12px">Détacher</button></li>`; }).join("");
   return `<section class="box"><h2>Connecter les pièces (appartement)</h2>
-    <p class="cap" style="margin:0 0 8px">Choisissez le mur de « ${esc(cur)} » et le mur de la pièce voisine qui sont dos à dos : la pièce voisine se place et tourne toute seule, de l'autre côté du mur commun. Les murs choisis sont en rouge sur le plan.</p>
+    <p class="cap" style="margin:0 0 8px"><b>Le plus simple :</b> faites glisser une pièce contre une autre sur le plan, elle se colle toute seule sur le mur le plus proche, calée sur la porte. Sinon, choisissez le mur de « ${esc(cur)} » et le mur de la pièce voisine qui sont dos à dos : la pièce voisine se place et tourne toute seule, de l'autre côté du mur commun. Les murs choisis sont en rouge sur le plan.</p>
     <div class="row"><label class="f">Mur de ${esc(cur)}<select data-lk="wa">${wa.map(w=>o(w.id,sh(w)+` (${cm(w.L)} cm)${doorC(w)!=null?" · porte":""}`,w.id===LK.wa)).join("")}</select></label>
       <label class="f">Pièce voisine<select data-lk="b">${rooms.map(n=>o(esc(n),esc(n),n===LK.b)).join("")}</select></label></div>
     <div class="row"><label class="f">Son mur<select data-lk="wb">${wbL.map(w=>o(w.id,sh(w)+` (${cm(w.L)} cm)${doorC(w)!=null?" · porte":""}`,w.id===LK.wb)).join("")}</select></label>
@@ -3395,8 +3409,10 @@ function linkHtml(cur){ const rooms=roomNames().filter(n=>n!==cur), wa=S.walls.f
     <div class="row"><label class="f">Alignement<select data-lk="al">${o("porte","Sur la porte commune"+(both?"":" (pas de porte sur les deux murs)"),al==="porte")}${o("debut","Début de mon mur = fin du sien",al==="debut")}${o("fin","Fin de mon mur = début du sien",al==="fin")}${o("centre","Murs centrés",al==="centre")}${o("manuel","Décalage manuel",al==="manuel")}</select></label>
       ${al==="manuel"?`<label class="f">Décalage le long de mon mur (cm)<input type="number" step="0.5" data-lk="d" value="${(+LK.d||0)/10}"></label>`:`<span></span>`}</div>
     <button type="button" class="pri" data-lkgo="1">Connecter</button>
+    ${SNAPMSG?`<p class="cap" style="margin:10px 0 0;color:#2e8b57"><b>✓ ${esc(SNAPMSG)}</b></p>`:""}
     ${list?`<h3 style="margin:14px 0 6px;font-size:15px">Connexions</h3><ul style="margin:0;padding-left:18px">${list}</ul><p class="cap" style="margin:6px 0 0">Une pièce connectée suit la pièce à laquelle elle est attachée : déplacez la première, les autres suivent. Les murs mitoyens sont en pointillé vert. Sur un mur commun, les portes et ouvertures ne se saisissent qu'une fois : ajoutez, déplacez ou supprimez-les d'un côté, l'autre côté suit en miroir (charnières et sens d'ouverture vus depuis l'autre pièce).</p>`:""}
     <p class="cap" style="margin:8px 0 0">Le métré « Tout le chantier » additionne toutes les pièces de l'appartement, et « Voir tout le logement en 3D » les montre ensemble.</p></section>`; }
+document.addEventListener("change",e=>{ const el=e.target; if(!el.dataset||el.dataset.lke===undefined||S.view!=="logement") return; const l=(S.links||[])[+el.dataset.lke]; if(!l) return; l.e=Math.max(0,Math.round((parseFloat(String(el.value).replace(",","."))||0)*10)); LOGVB=null; save(); renderAll(); });
 document.addEventListener("change",e=>{ const el=e.target, k=el.dataset&&el.dataset.lk; if(!k||S.view!=="logement") return; LK[k]=k==="e"||k==="d"?Math.round((parseFloat(String(el.value).replace(",","."))||0)*10):el.value; if(k==="b") LK.wb=""; renderOut(); });
 document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-lkgo],[data-lkdel]"); if(!b||S.view!=="logement") return;
   if(b.dataset.lkdel!==undefined){ S.links.splice(+b.dataset.lkdel,1); save(); renderOut(); return; }
@@ -5262,7 +5278,7 @@ document.getElementById("jump").addEventListener("click",()=>{ const sd=document
     if(lg.moved&&!lg.det){ lg.det=1; const n=(S.links||[]).length; S.links=(S.links||[]).filter(l=>{ const b=wById(l.wb); return !(b&&(b.room||"")===lg.room); }); lg.unl=n!==S.links.length; }
     const L=roomLayout(lg.room); L.x=Math.round((lg.L0.x+dx*lg.k)/50)*50; L.y=Math.round((lg.L0.y-dy*lg.k)/50)*50; renderLogement(); });
   window.addEventListener("pointerup",()=>{ if(!lg) return; const {room,moved}=lg; lg=null; LOGVB=null;
-    if(!moved){ const i=S.walls.findIndex(x=>(x.room||"")===room); if(i>=0) S.cur=i; renderAll(); } else { save(); renderOut(); } });
+    if(!moved){ const i=S.walls.findIndex(x=>(x.room||"")===room); if(i>=0) S.cur=i; renderAll(); } else { let ok=false; try{ ok=autoSnap(room); }catch(e){} save(); if(ok) renderAll(); else renderOut(); } });
 })();
 /* Dessins (murs, plaques, ossature…) : toujours en entier sur la largeur de l'écran ; pincer à deux doigts pour zoomer (jusqu'à ×6), glisser pour se déplacer, double-tap pour revenir */
 const PZ={z:1};
