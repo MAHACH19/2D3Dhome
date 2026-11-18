@@ -3738,7 +3738,7 @@ function kitMaterials(room){
   const rows=[], add=(des,det,q,u)=>{ if(q>0) rows.push({cat:"Cuisine IKEA",des,det,q,u}); }, cnt={};
   K.items.forEach(it=>{ const k=kitItem(it); if(k){ const fa=it.fac||K.facade, key=k.n+"|"+fa; if(!cnt[key]) cnt[key]={k,n:0,fa}; cnt[key].n++; } });
   Object.values(cnt).forEach(({k,n,fa})=>{ add(k.n,k.t==="app"?"":k.id==="custom"?"à faire faire ou à adapter":"caisson et aménagement intérieur",n,"u");
-    if(k.t==="bas"&&k.f==="pieds"){ add("Pied de plan de travail réglable 87 cm (inox)","à l'avant, l'arrière repose sur un tasseau vissé au mur",2*n,"u"); add("Tasseau 45×45 vissé au mur (appui arrière du plan)","",n,"u"); return; }
+    if(k.t==="bas"&&k.f==="pieds"){ add("Pied de plan de travail réglable inox Ø 60, 82-87 cm, avec platine à visser (aucune soudure)","à l'avant, platine vissée dans la traverse avant (4 vis 5×40)",2*n,"u"); add("Tasseau 45×45 vissé au mur (appui arrière du plan)","chevilles tous les 40 cm",n,"u"); add("Traverse avant 45×45 sous le Wedi (reçoit les platines des pieds)","collée-vissée sous le panneau Wedi",n,"u"); return; }
     if(k.t!=="app" && !/hotteinox|etag|fil/.test(k.f)) add(`Façade(s) ${fa} pour ${k.n.replace(/^METOD /,"").split(",")[0].split(" +")[0]}`,"",n,"lot");
     if((k.t==="bas"||k.t==="col")&&k.f!=="fil") add("Pied réglable METOD 8 cm","4 par meuble au sol",4*n,"u"); });
   { const jo=K.items.reduce((a,it)=>a+(it.jg?1:0)+(it.jd?1:0),0), ti=K.items.reduce((a,it)=>a+(+it.ti||0),0), et=K.items.reduce((a,it)=>a+(it.et>0?+it.et:0),0), led=K.items.filter(it=>it.led&&(kitItem(it)||{}).t==="haut");
@@ -4639,7 +4639,7 @@ function buildScene(){
         const fc=kk.c||(FACADES.find(f=>f.n===(it.fac||K.facade))||FACADES[0]).c, x0=it.x, x1=it.x+kk.w, d0=g.T, d1=g.T+b.d-20, base=kk.t==="bas"||kk.t==="col";
         const tg={kind:"kit",room,idx}, carc=v3Mat(kk.t==="app"?fc:"#f2f0ea"), fm=v3Mat(fc,{roughness:.55});
         const add=(m)=>{ m.userData=tg; scene.add(m); pick.push(m); };
-        if(kk.f==="pieds"){ const st=v3Mat("#c9ced3",{metalness:.6,roughness:.35}); [x0+40,x1-40].forEach(a=>add(v3Box(s,a-20,a+20,d1-70,d1-30,0,b.z1,st))); add(v3Box(s,x0+5,x1-5,d0,d0+18,b.z1-60,b.z1,carc)); return; }
+        if(kk.f==="pieds"){ const st=v3Mat("#c9ced3",{metalness:.6,roughness:.35}); [x0+60,x1-60].forEach(a=>{ add(v3Box(s,a-30,a+30,d1-90,d1-30,0,b.z1-51,st)); add(v3Box(s,a-50,a+50,d1-110,d1-10,b.z1-51,b.z1-45,st)); add(v3Box(s,a-35,a+35,d1-95,d1-25,0,12,st)); }); add(v3Box(s,x0+5,x1-5,d1-130,d1+10,b.z1-45,b.z1,carc)); add(v3Box(s,x0+5,x1-5,d0,d0+45,b.z1-45,b.z1,carc)); return; }
         if(base) add(v3Box(s,x0+5,x1-5,d0,d1-50,0,80,v3Mat(shade(fc,0.6))));
         const op=!!it.open&&kk.t!=="app"||(!!it.open&&kk.t==="app"&&(kk.f==="frigo"||kk.f==="us")), cz0=base?80:b.z0;
         if(!op) add(v3Box(s,x0+1,x1-1,d0,d1,cz0,b.z1,carc));
