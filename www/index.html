@@ -4047,7 +4047,7 @@ function solPanel(w){
 
 /* ---------- Visite 3D immersive (three.js) ---------- */
 const NUANCIER=[["Flügger White FL 8001","#f3f4f1"],["Blanc pur","#f7f6f2"],["Blanc cassé","#efeadf"],["Lin","#e6dcc8"],["Greige","#cfc6b8"],["Gris perle","#c9cac6"],["Gris anthracite","#4b4e52"],["Vert sauge","#b3bca4"],["Vert olive","#7d7f5a"],["Bleu gris","#8e9aa6"],["Bleu nuit","#2f3d55"],["Terracotta","#b9674a"],["Ocre","#c99a4a"],["Rose poudré","#e3c7bf"],["Noir","#232323"]];
-function paintColor(w){ if(w&&w.teinte) return w.teinte; const prod=(w&&w.peintN)||S.fin.peint.n; return /teint/i.test(prod)?(S.fin.peint.teinte||"#efe9df"):"#f7f6f2"; }
+function paintColor(w){ if(w&&w.teinte) return w.teinte; const prod=(w&&w.peintN)||S.fin.peint.n; return /teint/i.test(prod)?(S.fin.peint.teinte||"#efe9df"):"#fbfbf9"; }
 const LUM=[
   {id:"plaf",n:"Plafonnier (point DCL)",c:"lum"},{id:"susp",n:"Suspension (point DCL)",c:"lum"},{id:"spot",n:"Spot LED encastré Ø 8 cm",c:"lum"},
   {id:"regl",n:"Réglette / ruban LED",c:"lum"},{id:"vmc",n:"Bouche d'extraction VMC hygro",c:"vmc"},{id:"vmcins",n:"Bouche d'insufflation VMC double flux",c:"vmc"},
@@ -4258,7 +4258,7 @@ function v3Realify(scene){ if(!V3.r) return; const V=S.v3; scene.environment=v3E
   let ctr=[0,0], ext=6, win=null; try{ const {c,g}=v3Fit(), P=g.inner.flatMap(e=>[e.a,e.b]); ctr=c; ext=Math.max(4,Math.max(...P.map(p=>Math.hypot(p[0]-c[0],p[1]-c[1])))/1000+1.5);
     g.segs.forEach(sg=>sg.w.openings.filter(o=>o.type==="Fenêtre"||o.type==="Autre").forEach(o=>{ const A=o.w*o.h; if(!win||A>win.A){ const xm=o.x+o.w/2; win={A,x:sg.x0+sg.dx*xm,y:sg.y0+sg.dy*xm,nx:sg.nx,ny:sg.ny,z:o.y+o.h/2}; } })); }catch(e){}
   let nLamp=0; scene.traverse(o=>{ if(o.userData&&o.userData.lamp) nLamp++; });
-  scene.traverse(o=>{ if(o.isHemisphereLight) o.intensity=V.nuit?.03:.16;
+  scene.traverse(o=>{ if(o.isHemisphereLight){ o.intensity=V.nuit?.03:.45; if(!V.nuit) o.groundColor.set("#dcd9d2"); }
     if(o.isDirectionalLight){ o.intensity=V.nuit?0.02:2.1; o.color.set("#fff1dc"); if(win){ const tx=(win.x+win.nx*1800)/1000, ty=-(win.y+win.ny*1800)/1000; o.position.set(tx-win.nx*9,win.z/1000+5.5,ty+win.ny*9); o.target.position.set(tx,0,ty); ext=Math.max(ext,12); }
       else { o.position.set(ctr[0]/1000+ext*.7,ext*1.4,-ctr[1]/1000+ext*.5); o.target.position.set(ctr[0]/1000,0,-ctr[1]/1000); } scene.add(o.target);
       o.castShadow=true; o.shadow.mapSize.set(2048,2048); const sc=o.shadow.camera; sc.left=sc.bottom=-ext; sc.right=sc.top=ext; sc.near=.5; sc.far=ext*5; sc.updateProjectionMatrix(); o.shadow.bias=-.0004; o.shadow.normalBias=.02; }
@@ -4574,7 +4574,7 @@ function buildScene(){
   const T3=THREE, scene=new T3.Scene(), V=S.v3, cw=S.walls[S.cur], curRoom=cw.room||"";
   scene.background=new T3.Color(V.nuit?"#0d1119":"#dfe6ee");
   // v159 : jour = ciel bleuté + rebond chaud du sol + soleil ; nuit = clair de lune très faible, ce sont les luminaires qui éclairent
-  scene.add(new T3.HemisphereLight(V.nuit?"#3a4766":"#e3ecf8",V.nuit?"#15130f":"#c2ae8f",V.nuit?0.07:0.62));
+  scene.add(new T3.HemisphereLight(V.nuit?"#3a4766":"#e3ecf8",V.nuit?"#15130f":"#dcd9d2",V.nuit?0.07:0.62));
   const sun=new T3.DirectionalLight(V.nuit?"#9fb4dc":"#fff1dc",V.nuit?0.03:0.62); sun.position.set(4,8,3); scene.add(sun);
   const pick=[], rooms=V.all?roomNames().filter(n=>!(S.r3.hide||{})[n]):[curRoom], LAY=wallLayers(), cut=V.cut, lay=S.r3.lay||{};
   const M={stone:v3Mat("#ffffff",{map:texStone()}), fibre:v3Mat("#ffffff",{map:texFibre()}), mem:v3Mat("#ffffff",{map:texMem(),emissive:new THREE.Color("#808080"),emissiveMap:texMem(),roughness:.55,transparent:true,opacity:.93}),
@@ -4869,7 +4869,7 @@ function v3Init(){
   V3.fp={x:c[0],y:c[1],yaw:0,pitch:0}; V3.orb={th:-0.6,ph:0.9,r:Math.max(5,ext*(wrap.clientWidth<600?2.4:1.7)+2),t:[c[0],c[1]]};
   v3Rebuild(); v3Events(); v3Loop(); VR.on=null;
   try{ if(navigator.xr&&navigator.xr.isSessionSupported) navigator.xr.isSessionSupported("immersive-vr").then(ok=>{ VR.xr=!!ok; }).catch(()=>{}); }catch(e){} }
-function v3Rebuild(){ if(!V3.r) return; { const R=V3.r, real=!!S.v3.real; R.toneMapping=real?THREE.ACESFilmicToneMapping:THREE.NoToneMapping; R.toneMappingExposure=real?(S.v3&&S.v3.nuit?1.05:.8):1; R.shadowMap.enabled=real; R.shadowMap.type=THREE.PCFSoftShadowMap; R.physicallyCorrectLights=false; } if(V3.scene) V3.scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.shadow&&o.shadow.map){ o.shadow.map.dispose(); o.shadow.map=null; } if(o.material) [].concat(o.material).forEach(m=>{ if(m&&m.map&&m.map.__own){ m.map.dispose(); } }); });
+function v3Rebuild(){ if(!V3.r) return; { const R=V3.r, real=!!S.v3.real; R.toneMapping=real?THREE.ACESFilmicToneMapping:THREE.NoToneMapping; R.toneMappingExposure=real?(S.v3&&S.v3.nuit?1.05:1.2):1; R.shadowMap.enabled=real; R.shadowMap.type=THREE.PCFSoftShadowMap; R.physicallyCorrectLights=false; } if(V3.scene) V3.scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.shadow&&o.shadow.map){ o.shadow.map.dispose(); o.shadow.map=null; } if(o.material) [].concat(o.material).forEach(m=>{ if(m&&m.map&&m.map.__own){ m.map.dispose(); } }); });
   const b=buildScene(); V3.scene=b.scene; V3.pick=b.pick; V3.walls=b.wallSets; V3.dirty=true; MES.g=null; mesDraw(); }
 function v3Cam(){ const V=S.v3, cam=V3.cam, wrap=V3.wrap, W=wrap.clientWidth, H=wrap.clientHeight;
   if(V3.r.domElement.width!==Math.round(W*V3.r.getPixelRatio())||V3.r.domElement.height!==Math.round(H*V3.r.getPixelRatio())){ V3.r.setSize(W,H,false); }
