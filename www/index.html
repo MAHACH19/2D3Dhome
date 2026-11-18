@@ -4644,9 +4644,9 @@ function buildScene(){
           else { add(v3Box(s,p[0]+1.5,p[1]-1.5,d1,d1+19,p[2]+1.5,p[3]-1.5,pm));
             // façades à cadre (ASPUDDEN, STENSUND…) : cadre étroit en relief + rainure autour du panneau
             const fn=it.fac||K.facade||"", a=p[0]+1.5, bb=p[1]-1.5, c=p[2]+1.5, d=p[3]-1.5;
-            if(/ASPUDDEN|STENSUND|BODBYN|SANNIDAL|HAVSTORP|AXSTAD|ENKÖPING/i.test(fn)&&!p[4]&&kk.f!=="fil"&&bb-a>140&&d-c>140){ const fw=Math.min(48,(bb-a)*0.14,(d-c)*0.14), gm=v3Mat(shade(fc,0.82),{roughness:.7});
-              [[a,a+fw,c,d],[bb-fw,bb,c,d],[a+fw,bb-fw,c,c+fw],[a+fw,bb-fw,d-fw,d]].forEach(q=>add(v3Box(s,q[0],q[1],d1+19,d1+22,q[2],q[3],pm)));
-              [[a+fw,a+fw+3,c+fw,d-fw],[bb-fw-3,bb-fw,c+fw,d-fw],[a+fw,bb-fw,c+fw,c+fw+3],[a+fw,bb-fw,d-fw-3,d-fw]].forEach(q=>add(v3Box(s,q[0],q[1],d1+19,d1+19.6,q[2],q[3],gm))); } }
+            if(/ASPUDDEN|STENSUND|BODBYN|SANNIDAL|HAVSTORP|AXSTAD|ENKÖPING/i.test(fn)&&!p[4]&&kk.f!=="fil"&&bb-a>140&&d-c>140){ const fw=Math.min(20,(bb-a)*0.08,(d-c)*0.08), gm=v3Mat(shade(fc,0.82),{roughness:.7});
+              [[a,a+fw,c,d],[bb-fw,bb,c,d],[a+fw,bb-fw,c,c+fw],[a+fw,bb-fw,d-fw,d]].forEach(q=>add(v3Box(s,q[0],q[1],d1+19,d1+21,q[2],q[3],pm)));
+              [[a+fw,a+fw+2,c+fw,d-fw],[bb-fw-2,bb-fw,c+fw,d-fw],[a+fw,bb-fw,c+fw,c+fw+2],[a+fw,bb-fw,d-fw-2,d-fw]].forEach(q=>add(v3Box(s,q[0],q[1],d1+19,d1+19.6,q[2],q[3],gm))); } }
           if(p[4]==="four") add(v3Box(s,p[0]+60,p[1]-60,d1+19,d1+21,p[2]+80,p[3]-120,v3Mat("#3d4248",{roughness:.2})));
           if(kk.t!=="app"||kk.f==="frigo"||kk.f==="us"){ const hor=(p[3]-p[2])<500||(p[4]&&p[4]!=="vit"), HD=handleOf(it,room), hm=handleMat(HD.f);
             const rel=p[4]==="rel", hor2=hor||rel, c=rel?[(p[0]+p[1])/2,p[2]+50]:hor?[(p[0]+p[1])/2,p[3]-52]:[kk.f==="2p"&&p[0]>x0+10||kk.f!=="2p"&&kk.f!=="us"&&it.hg==="d"?p[0]+40:p[1]-40, kk.t==="haut"?p[2]+140:p[3]-120];
