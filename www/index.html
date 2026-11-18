@@ -1076,10 +1076,10 @@ function materials(r){
         add("Isolant", dl, `${det} · ${r.insPanels} panneaux nécessaires, vendus par ${iso.pk}`, Math.ceil(r.insPanels/iso.pk), `lot(s) de ${iso.pk}`); }
       else add("Isolant", des, det, r.insPanels, "panneaux"); }
   }
-  if(iso.on && r.murMode) add("Isolant", `Cheville rosace pour isolant souple · L ≥ ${iso.ep+50} mm`, `≈ ${iso.chev||2} par panneau, à choisir pour maçonnerie pierre`, r.chevQty, "u");
+  if(iso.on && r.murMode) add("Isolant", `Cheville rosace pour isolant souple · L ≥ ${iso.ep+50} mm`, `≈ ${iso.chev||2} par panneau, à choisir pour ${SUPS[supOf(r.wall)].m}`, r.chevQty, "u");
   if(r.appuis){
     add("Ossature", `Appui intermédiaire réglable · décollement ${cm(iso.decol)} cm`, "1 tous les 1,35 m de hauteur par montant", r.appuis, "u");
-    add("Ossature", "Cheville de fixation des appuis", "dans la pierre", r.appuis, "u");
+    add("Ossature", "Cheville de fixation des appuis", "dans "+SUPS[supOf(r.wall)].a, r.appuis, "u");
   }
   add("Plaques", `${pla.f} ${pla.n} · ${cm(r.W)}×${cm(r.Sp)} cm`, `${pla.couches} couche${pla.couches>1?"s":""}, ${pla.faces} face${pla.faces>1?"s":""}, ${fr(r.netArea*pla.faces,2)} m² nets`, r.plateCount, "u");
   const m2 = r.netArea*pla.faces;
@@ -1138,12 +1138,13 @@ function renderQuick(){ const q=document.getElementById("quick"); if(!q) return;
   q.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><select data-qroom aria-label="Pièce" style="max-width:100%;font-weight:600">${roomNames().map(n=>`<option${n===(w.room||"")?" selected":""}>${esc(n)}</option>`).join("")}<option value="__new">＋ Nouvelle pièce</option></select><button type="button" data-qnew style="padding:5px 10px;font-size:13px">＋ Pièce</button><label class="cap" style="display:inline-flex;gap:4px;align-items:center">Nom<input type="text" data-qrname value="${esc(w.room||"")}" aria-label="Nom de la pièce" style="width:130px"></label>
     ${S.walls.map((x,i)=>(x.room||"")===(w.room||"")?`<button type="button" data-qwall="${i}" aria-pressed="${i===S.cur}" style="padding:5px 10px;font-size:13px">${esc((x.name||"Mur "+(i+1)).replace((x.room||"")+" — ",""))}</button>`:"").join("")}
     <span class="cap">${S.walls.length} mur(s) au total, ${roomNames().length} pièce(s)</span></div>
-    ${`<div class="qcfg"><span class="cap">Sur ce mur :</span>${(()=>{ const cur=isCol(w)?"colle":w.dbl==="contre"?"contre":"oss", off="background:var(--card);color:var(--ink);border-color:var(--line)";
+    ${`<div class="qcfg"><label class="cap" style="display:inline-flex;gap:4px;align-items:center;width:100%">Mur porteur (derrière le doublage)<select data-qsup>${Object.entries(SUPS).map(([k,v])=>`<option value="${k}"${supOf(w)===k?" selected":""}>${v.n.replace("Mur en ","")}</option>`).join("")}</select>${linkOf(w)?`<span class="cap">mur commun avec ${esc((()=>{ const l=linkOf(w), o=wById(l.wa===w.id?l.wb:l.wa); return o?o.room||"":""; })())} : un seul mur de ${cm(+linkOf(w).e||0)} cm, chaque côté garde son propre doublage</span>`:""}</label><span class="cap">Sur ce mur :</span>${(()=>{ const cur=isCol(w)?"colle":w.dbl==="contre"?"contre":"oss", off="background:var(--card);color:var(--ink);border-color:var(--line)";
       return [["oss","Ossature + isolant"],["contre","Ossature autoportante"],["colle","Placo collé au mur brut"]].map(([k,t])=>`<button type="button" data-qdbl="${k}" aria-pressed="${cur===k}" style="${cur===k?"":off}">${t}</button>`).join("")
-      +(cur==="colle"?`<span class="cap">plots de mortier adhésif (MAP) sur la pierre, ${fr(COLLE_T/10,2)} cm d'épaisseur, sans ossature ni isolant</span>`:cur==="contre"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Écart à la pierre (cm)<input type="number" step="0.5" min="0" data-qgap value="${gapOf(w)/10}" style="width:70px"></label><span class="cap">rails ${S.oss.g} mm fixés au sol et au plafond seulement, rien dans la pierre, sans isolant : ${fr(contreT(w)/10,2)} cm d'épaisseur${w.H>withWallCfg(w,autoMax)?` · ⚠ hauteur ${cm(w.H)} cm > ≈ ${cm(withWallCfg(w,autoMax))} cm admis en autoportant (M${S.oss.g}, entraxe ${(+w.e||S.oss.e)/10}) : montants doublés ou entraxe 40`:""}</span>`:""); })()}${!isCol(w)?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Entraxe des montants de ce mur<select data-qent>${[...new Set([600,400,300,+S.oss.e,+(w.e||0)].filter(v=>v>0))].sort((a,b)=>b-a).map(v=>`<option value="${v}"${(+w.e||+S.oss.e)===v?" selected":""}>${v/10} cm${v===400?" (charges lourdes)":""}</option>`).join("")}</select></label>${+w.e>0&&+w.e!==+S.oss.e?`<button type="button" data-qent0 style="padding:4px 8px;font-size:12px">↺ ${S.oss.e/10} cm comme les autres</button>`:`<span class="cap">(réglage commun)</span>`}${(()=>{ const on=typeof w.dA==="boolean"?w.dA:!!S.oss.doubleAll; return `<button type="button" data-qda aria-pressed="${on}">${on?"✓":"✕"} Montants doublés sur tout ce mur</button>`; })()}`:""}${!isCol(w)&&!w.dbl&&!w.noDbl&&S.iso.on&&S.iso.pose==="mur"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Mur → dos des montants (cm)<input type="number" step="0.5" min="0" data-qdecol value="${decolOf(w)/10}" style="width:70px"></label>${w.decol!=null?`<button type="button" data-qdecol0 style="padding:4px 8px;font-size:12px">↺ ${fr(decolBase()/10,1)} cm comme les autres</button>`:`<span class="cap">(réglage commun)</span>`}`:""}${(()=>{ if(!fibOn(w)||isCol(w)) return ""; const FC=fibCorner(w); if(!FC.pc&&!FC.nc) return ""; const r=compute(w), len=r.L+(FC.post??FC.cut)+FC.pre, sh=x=>esc((x.name||"").split(" — ").pop()), on="", off="background:var(--card);color:var(--ink);border-color:var(--line)";
+      +(cur==="colle"?`<span class="cap">plots de mortier adhésif (MAP) sur ${SUPS[supOf(w)].a}, ${fr(COLLE_T/10,2)} cm d'épaisseur, sans ossature ni isolant</span>`:cur==="contre"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Écart à la pierre (cm)<input type="number" step="0.5" min="0" data-qgap value="${gapOf(w)/10}" style="width:70px"></label><span class="cap">rails ${S.oss.g} mm fixés au sol et au plafond seulement, rien dans la pierre, sans isolant : ${fr(contreT(w)/10,2)} cm d'épaisseur${w.H>withWallCfg(w,autoMax)?` · ⚠ hauteur ${cm(w.H)} cm > ≈ ${cm(withWallCfg(w,autoMax))} cm admis en autoportant (M${S.oss.g}, entraxe ${(+w.e||S.oss.e)/10}) : montants doublés ou entraxe 40`:""}</span>`:""); })()}${!isCol(w)?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Entraxe des montants de ce mur<select data-qent>${[...new Set([600,400,300,+S.oss.e,+(w.e||0)].filter(v=>v>0))].sort((a,b)=>b-a).map(v=>`<option value="${v}"${(+w.e||+S.oss.e)===v?" selected":""}>${v/10} cm${v===400?" (charges lourdes)":""}</option>`).join("")}</select></label>${+w.e>0&&+w.e!==+S.oss.e?`<button type="button" data-qent0 style="padding:4px 8px;font-size:12px">↺ ${S.oss.e/10} cm comme les autres</button>`:`<span class="cap">(réglage commun)</span>`}${(()=>{ const on=typeof w.dA==="boolean"?w.dA:!!S.oss.doubleAll; return `<button type="button" data-qda aria-pressed="${on}">${on?"✓":"✕"} Montants doublés sur tout ce mur</button>`; })()}`:""}${!isCol(w)&&!w.dbl&&!w.noDbl&&S.iso.on&&S.iso.pose==="mur"?`<label class="cap" style="display:inline-flex;gap:6px;align-items:center">Mur → dos des montants (cm)<input type="number" step="0.5" min="0" data-qdecol value="${decolOf(w)/10}" style="width:70px"></label>${w.decol!=null?`<button type="button" data-qdecol0 style="padding:4px 8px;font-size:12px">↺ ${fr(decolBase()/10,1)} cm comme les autres</button>`:`<span class="cap">(réglage commun)</span>`}`:""}${(()=>{ if(!fibOn(w)||isCol(w)) return ""; const FC=fibCorner(w); if(!FC.pc&&!FC.nc) return ""; const r=compute(w), len=r.L+(FC.post??FC.cut)+FC.pre, sh=x=>esc((x.name||"").split(" — ").pop()), on="", off="background:var(--card);color:var(--ink);border-color:var(--line)";
       const row=(lab,k,me)=>`<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%"><span class="cap">${lab}</span><button type="button" data-qfib="${k}" data-v="moi" aria-pressed="${me}" style="${me?on:off}">Ce mur va jusqu'à la pierre</button><button type="button" data-qfib="${k}" data-v="autre" aria-pressed="${!me}" style="${!me?on:off}">L'autre mur va jusqu'à la pierre</button></div>`;
       return `<div style="width:100%;margin-top:4px"><b>Fibre de bois sur ce mur : ${cm(len)} cm</b> <span class="cap">(mur brut ${cm(w.L)} cm)</span></div>`+(FC.pc?row(`Angle de début, avec ${sh(FC.prev)} :`,"start",FC.prev.fibPass==="suivant"):"")+(FC.nc?row(`Angle de fin, avec ${sh(FC.next)} :`,"end",w.fibPass!=="suivant"):""); })()}${!w.dbl&&!w.noDbl&&S.iso.on?`<button type="button" data-qcfg="noIso" aria-pressed="${!w.noIso}">${!w.noIso?"✓":"✕"} Isolant</button>`:""}${!w.dbl&&!w.noDbl&&S.mem.on?`<button type="button" data-qcfg="noMem" aria-pressed="${!w.noMem}">${!w.noMem?"✓":"✕"} Membrane</button>`:""}<span class="cap">les autres murs ne changent pas</span></div>`}`; }
 document.getElementById("quick").addEventListener("change",e=>{ if(e.target.matches("[data-qdecol]")){ const v=parseFloat(String(e.target.value).replace(",",".")), w=S.walls[S.cur]; if(isNaN(v)) return; const mm=Math.max(0,Math.round(v*10)); if(mm===decolBase()) delete w.decol; else w.decol=mm; save(); renderAll(); return; } if(e.target.matches("[data-qgap]")){ const v=parseFloat(e.target.value); if(isNaN(v)) return; S.walls[S.cur].ec=Math.max(0,Math.round(v*10)); save(); renderAll(); } });
+document.getElementById("quick").addEventListener("change",e=>{ const el=e.target; if(el.dataset.qsup===undefined) return; const w=S.walls[S.cur], l=linkOf(w); if(l) l.mat=el.value; else if(el.value==="pierre") delete w.sup; else w.sup=el.value; save(); renderAll(); });
 document.getElementById("quick").addEventListener("click",e=>{ const q=e.target.closest("[data-qdbl]"); if(q){ const w=S.walls[S.cur]; delete w.noDbl; if(q.dataset.qdbl==="oss") delete w.dbl; else w.dbl=q.dataset.qdbl; save(); renderAll(); return; } });
 document.getElementById("quick").addEventListener("click",e=>{ const b=e.target.closest("[data-qfib]"); if(!b) return; const w=S.walls[S.cur], FC=fibCorner(w), me=b.dataset.v==="moi";
   if(b.dataset.qfib==="end"){ if(me) delete w.fibPass; else w.fibPass="suivant"; } else if(FC.prev){ if(me) FC.prev.fibPass="suivant"; else delete FC.prev.fibPass; } save(); renderAll(); });
@@ -1398,6 +1399,12 @@ function renderSide(){ renderQuick();
 /* ---------- Matières réalistes (textures procédurales) ---------- */
 function rng(seed){ return ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 let TEXCACHE=null;
+/* Support du mur (maçonnerie derrière le doublage) : pierre par défaut, réglable mur par mur ; un mur commun entre deux pièces a un seul support */
+const SUPS={pierre:{n:"Mur en pierre",a:"la pierre",m:"maçonnerie pierre",c:"#9b9283"},brique:{n:"Mur en briques",a:"la brique",m:"brique (creuse : cheville à expansion longue ou à frapper spéciale brique creuse)",c:"#b0623c"},parpaing:{n:"Mur en parpaings",a:"le parpaing",m:"parpaing creux",c:"#9a9a96"},beton:{n:"Mur en béton",a:"le béton",m:"béton",c:"#a8a69f"}};
+function linkOf(w){ return w&&w.id?(S.links||[]).find(l=>l.wa===w.id||l.wb===w.id):null; }
+function supOf(w){ const l=linkOf(w); const k=l?(l.mat||"brique"):(w&&w.sup)||"pierre"; return SUPS[k]?k:"pierre"; }
+function supFill(w){ return `url(#tx-${({pierre:"stone",brique:"brick",parpaing:"block",beton:"beton"})[supOf(w)]})`; }
+function supT(w){ const l=linkOf(w); return l?Math.max(10,(+l.e||0)/2):300; }
 function texDefs(){
   if(TEXCACHE) return TEXCACHE;
   const r=rng(11);
@@ -1429,7 +1436,14 @@ function texDefs(){
   // Enduit : passes de lisseuse
   let en=`<rect width="700" height="700" fill="#f2f0ea"/>`;
   for(let i=0;i<10;i++){ const x=r()*700, y=r()*700; en+=`<path d="M${x} ${y} q ${120+r()*120} ${-60+r()*120} ${260+r()*120} 0" fill="none" stroke="#e2dfd6" stroke-width="${8+r()*10}" opacity=".7"/>`; }
+  // Briques : rangs décalés, joints clairs
+  let br=`<rect width="480" height="260" fill="#d9cfc0"/>`; for(let row=0;row<4;row++){ const y=row*65, off=row%2?-120:0; for(let x=off;x<480;x+=240){ [0,480].forEach(o=>{ const X=x-o; if(X+240>0&&X<480){ const c=["#b4603a","#a8552f","#bd6a42","#9f4f2c","#c2714a"][Math.floor(r()*5)]; br+=`<rect x="${X+6}" y="${y+6}" width="228" height="53" fill="${c}"/>`; } }); } }
+  let bk=`<rect width="1000" height="400" fill="#8d8d88"/>`; for(let row=0;row<2;row++){ const y=row*200, off=row%2?-250:0; for(let x=off;x<1000;x+=500){ [0,1000].forEach(o=>{ const X=x-o; if(X+500>0&&X<1000) bk+=`<rect x="${X+8}" y="${y+8}" width="484" height="184" fill="#a7a7a2"/>`; }); } }
+  let bt=`<rect width="400" height="400" fill="#a9a7a0"/>`; for(let i=0;i<60;i++) bt+=`<circle cx="${r()*400}" cy="${r()*400}" r="${2+r()*5}" fill="${r()<.5?"#97958e":"#bab8b1"}"/>`;
   TEXCACHE=`
+    <pattern id="tx-brick" patternUnits="userSpaceOnUse" width="480" height="260">${br}</pattern>
+    <pattern id="tx-block" patternUnits="userSpaceOnUse" width="1000" height="400">${bk}</pattern>
+    <pattern id="tx-beton" patternUnits="userSpaceOnUse" width="400" height="400">${bt}</pattern>
     <pattern id="tx-stone" patternUnits="userSpaceOnUse" width="${SW}" height="${SH}">${st}</pattern>
     <pattern id="tx-fibre" patternUnits="userSpaceOnUse" width="420" height="420">${fb}</pattern>
     <pattern id="tx-plaque" patternUnits="userSpaceOnUse" width="300" height="300">${pl}</pattern>
@@ -1458,7 +1472,7 @@ function render3D(r){
   const big=Math.max(L,H), fs=Math.max(38,big/48);
   const ZX=0.62, ZY=0.42;
   const Ls=[];
-  Ls.push({k:"pierre", n:"Mur en pierre", d:260, fill:"url(#tx-stone)"});
+  Ls.push({k:"pierre", n:SUPS[supOf(r.wall)].n, d:Math.min(260,supT(r.wall)), fill:supFill(r.wall)});
   if(iso.on && r.murMode){
     Ls.push({k:"fibre", n:`${iso.n} ${iso.ep} mm, chevillé`, d:iso.ep, fill:"url(#tx-fibre)"});
     const gap=(iso.decol||0)-iso.ep; if(gap>5) Ls.push({k:"air", d:gap, skip:true});
@@ -1565,7 +1579,7 @@ function renderCoupes(r){
 
   // ---- Coupe horizontale (vue de dessus) ----
   const P=[defs];
-  P.push(`<rect x="0" y="${-ST}" width="${L}" height="${ST}" fill="url(#tx-stone)"/>`);
+  P.push(`<rect x="0" y="${-ST}" width="${L}" height="${ST}" fill="${supFill(r.wall)}"/>`);
   const cut=ops.filter(o=>o.y<hc && o.y1>hc);
   A.forEach(l=>{
     if(l.k==="oss"){
@@ -1597,7 +1611,7 @@ function renderCoupes(r){
   axes.forEach((x,i)=>{ P.push(ln(x,cy-fs*.35,x,cy+fs*.35,"var(--chalk)",.07)); if(i&&x-axes[i-1]>fs*2.2) P.push(T((x+axes[i-1])/2,cy-fs*.35,cm(x-axes[i-1]),"middle",`style="fill:var(--chalk)" font-size="${fs*.7}"`)); });
   // cotes d'épaisseur à droite
   const cx=L+fs*.8, lx=L+fs*2.4;
-  const items=[{n:"Mur en pierre",t:null,y0:-ST,y1:0},...A.map(l=>({n:l.n,t:l.t,y0:l.d0,y1:l.d1}))].map(it=>({...it,ly:(it.y0+it.y1)/2+fs*.3}));
+  const items=[{n:SUPS[supOf(r.wall)].n,t:null,y0:-ST,y1:0},...A.map(l=>({n:l.n,t:l.t,y0:l.d0,y1:l.d1}))].map(it=>({...it,ly:(it.y0+it.y1)/2+fs*.3}));
   spreadLabels(items,fs*1.05);
   P.push(ln(cx,-ST,cx,tot,"var(--ink)",.04));
   items.forEach(it=>{
@@ -1606,7 +1620,7 @@ function renderCoupes(r){
     P.push(T(lx,it.ly,`${esc(it.n)}${it.t!==null?` · ${fr(it.t,it.t<1?1:(it.t%1?1:0))} mm`:""}`,"start",`font-size="${fs*.72}"`));
   });
   const lastY=items[items.length-1].ly;
-  P.push(T(lx,Math.max(lastY,tot)+fs*1.6,`Épaisseur de la pierre au parement fini : ${fr(real,1)} mm`,"start",`font-weight="600" font-size="${fs*.75}"`));
+  P.push(T(lx,Math.max(lastY,tot)+fs*1.6,`Épaisseur de ${SUPS[supOf(r.wall)].a} au parement fini : ${fr(real,1)} mm`,"start",`font-weight="600" font-size="${fs*.75}"`));
   const vbH=[-fs*1.5,-ST-fs*2,L+fs*34,ST+Math.max(tot,lastY)+fs*7.5].join(" ");
 
   // ---- Coupe verticale (à mi-entraxe, hors ouverture) ----
@@ -1617,7 +1631,7 @@ function renderCoupes(r){
   const T2=(x,y,t,a="start",ex="")=>`<text x="${x}" y="${y}" text-anchor="${a}" font-size="${fv*.72}" style="fill:var(--ink)" ${ex}>${t}</text>`;
   const ln2=(x1,y1,x2,y2,c="var(--ink)",w=.05)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" style="stroke:${c}" stroke-width="${fv*w}"/>`;
   // pierre (à gauche), sol, plafond
-  V.push(`<rect x="${-ST}" y="${-150}" width="${ST}" height="${H+300}" fill="url(#tx-stone)"/>`);
+  V.push(`<rect x="${-ST}" y="${-150}" width="${ST}" height="${H+300}" fill="${supFill(r.wall)}"/>`);
   V.push(`<rect x="${-ST}" y="${H}" width="${ST+tot+600}" height="200" fill="url(#hatch-c)" opacity=".55"/><rect x="${-ST}" y="-200" width="${ST+tot+600}" height="200" fill="url(#hatch-c)" opacity=".35"/>`);
   V.push(ln2(-ST,H,tot+600,H,"var(--ink)",.07)+ln2(-ST,0,tot+600,0,"var(--ink)",.07));
   A.forEach(l=>{
@@ -1666,7 +1680,7 @@ function renderPiece(r){
   segs.forEach(sg=>{ const T=wT(sg.w);
     const {x0,y0,x1,y1,dx,dy,w}=sg, nlx=dy, nly=-dx, nrx=-dy, nry=dx, sel=sg.i===S.cur;
     parts.push(`<g data-pick="${sg.i}" style="cursor:pointer">`);
-    parts.push(`<polygon points="${Q(x0,y0)} ${Q(x1,y1)} ${Q(x1+nrx*STN,y1+nry*STN)} ${Q(x0+nrx*STN,y0+nry*STN)}" fill="url(#tx-stone)"/>`);
+    parts.push(`<polygon points="${Q(x0,y0)} ${Q(x1,y1)} ${Q(x1+nrx*STN,y1+nry*STN)} ${Q(x0+nrx*STN,y0+nry*STN)}" fill="${supFill(w)}"/>`);
     // couches réelles de ce mur, bout à bout aux angles comme sur le chantier (mêmes longueurs que les plans du mur)
     { const r=compute(w), d=r.adj.dx||0, PQ=(x,o)=>Q(x0+dx*x+nlx*o, y0+dy*x+nly*o), band=(a,b,o0,o1,f,ex="")=>{ if(b-a>1&&o1-o0>0.5) parts.push(`<polygon points="${PQ(a,o0)} ${PQ(b,o0)} ${PQ(b,o1)} ${PQ(a,o1)}" fill="${f}" ${ex}/>`); };
       const pl=isCol(w)?12.5:12.5*S.pla.couches, oP=T-pl, oF=isCol(w)?0:Math.max(0,oP-S.oss.g), a=-d, b=r.L-d;
@@ -2920,7 +2934,7 @@ function isoWarn(){ const {iso,mem}=S; if(iso.on&&iso.pose==="mur"&&mem.on) retu
   return `<div class="warn" style="margin:8px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span>Dans les réglages de ce projet, ${miss} ${miss.includes(" et ")?"sont désactivés":"est désactivé"} : ${miss.includes(" et ")?"ils n'apparaissent":"il n'apparaît"} donc pas dans les couches.</span><button type="button" data-isoon class="pri">Activer isolant chevillé + membrane</button></div>`; }
 function wallLayers(w){ // w : couches propres à ce mur (contre-cloison, écart, décollement), sinon réglage général
   const {iso,mem,oss,pla,fin}=S, ctr=!!(w&&w.dbl==="contre"&&!isCol(w)), T=ctr?contreT(w):doublageT(w), L=[], pl=12.5*pla.couches;
-  L.push({k:"pierre",n:"Mur en pierre",o0:-300,o1:0,fill:"url(#tx-stone)",c:"#9b9283"});
+  L.push({k:"pierre",n:SUPS[supOf(w)].n,o0:-supT(w),o1:0,fill:supFill(w),c:SUPS[supOf(w)].c});
   if(ctr){ const gp=gapOf(w);
     if(iso.on) L.push({k:"fibre",n:`Fibre de bois ${iso.ep} mm entre montants`,o0:gp,o1:gp+oss.g,fill:"url(#tx-fibre)",c:"#c4914f"});
     L.push({k:"oss",n:`Ossature ${oss.g} mm, à ${fr(gp/10,1)} cm de la pierre`,o0:gp,o1:gp+oss.g,c:"#a9b1b8",studs:1});
@@ -3010,7 +3024,7 @@ function renderRoom3D(){
             if(l.o1-l.o0>3 || V.cut==="ecorche") face([P0(E0,l.o0,hl),[...E0.b,hl],[...E1.b,hl],P0(E1,l.o1,hl)],{d:dd+0.3,pick:s.i,op,fill:l.paint?l.c:shade(l.c,1.05),stroke:"#00000055"});
           });
         }
-      } else face([[...O.a,0],[...O.b,0],[...O.b,h],[...O.a,h]],{pick:s.i,op,fill:"url(#tx-stone)",holes:holeP(-g.STN),tone:lit(-s.nx,-s.ny,0)});
+      } else face([[...O.a,0],[...O.b,0],[...O.b,h],[...O.a,h]],{pick:s.i,op,fill:supFill(w),holes:holeP(-g.STN),tone:lit(-s.nx,-s.ny,0)});
       if(!front && w.tile && w.tile.on && (!layered || (V.cut!=="ecorche" && V.lay.peint!==false && V.lay.pla!==false))){
         const t=w.tile, sp=floorSpec({n:t.n,c:t.c,pose:t.pose}), ua=useRange(w), x0=Math.max(ua[0],t.x0||0), x1=Math.min(ua[1],t.x1||w.L), z0=t.z0||0, z1=Math.min(h,t.z1||1200);
         if(x1>x0&&z1>z0){ const reg=[at(x0,T+3,z0),at(x1,T+3,z0),at(x1,T+3,z1),at(x0,T+3,z1)];
@@ -3322,7 +3336,7 @@ function renderLogement(){
     if(g.poly) parts.push(`<polygon points="${pp(g.poly)}" fill="${sel?"#dbe7f7":"#efece6"}"/>`);
     g.segs.forEach((s,k)=>{
       const O=g.outer[k], M=g.mid[k], I=g.inner[k];
-      parts.push(`<polygon points="${pp([O.a,O.b,M.b,M.a])}" fill="url(#tx-stone)" stroke="#6f675b" stroke-width="12"/>`);
+      parts.push(`<polygon points="${pp([O.a,O.b,M.b,M.a])}" fill="${supFill(s.w)}" stroke="#6f675b" stroke-width="12"/>`);
       parts.push(`<polygon points="${pp([M.a,M.b,I.b,I.a])}" fill="#c4914f" stroke="#7a5326" stroke-width="8"/>`);
       if(s.w.id&&(s.w.id===LK.wa||s.w.id===LK.wb)) parts.push(`<polygon points="${pp([O.a,O.b,I.b,I.a])}" fill="none" stroke="#d6452b" stroke-width="60"/>`);
       if(S.links&&S.links.some(l=>l.wa===s.w.id||l.wb===s.w.id)) parts.push(`<polyline points="${pp([[(O.a[0]+M.a[0])/2,(O.a[1]+M.a[1])/2],[(O.b[0]+M.b[0])/2,(O.b[1]+M.b[1])/2]])}" fill="none" stroke="#2e8b57" stroke-width="40" stroke-dasharray="120 80"/>`);
@@ -3366,7 +3380,7 @@ function autoSnap(room){ let best=null; const gB=geomXf(roomGeom(room),room);
   S.links=(S.links||[]).filter(l=>{ const b=wById(l.wb); return b&&(b.room||"")!==room; });
   { let r=A.room||"", n=0; while(n++<50){ const up=S.links.find(l=>linkRoom(l,"wb")===r); if(!up) break; if(linkRoom(up,"wa")===room){ S.links.splice(S.links.indexOf(up),1); break; } r=linkRoom(up,"wa"); } }
   const oneDoor=doorC(A)!=null||doorC(B)!=null;
-  S.links.push({wa:wid(A),wb:wid(B),e:prev?prev.e:300,al:both?"porte":"manuel",d:Math.round(best.u1/10)*10,auto:1}); syncLinks(); applyLinks(); LK.wa=wid(A); LK.b=room; LK.wb=wid(B);
+  S.links.push({wa:wid(A),wb:wid(B),e:prev?prev.e:300,al:both?"porte":"manuel",d:Math.round(best.u1/10)*10,auto:1,mat:prev&&prev.mat||"brique"}); syncLinks(); applyLinks(); LK.wa=wid(A); LK.b=room; LK.wb=wid(B);
   SNAPMSG=`« ${room} » collée contre « ${A.room||""} » : « ${(B.name||"").replace((B.room||"")+" — ","")} » contre « ${(A.name||"").replace((A.room||"")+" — ","")} »${both?", portes alignées":oneDoor?", la porte est recopiée de l'autre côté":""}. Vérifiez l'épaisseur du mur commun ci-dessous.`; return true; }
 let SNAPMSG="";
 function linkD(l,wa,wb){ const LA=wa.L, LB=wb.L, cA=doorC(wa), cB=doorC(wb);
@@ -3399,7 +3413,7 @@ function linkHtml(cur){ const rooms=roomNames().filter(n=>n!==cur), wa=S.walls.f
   if(!wa.some(w=>w.id===LK.wa)) LK.wa=wid(wa[0]); if(!rooms.includes(LK.b)) LK.b=rooms[0]; const wbL=S.walls.filter(w=>(w.room||"")===LK.b); if(!wbL.some(w=>w.id===LK.wb)) LK.wb=wid(wbL[0]); wbL.forEach(wid); wa.forEach(wid);
   const A=wById(LK.wa), B=wById(LK.wb), both=doorC(A)!=null&&doorC(B)!=null, sh=w=>esc((w.name||"").replace((w.room||"")+" — ","")), o=(v,t,sel)=>`<option value="${v}"${sel?" selected":""}>${t}</option>`;
   const al=LK.al==="auto"?(both?"porte":"debut"):LK.al;
-  const list=(S.links||[]).map((l,i)=>{ const a=wById(l.wa), b=wById(l.wb); if(!a||!b) return ""; return `<li><b>${esc(a.room||"")}</b> · ${sh(a)} ⟷ <b>${esc(b.room||"")}</b> · ${sh(b)} <span class="cap">(mur de <input type="number" min="0" step="0.5" data-lke="${i}" value="${(+l.e||0)/10}" style="width:62px;padding:2px 4px"> cm, ${l.al==="porte"?"portes alignées":l.al==="fin"?"alignés par la fin":l.al==="centre"?"centrés":l.al==="manuel"?`décalage ${cm(+l.d||0)} cm`:"alignés par le début"})</span> <button type="button" data-lkdel="${i}" style="padding:3px 8px;font-size:12px">Détacher</button></li>`; }).join("");
+  const list=(S.links||[]).map((l,i)=>{ const a=wById(l.wa), b=wById(l.wb); if(!a||!b) return ""; return `<li><b>${esc(a.room||"")}</b> · ${sh(a)} ⟷ <b>${esc(b.room||"")}</b> · ${sh(b)} <span class="cap">(mur en <select data-lkm="${i}" style="padding:2px 4px">${Object.entries(SUPS).map(([k,v])=>`<option value="${k}"${(l.mat||"brique")===k?" selected":""}>${v.n.replace("Mur en ","")}</option>`).join("")}</select> de <input type="number" min="0" step="0.5" data-lke="${i}" value="${(+l.e||0)/10}" style="width:62px;padding:2px 4px"> cm, ${l.al==="porte"?"portes alignées":l.al==="fin"?"alignés par la fin":l.al==="centre"?"centrés":l.al==="manuel"?`décalage ${cm(+l.d||0)} cm`:"alignés par le début"})</span> <button type="button" data-lkdel="${i}" style="padding:3px 8px;font-size:12px">Détacher</button></li>`; }).join("");
   return `<section class="box"><h2>Connecter les pièces (appartement)</h2>
     <p class="cap" style="margin:0 0 8px"><b>Le plus simple :</b> faites glisser une pièce contre une autre sur le plan, elle se colle toute seule sur le mur le plus proche, calée sur la porte. Sinon, choisissez le mur de « ${esc(cur)} » et le mur de la pièce voisine qui sont dos à dos : la pièce voisine se place et tourne toute seule, de l'autre côté du mur commun. Les murs choisis sont en rouge sur le plan.</p>
     <div class="row"><label class="f">Mur de ${esc(cur)}<select data-lk="wa">${wa.map(w=>o(w.id,sh(w)+` (${cm(w.L)} cm)${doorC(w)!=null?" · porte":""}`,w.id===LK.wa)).join("")}</select></label>
@@ -3412,6 +3426,7 @@ function linkHtml(cur){ const rooms=roomNames().filter(n=>n!==cur), wa=S.walls.f
     ${SNAPMSG?`<p class="cap" style="margin:10px 0 0;color:#2e8b57"><b>✓ ${esc(SNAPMSG)}</b></p>`:""}
     ${list?`<h3 style="margin:14px 0 6px;font-size:15px">Connexions</h3><ul style="margin:0;padding-left:18px">${list}</ul><p class="cap" style="margin:6px 0 0">Une pièce connectée suit la pièce à laquelle elle est attachée : déplacez la première, les autres suivent. Les murs mitoyens sont en pointillé vert. Sur un mur commun, les portes et ouvertures ne se saisissent qu'une fois : ajoutez, déplacez ou supprimez-les d'un côté, l'autre côté suit en miroir (charnières et sens d'ouverture vus depuis l'autre pièce).</p>`:""}
     <p class="cap" style="margin:8px 0 0">Le métré « Tout le chantier » additionne toutes les pièces de l'appartement, et « Voir tout le logement en 3D » les montre ensemble.</p></section>`; }
+document.addEventListener("change",e=>{ const el=e.target; if(!el.dataset||el.dataset.lkm===undefined||S.view!=="logement") return; const l=(S.links||[])[+el.dataset.lkm]; if(!l) return; l.mat=el.value; save(); renderAll(); });
 document.addEventListener("change",e=>{ const el=e.target; if(!el.dataset||el.dataset.lke===undefined||S.view!=="logement") return; const l=(S.links||[])[+el.dataset.lke]; if(!l) return; l.e=Math.max(0,Math.round((parseFloat(String(el.value).replace(",","."))||0)*10)); LOGVB=null; save(); renderAll(); });
 document.addEventListener("change",e=>{ const el=e.target, k=el.dataset&&el.dataset.lk; if(!k||S.view!=="logement") return; LK[k]=k==="e"||k==="d"?Math.round((parseFloat(String(el.value).replace(",","."))||0)*10):el.value; if(k==="b") LK.wb=""; renderOut(); });
 document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-lkgo],[data-lkdel]"); if(!b||S.view!=="logement") return;
@@ -3419,7 +3434,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closes
   const A=wById(LK.wa), B=wById(LK.wb); if(!A||!B) return; const al=LK.al==="auto"?(doorC(A)!=null&&doorC(B)!=null?"porte":"debut"):LK.al;
   S.links=(S.links||[]).filter(l=>{ const lb=wById(l.wb); return lb&&(lb.room||"")!==(B.room||""); }); // une pièce n'est attachée qu'à un seul endroit
   { let r=A.room||"", n=0; while(n++<50){ const up=S.links.find(l=>linkRoom(l,"wb")===r); if(!up) break; if(linkRoom(up,"wa")===(B.room||"")){ S.links.splice(S.links.indexOf(up),1); break; } r=linkRoom(up,"wa"); } } // pas de boucle
-  S.links.push({wa:LK.wa,wb:LK.wb,e:+LK.e||0,al,d:+LK.d||0}); syncLinks(); LOGVB=null; save(); renderAll(); });
+  S.links.push({wa:LK.wa,wb:LK.wb,e:+LK.e||0,al,d:+LK.d||0,mat:"brique"}); syncLinks(); LOGVB=null; save(); renderAll(); });
 let LOGVB=null;
 
 /* ---------- Cuisine IKEA (système METOD) ---------- */
@@ -4003,6 +4018,9 @@ function loadThree(cb){
 function texCanvas(key,w,h,draw){ V3.tex=V3.tex||{}; if(V3.tex[key]) return V3.tex[key];
   const c=document.createElement("canvas"); c.width=w; c.height=h; draw(c.getContext("2d"),w,h);
   const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.anisotropy=4; V3.tex[key]=t; return t; }
+function texBrick(){ return texCanvas("brick",512,256,(x,w,h)=>{ x.fillStyle="#d9cfc0"; x.fillRect(0,0,w,h); let r=3; const R=()=>{ r=(r*16807)%2147483647; return r/2147483647; };
+  for(let y=0,k=0;y<h;y+=32,k++){ for(let X=k%2?-32:0;X<w;X+=64){ const c=150+R()*40|0; x.fillStyle=`rgb(${c+30},${c-50},${c-85})`; x.fillRect(X+2,y+2,60,28); } } }); }
+function texSup(w){ const k=supOf(w); return k==="brique"?texBrick():texStone(); }
 function texStone(){ return texCanvas("stone",512,256,(x,w,h)=>{ x.fillStyle="#8a8070"; x.fillRect(0,0,w,h); let r=1; const R=()=>{ r=(r*16807)%2147483647; return r/2147483647; };
   for(let y=0;y<h;y+=42){ for(let X=-(y/42%2)*40;X<w;){ const ww=50+R()*60; const c=150+R()*50|0; x.fillStyle=`rgb(${c},${c-8},${c-22})`; x.beginPath(); x.roundRect?x.roundRect(X+3,y+3,ww-6,36,9):x.rect(X+3,y+3,ww-6,36); x.fill(); X+=ww; } } }); }
 function texFibre(){ const ty=(ISO.find(i=>i.n===S.iso.n)||{}).typ||"bois", col=(ISO_TYP[ty]||ISO_TYP.bois)[0], [r0,g0,b0]=[1,3,5].map(i=>parseInt(col.slice(i,i+2),16));
@@ -4393,7 +4411,7 @@ function buildScene(){
   const M={stone:v3Mat("#ffffff",{map:texStone()}), fibre:v3Mat("#ffffff",{map:texFibre()}), mem:v3Mat("#ffffff",{map:texMem(),emissive:new THREE.Color("#808080"),emissiveMap:texMem(),roughness:.55,transparent:true,opacity:.93}),
     pla:v3Mat("#e8e7e2"), end:v3Mat("#f3f1ea"), metal:v3Mat("#a9b1b8",{metalness:.6,roughness:.4}), white:v3Mat("#fbfbf8"), glass:v3Mat("#a9d3ef",{transparent:true,opacity:.35,roughness:.1}),
     dark:v3Mat("#222326",{roughness:.4}), rosace:v3Mat("#f2f2ee",{roughness:.5}), steel:v3Mat("#c9ced3",{metalness:.7,roughness:.3}), cap:v3Mat("#d8d3c8"), memO:v3Mat("#ffffff",{map:texMem(),emissive:new THREE.Color("#808080"),emissiveMap:texMem(),roughness:.55}), tape:v3Mat("#fbfbf8",{roughness:.4})};
-  [M.stone,M.fibre].forEach(m=>{ m.map.repeat.set(1/1.2,1/0.6); }); 
+  M.brick=v3Mat("#ffffff",{map:texBrick()}); [M.stone,M.fibre,M.brick].forEach(m=>{ m.map.repeat.set(1/1.2,1/0.6); }); const Msup=w=>supOf(w)==="brique"?M.brick:M.stone; 
   const lights=[], wallSets=[], RS={transparent:true,opacity:.16,depthWrite:false};
   rooms.forEach(room=>{
     const g=V.all?geomXf(roomGeom(room),room):roomGeom(room), K=kitCfg(room), F=floorCfg(room), X=g.xf||{p:(x,y)=>[x,y]};
@@ -4409,14 +4427,14 @@ function buildScene(){
       if(isCol(w)){ const [a1,b1]=ext2(-g.STN,0); let [a2,b2]=ext2(g.T-12.5,g.T); if(RA.dEnd) b2=Math.max(b2,w.L+RA.dEnd); const pc=paintColor(w); // placo collé au MAP sur la pierre
         if(cut==="ecorche"||V.couches){ const [pa,pb]=ext(10), mp=v3Mat("#d9d4c9",{roughness:.9}); for(let x=pa+150;x<pb-100;x+=350) for(let z=250;z<h-100;z+=400){ if(holes.some(q=>x>q.a-60&&x<q.b+60&&z>q.c-60&&z<q.d+60)) continue; scene.add(v3Box(s,x-45,x+45,0,10,z-45,z+45,mp)); } }
         if(!(w.tile&&w.tile.on)&&!(typeof bcOnWall==="function"&&bcOnWall(w))) v3Joints(scene,s,w,g.T,h,a2,b2,holes);
-        [v3Slab(s,a1,b1,-g.STN,0,0,h,holes,[M.stone,M.cap]), lay.pla===false?null:cut==="ecorche"?v3Slab(s,a2+(b2-a2)*0.45,b2,g.T-12.5,g.T,0,h,holes,[M.pla,M.pla]):V.couches&&lay.peint===false?v3Slab(s,a2,b2,g.T-12.5,g.T,0,h,holes,[M.pla,M.pla]):v3Slab(s,a2,b2,g.T-12.5,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } }); }
+        [v3Slab(s,a1,b1,-supT(w),0,0,h,holes,[Msup(w),M.cap]), lay.pla===false?null:cut==="ecorche"?v3Slab(s,a2+(b2-a2)*0.45,b2,g.T-12.5,g.T,0,h,holes,[M.pla,M.pla]):V.couches&&lay.peint===false?v3Slab(s,a2,b2,g.T-12.5,g.T,0,h,holes,[M.pla,M.pla]):v3Slab(s,a2,b2,g.T-12.5,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } }); }
       else if(!layered){
         const [a1,b1]=ext2(-g.STN,0); let [a2,b2]=ext2(0,g.T); if(RA.colStart) a2=Math.max(a2,0); const pc=paintColor(w);
         if(V.res){ const pl=12.5*S.pla.couches, oM=Math.max(2,g.T-pl-S.oss.g), [a3,b3]=ext(oM/2), mm=S.mem.on?null:v3Slab(s,a3,b3,0,oM,0,h,holes,[M.fibre,M.cap]); if(mm){ mm.userData=tag; scene.add(mm); } if(S.mem.on){ const f=v3Slab(s,a3,b3,0,oM-3,0,h,holes,[M.fibre,M.cap]); if(f) scene.add(f); v3MemLes(scene,pick,s,w,a3,b3,oM-3,oM,h,holes,M.memO,M.cap,tag); } v3Tapes(scene,s,w,oM,h,M.tape);
           const r=compute(w), dxs=r.adj.dx||0; r.studs.forEach(st=>{ const xa=st.x-dxs; if(st.y1>st.y0) scene.add(v3Box(s,xa,xa+FL,oM,g.T-pl,st.y0,st.y1,M.metal)); });
           r.rails.forEach(rl=>{ scene.add(v3Box(s,Math.max(a2,rl.x0-dxs),Math.min(b2,rl.x1-dxs),oM,g.T-pl,rl.y0,rl.y1,M.metal)); }); }
         { const [fa,fb]=ext(g.T); if(!(w.tile&&w.tile.on)&&!(typeof bcOnWall==="function"&&bcOnWall(w))) v3Joints(scene,s,w,g.T,h,fa,fb,holes); if(V.real&&!V.res) v3AO(scene,s,fa,fb,g.T,h); }
-        [v3Slab(s,a1,b1,-g.STN,0,0,h,holes,[M.stone,M.cap]), v3Slab(s,a2,b2,0,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } });
+        [v3Slab(s,a1,b1,-supT(w),0,0,h,holes,[Msup(w),M.cap]), v3Slab(s,a2,b2,0,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } });
         if(w.tile&&w.tile.on){ const t=w.tile, sp=floorSpec({n:t.n,c:t.c,pose:t.pose}), ua=useRange(w), x0=Math.max(ua[0],t.x0||0), x1=Math.min(ua[1],t.x1||w.L), z0=t.z0||0, z1=Math.min(h,t.z1||1200);
           const c=document.createElement("canvas"), kk=Math.min(1,1500/Math.max(x1-x0,z1-z0)); c.width=Math.max(8,(x1-x0)*kk|0); c.height=Math.max(8,(z1-z0)*kk|0); const cx=c.getContext("2d"); cx.fillStyle="#aaa49a"; cx.fillRect(0,0,c.width,c.height);
           tilePolys([[x0,z0],[x1,z0],[x1,z1],[x0,z1]],[x0,z0],[1,0],sp).forEach(q=>{ cx.beginPath(); q.p.forEach((p,i)=>{ const u=(p[0]-x0)*kk, v=(z1-p[1])*kk; i?cx.lineTo(u,v):cx.moveTo(u,v); }); cx.closePath(); cx.fillStyle=shade(sp.c,0.96+0.06*q.r); cx.fill(); cx.strokeStyle="#aaa49a"; cx.lineWidth=Math.max(1,(sp.joint||2)*kk); cx.stroke(); });
@@ -4430,7 +4448,7 @@ function buildScene(){
           r.studs.forEach(st=>{ const xa=st.x-dxs; const z1=Math.min(st.y1,hl); if(xa>=a-1&&z1>st.y0){ const m=v3Box(s,xa,xa+FL,l.o0,l.o1,st.y0,z1,M.metal); m.userData=tag; scene.add(m); } });
           r.rails.forEach(rl=>{ if(rl.y0<hl){ const m=v3Box(s,Math.max(a,rl.x0-dxs),Math.min(b,rl.x1-dxs),l.o0,l.o1,rl.y0,Math.min(rl.y1,hl),M.metal); m.userData=tag; scene.add(m); } });
           return; }
-        const mat = l.k==="pierre"?M.stone : l.k==="fibre"?M.fibre : l.k==="mem"?M.mem : l.k==="pla"?M.pla : l.k==="end"?M.end : finMat(w,paintColor(w));
+        const mat = l.k==="pierre"?Msup(w) : l.k==="fibre"?M.fibre : l.k==="mem"?M.mem : l.k==="pla"?M.pla : l.k==="end"?M.end : finMat(w,paintColor(w));
         if(l.k==="mem"){ v3Tapes(scene,s,w,Math.max(l.o1,l.o0+3),hl,M.tape,a); v3MemLes(scene,pick,s,w,a,b,l.o0,Math.max(l.o1,l.o0+3),hl,holes,M.mem,M.cap,tag); return; }
         if(l.k==="pla"&&j===n-1||(l.k==="pla"&&ec)) v3Joints(scene,s,w,l.o1,hl,a,ec?Math.min(b,a0+(b-a0)*(j+1)/n):b,holes);
         const m=v3Slab(s,a,b,l.o0,Math.max(l.o1,l.o0+(l.k==="mem"?3:1)),0,hl,holes,V.res&&!["pierre","fibre","mem"].includes(l.k)?[v3Mat(l.k==="pla"?"#e8e7e2":l.k==="end"?"#f3f1ea":paintColor(w),RS),v3Mat("#fbfbf8",RS)]:[mat,l.k==="pierre"?M.cap:mat]); if(m){ m.userData=tag; scene.add(m); pick.push(m); }
