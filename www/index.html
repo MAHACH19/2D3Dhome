@@ -3638,10 +3638,17 @@ function onyxGeo(room){ const K=kitCfg(room); if(!K.on) return null; const PL=pl
     const hA=sideA?(cpOk.length?cpOk[0].h:Hc):0, hB=sideB?(cpOk.length?cpOk[cpOk.length-1].h:Hc):0;
     if(sideA) pieces.push({h:hA,l:sideL,n:`Crédence de côté ${nm}, début (contre ${(pw.name||"").split(" — ").pop()})`,t:"cred",w});
     if(sideB) pieces.push({h:hB,l:sideL,n:`Crédence de côté ${nm}, fin (contre ${(rw[(i+1)%rw.length].name||"").split(" — ").pop()})`,t:"cred",w});
+    // v157 : sur les murs de côté, le carrelage monte jusqu'au plafond (ou sous le coffrage), devant les meubles hauts
+    const sideUp=[]; try{ const ch=ceilFinH(room,roomGeom(room));
+      [[sideA,hA,rn.a,"début"],[sideB,hB,rn.b,"fin"]].forEach(([on,h,xe,lab])=>{ if(!on||!(h>20)) return; const z0=ONX.top+h+ONX.J;
+        const zn=zones.filter(zz=>xe>=zz.x0-5&&xe<=zz.x1+5), zt=Math.min(ch,...zn.map(zz=>zz.z))-1; if(zt-z0<30) return;
+        const hu=its.filter(o=>o.k.t==="haut"&&o.b.z0<zt&&o.b.z1>z0&&(Math.abs(o.it.x-xe)<25||Math.abs(o.it.x+o.k.w-xe)<25)), dd=hu.length?Math.max(...hu.map(o=>o.b.d-1))+ONX.J:ONX.cred;
+        const l=Math.round((ONX.front+ONX.th-dd)*10)/10; if(l<30) return; let z=z0, n=0; while(zt-z>1){ const hh=Math.min(ONX.T,zt-z); n++;
+          sideUp.push({end:lab,z0:z,h:Math.round(hh*10)/10,d0:dd,l}); pieces.push({h:Math.round(hh*10)/10,l,n:`Crédence de côté ${nm}, ${lab}, haut${n>1?" "+n:""} (jusqu'au plafond)`,t:"cred",w}); z+=hh+ONX.J; } }); }catch(e){}
     if(endA) pieces.push({h:Math.ceil(ONX.nez)+2,l:ONX.P,n:`Chant de côté ${nm}, début (onglet 45°)`,t:"nez",w});
     if(endB) pieces.push({h:Math.ceil(ONX.nez)+2,l:ONX.P,n:`Chant de côté ${nm}, fin (onglet 45°)`,t:"nez",w});
     const cuts=its.filter(o=>o.k.sink||o.k.hob).map(o=>{ const m=o.it.x+o.k.w/2, sg=segs.findIndex(q=>m>=q.a-1&&m<=q.b+1); return {n:o.k.sink?"évier":"plaque de cuisson",m,seg:sg+1,dx:sg>=0?m-segs[sg].a:0}; });
-    out.push({w,nm,a,b,L,segs,Hc,zc1,cornerA,endA,endB,cuts,credParts,sideA:hA,sideB:hB,sideL}); });
+    out.push({w,nm,a,b,L,segs,Hc,zc1,cornerA,endA,endB,cuts,credParts,sideA:hA,sideB:hB,sideL,sideUp}); });
   // découpe des carreaux : bandes sur toute la largeur du carreau, regroupées par hauteur (premier qui rentre, plus grandes d'abord)
   const tiles=[]; [...pieces].sort((p,q)=>q.h-p.h||q.l-p.l).forEach(p=>{ let ok=false;
     for(const t of tiles){ for(const r of t.rows){ if(p.h<=r.h+0.6&&r.h-p.h<=130&&r.used+ONX.K+p.l<=ONX.T+0.1){ r.p.push(p); r.used+=ONX.K+p.l; ok=true; break; } } if(ok) break; }
@@ -4671,6 +4678,7 @@ function buildScene(){
           if(R&&R.Hc>20){ const ca=R.cornerA?R.a-ONX.front:R.a, ct=marbleTex(PL).clone(); ct.needsUpdate=true; ct.repeat.set((rn.b-ca)/1200,R.Hc/1200);
             const cm=v3Mat("#ffffff",{map:ct,roughness:.18}); (R.credParts&&R.credParts.length?R.credParts:[{a:ca,b:rn.b,h:R.Hc}]).filter(p=>p.h>20).forEach(p=>{ const t2=ct.clone(); t2.needsUpdate=true; t2.repeat.set((p.b-p.a)/1200,p.h/1200); t2.offset.set((p.a-ca)/1200,0); scene.add(v3Box(s,p.a,p.b,g.T,g.T+ONX.cred,ONX.top,ONX.top+p.h,v3Mat("#ffffff",{map:t2,roughness:.18}))); });
             R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.cred,g.T+ONX.cred+0.5,ONX.top,ONX.top+R.Hc,v3Mat("#3a3b3d"))));
+            (R.sideUp||[]).forEach(q=>{ const x0=q.end==="début"?R.a:R.b-ONX.cred, t3=marbleTex(PL).clone(); t3.needsUpdate=true; t3.repeat.set(q.l/1200,q.h/1200); scene.add(v3Box(s,x0,x0+ONX.cred,g.T+q.d0,g.T+q.d0+q.l,q.z0,q.z0+q.h,v3Mat("#ffffff",{map:t3,roughness:.18}))); });
             [[R.sideA,R.a,R.a+ONX.cred],[R.sideB,R.b-ONX.cred,R.b]].forEach(([h,x0,x1])=>{ if(!(h>20)) return; const t3=marbleTex(PL).clone(); t3.needsUpdate=true; t3.repeat.set(R.sideL/1200,h/1200); scene.add(v3Box(s,x0,x1,g.T+ONX.cred,g.T+ONX.front+ONX.th,ONX.top,ONX.top+h,v3Mat("#ffffff",{map:t3,roughness:.18}))); }); } }
         else { const m=v3Box(s,rn.a,rn.b,g.T,g.T+635,880,918,wt); m.userData={kind:"plan",room}; scene.add(m); }
         K.items.filter(it=>it.wall===wid(w)).forEach(it=>{ const kk=kitItem(it); if(!kk||kk.t!=="bas") return; const mx=it.x+kk.w/2;
