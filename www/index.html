@@ -3766,7 +3766,7 @@ function kitMaterials(room){
     A("Vis wedi + rondelles 36 mm","crédence : dans les montants (6 par m²)",Math.ceil(OG.m2wc*6/50)*50||50,"u");
     A("Bande d'armature wedi (joints des panneaux et angle plan / crédence)","rouleau de 50 m",1,"u");
     A("Colle carrelage C2S1 déformable grand format (sac 25 kg)",`double encollage ≈ 6 kg/m² sur ${fr(m2,2)} m²`,Math.max(1,Math.ceil(m2*6/25)),"sac(s)");
-    A("Joint époxy gris (cuisine, anti-taches) · 2 kg","joints de 2 mm",1,"u");
+    A("Joint époxy teinté gris clair assorti au carreau (aspect sans joint) · 2 kg","joints fins de 2 mm, couleur du fond du carreau",1,"u");
     A("Silicone sanitaire gris assorti","angle plan / crédence, évier",2,"u");
     A("Croisillons autonivelants 1,5 mm + cales","grands formats",1,"lot");
     rows.push({cat:"Outillage",des:"Ventouses de manutention double (carreaux 120×120)",det:"2 paires (Vevor)",q:2,u:"u"},{cat:"Outillage",des:"Disque diamant grès cérame Ø 125 + guide pour onglet 45°",det:"coupes d'évier, de plaque et chants",q:1,u:"u"}); }
@@ -4674,10 +4674,10 @@ function buildScene(){
         else if(PL.bc) wt=bcMat({...bcCfg(room),col:pc},[(rn.b-rn.a)/1500,635/1500]);
         if(PL.wedi){ const OG=onyxGeo(room), R=OG&&OG.runs.find(q=>q.w===w&&q.b===rn.b), a0=R?R.a:rn.a, tm=wt;
           const m=v3Box(s,a0,rn.b,g.T+ONX.wedi,g.T+ONX.front+ONX.th,ONX.cab,ONX.top,tm); m.userData={kind:"plan",room}; scene.add(m);
-          if(R) R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.wedi,g.T+ONX.front+ONX.th+0.5,ONX.top-1,ONX.top+0.3,v3Mat("#3a3b3d"))));
+          if(R) R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.wedi,g.T+ONX.front+ONX.th+0.5,ONX.top-1,ONX.top+0.3,v3Mat("#c9cbcc",{roughness:.4}))));
           if(R&&R.Hc>20){ const ca=R.cornerA?R.a-ONX.front:R.a, ct=marbleTex(PL).clone(); ct.needsUpdate=true; ct.repeat.set((rn.b-ca)/1200,R.Hc/1200);
             const cm=v3Mat("#ffffff",{map:ct,roughness:.18}); (R.credParts&&R.credParts.length?R.credParts:[{a:ca,b:rn.b,h:R.Hc}]).filter(p=>p.h>20).forEach(p=>{ const t2=ct.clone(); t2.needsUpdate=true; t2.repeat.set((p.b-p.a)/1200,p.h/1200); t2.offset.set((p.a-ca)/1200,0); scene.add(v3Box(s,p.a,p.b,g.T,g.T+ONX.cred,ONX.top,ONX.top+p.h,v3Mat("#ffffff",{map:t2,roughness:.18}))); });
-            R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.cred,g.T+ONX.cred+0.5,ONX.top,ONX.top+R.Hc,v3Mat("#3a3b3d"))));
+            R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.cred,g.T+ONX.cred+0.5,ONX.top,ONX.top+R.Hc,v3Mat("#c9cbcc",{roughness:.4}))));
             (R.sideUp||[]).forEach(q=>{ const x0=q.end==="début"?R.a:R.b-ONX.cred, t3=marbleTex(PL).clone(); t3.needsUpdate=true; t3.repeat.set(q.l/1200,q.h/1200); scene.add(v3Box(s,x0,x0+ONX.cred,g.T+q.d0,g.T+q.d0+q.l,q.z0,q.z0+q.h,v3Mat("#ffffff",{map:t3,roughness:.18}))); });
             [[R.sideA,R.a,R.a+ONX.cred],[R.sideB,R.b-ONX.cred,R.b]].forEach(([h,x0,x1])=>{ if(!(h>20)) return; const t3=marbleTex(PL).clone(); t3.needsUpdate=true; t3.repeat.set(R.sideL/1200,h/1200); scene.add(v3Box(s,x0,x1,g.T+ONX.cred,g.T+ONX.front+ONX.th,ONX.top,ONX.top+h,v3Mat("#ffffff",{map:t3,roughness:.18}))); }); } }
         else { const m=v3Box(s,rn.a,rn.b,g.T,g.T+635,880,918,wt); m.userData={kind:"plan",room}; scene.add(m); }
