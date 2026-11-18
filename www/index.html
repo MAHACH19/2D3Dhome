@@ -3632,13 +3632,19 @@ function onyxGeo(room){ const K=kitCfg(room); if(!K.on) return null; const PL=pl
       if(Hc>20){ const cp=credParts.filter(p=>p.si===si&&p.h>20); if(!cp.length) cp.push({a:q.a,b:q.b,h:Hc}); const one=cp.length===1;
         cp.forEach((p,pi)=>pieces.push({h:p.h,l:Math.round((p.b-p.a)*10)/10,n:`Crédence ${nm} n°${si+1}${one?"":String.fromCharCode(97+pi)}${p.h<Hc-0.5?" (sous le coffrage)":""}`,t:"cred",w,a:p.a})); }
       pieces.push({h:Math.ceil(ONX.nez)+2,l,n:`Chant avant ${nm} n°${si+1} (onglet 45°)`,t:"nez",w,a:q.a}); });
+    // crédence sur les murs de côté (tronçon arrêté contre un mur)
+    const sideL=Math.round((ONX.front+ONX.th-ONX.cred)*10)/10, nxR=runs.some(q=>q!==rn&&rw.indexOf(q.w)===(i+1)%rw.length&&q.a<=kitUse(q.w)[0]+5);
+    const sideA=!cornerA&&rn.a<=u0+5&&Hc>20, sideB=rn.b>=u1-5&&!nxR&&Hc>20, cpOk=credParts.filter(p=>p.h>20);
+    const hA=sideA?(cpOk.length?cpOk[0].h:Hc):0, hB=sideB?(cpOk.length?cpOk[cpOk.length-1].h:Hc):0;
+    if(sideA) pieces.push({h:hA,l:sideL,n:`Crédence de côté ${nm}, début (contre ${(pw.name||"").split(" — ").pop()})`,t:"cred",w});
+    if(sideB) pieces.push({h:hB,l:sideL,n:`Crédence de côté ${nm}, fin (contre ${(rw[(i+1)%rw.length].name||"").split(" — ").pop()})`,t:"cred",w});
     if(endA) pieces.push({h:Math.ceil(ONX.nez)+2,l:ONX.P,n:`Chant de côté ${nm}, début (onglet 45°)`,t:"nez",w});
     if(endB) pieces.push({h:Math.ceil(ONX.nez)+2,l:ONX.P,n:`Chant de côté ${nm}, fin (onglet 45°)`,t:"nez",w});
     const cuts=its.filter(o=>o.k.sink||o.k.hob).map(o=>{ const m=o.it.x+o.k.w/2, sg=segs.findIndex(q=>m>=q.a-1&&m<=q.b+1); return {n:o.k.sink?"évier":"plaque de cuisson",m,seg:sg+1,dx:sg>=0?m-segs[sg].a:0}; });
-    out.push({w,nm,a,b,L,segs,Hc,zc1,cornerA,endA,endB,cuts,credParts}); });
+    out.push({w,nm,a,b,L,segs,Hc,zc1,cornerA,endA,endB,cuts,credParts,sideA:hA,sideB:hB,sideL}); });
   // découpe des carreaux : bandes sur toute la largeur du carreau, regroupées par hauteur (premier qui rentre, plus grandes d'abord)
   const tiles=[]; [...pieces].sort((p,q)=>q.h-p.h||q.l-p.l).forEach(p=>{ let ok=false;
-    for(const t of tiles){ for(const r of t.rows){ if(Math.abs(r.h-p.h)<0.6&&r.used+ONX.K+p.l<=ONX.T+0.1){ r.p.push(p); r.used+=ONX.K+p.l; ok=true; break; } } if(ok) break; }
+    for(const t of tiles){ for(const r of t.rows){ if(p.h<=r.h+0.6&&r.h-p.h<=130&&r.used+ONX.K+p.l<=ONX.T+0.1){ r.p.push(p); r.used+=ONX.K+p.l; ok=true; break; } } if(ok) break; }
     if(!ok) for(const t of tiles){ if(t.used+ONX.K+p.h<=ONX.T+0.1){ t.rows.push({h:p.h,used:p.l,p:[p]}); t.used+=ONX.K+p.h; ok=true; break; } }
     if(!ok) tiles.push({used:p.h,rows:[{h:p.h,used:p.l,p:[p]}]}); });
   tiles.forEach((t,i)=>{ t.i=i+1; t.rows.forEach(r=>r.p.forEach(p=>p.tile=i+1)); });
@@ -3647,7 +3653,7 @@ function onyxGeo(room){ const K=kitCfg(room); if(!K.on) return null; const PL=pl
   return {runs:out,pieces,tiles,m2p,m2c,m2n,lenP,lenC,m2wc}; }
 function onyxSvg(G){ const sc=0.13, T=ONX.T*sc, col={plan:"#b3b5b6",cred:"#cfd1d2",nez:"#e4e5e6"};
   return `<div style="display:flex;flex-wrap:wrap;gap:8px">${G.tiles.map(t=>{ let y=0, g="";
-    t.rows.forEach(r=>{ let x=0; r.p.forEach(p=>{ g+=`<rect x="${x*sc}" y="${y*sc}" width="${p.l*sc}" height="${r.h*sc}" fill="${col[p.t]}" stroke="#222" stroke-width=".6"/>`; if(r.h*sc>9) g+=`<text x="${(x+p.l/2)*sc}" y="${(y+r.h/2)*sc+3}" text-anchor="middle" font-size="${Math.min(8,r.h*sc*.5)}" fill="#111">${esc(p.n.replace(/ \(onglet 45°\)/,"").replace(/^Chant avant /,"Chant ").slice(0,24))}</text>`; x+=p.l+ONX.K; }); y+=r.h+ONX.K; });
+    t.rows.forEach(r=>{ let x=0; r.p.forEach(p=>{ g+=`<rect x="${x*sc}" y="${y*sc}" width="${p.l*sc}" height="${p.h*sc}" fill="${col[p.t]}" stroke="#222" stroke-width=".6"/>`; if(r.h*sc>9) g+=`<text x="${(x+p.l/2)*sc}" y="${(y+r.h/2)*sc+3}" text-anchor="middle" font-size="${Math.min(8,r.h*sc*.5)}" fill="#111">${esc(p.n.replace(/ \(onglet 45°\)/,"").replace(/^Chant avant /,"Chant ").slice(0,24))}</text>`; x+=p.l+ONX.K; }); y+=r.h+ONX.K; });
     return `<figure style="margin:0;text-align:center"><svg viewBox="-1 -1 ${T+2} ${T+2}" width="${T+2}" height="${T+2}" style="background:#f4f4f2"><rect x="0" y="0" width="${T}" height="${T}" fill="none" stroke="#555" stroke-dasharray="3 2"/>${g}</svg><figcaption class="cap">Carreau ${t.i}</figcaption></figure>`; }).join("")}</div>`; }
 function onyxPanel(room){ const G=onyxGeo(room); if(!G||!G.runs.length) return "";
   const nT=G.tiles.length, nB=Math.ceil(nT/ONX.box);
@@ -4648,7 +4654,8 @@ function buildScene(){
           if(R) R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.wedi,g.T+ONX.front+ONX.th+0.5,ONX.top-1,ONX.top+0.3,v3Mat("#3a3b3d"))));
           if(R&&R.Hc>20){ const ca=R.cornerA?R.a-ONX.front:R.a, ct=marbleTex(PL).clone(); ct.needsUpdate=true; ct.repeat.set((rn.b-ca)/1200,R.Hc/1200);
             const cm=v3Mat("#ffffff",{map:ct,roughness:.18}); (R.credParts&&R.credParts.length?R.credParts:[{a:ca,b:rn.b,h:R.Hc}]).filter(p=>p.h>20).forEach(p=>{ const t2=ct.clone(); t2.needsUpdate=true; t2.repeat.set((p.b-p.a)/1200,p.h/1200); t2.offset.set((p.a-ca)/1200,0); scene.add(v3Box(s,p.a,p.b,g.T,g.T+ONX.cred,ONX.top,ONX.top+p.h,v3Mat("#ffffff",{map:t2,roughness:.18}))); });
-            R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.cred,g.T+ONX.cred+0.5,ONX.top,ONX.top+R.Hc,v3Mat("#3a3b3d")))); } }
+            R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.cred,g.T+ONX.cred+0.5,ONX.top,ONX.top+R.Hc,v3Mat("#3a3b3d"))));
+            [[R.sideA,R.a,R.a+ONX.cred],[R.sideB,R.b-ONX.cred,R.b]].forEach(([h,x0,x1])=>{ if(!(h>20)) return; const t3=marbleTex(PL).clone(); t3.needsUpdate=true; t3.repeat.set(R.sideL/1200,h/1200); scene.add(v3Box(s,x0,x1,g.T+ONX.cred,g.T+ONX.front+ONX.th,ONX.top,ONX.top+h,v3Mat("#ffffff",{map:t3,roughness:.18}))); }); } }
         else { const m=v3Box(s,rn.a,rn.b,g.T,g.T+635,880,918,wt); m.userData={kind:"plan",room}; scene.add(m); }
         K.items.filter(it=>it.wall===wid(w)).forEach(it=>{ const kk=kitItem(it); if(!kk||kk.t!=="bas") return; const mx=it.x+kk.w/2;
           const dz=PL.wedi?ONX.top-918:0, dd=PL.wedi?ONX.cred:0;
