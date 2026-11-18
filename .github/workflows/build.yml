@@ -31,7 +31,9 @@ jobs:
           chmod +x gradlew
           ./gradlew --no-daemon assembleDebug
       - name: Renommer
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Calepinage.apk
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk Calepinage.apk
+          cp Calepinage.apk Calepinage-2-${{ github.run_number }}.apk
       - uses: actions/upload-artifact@v4
         with:
           name: Calepinage-apk
@@ -45,5 +47,7 @@ jobs:
           body: |
             Télécharger **Calepinage.apk** sur le téléphone, l'ouvrir et autoriser l'installation.
             Version Capacitor : s'installe par-dessus l'ancienne, vos projets sont repris automatiquement.
-          files: Calepinage.apk
+          files: |
+            Calepinage.apk
+            Calepinage-2-${{ github.run_number }}.apk
           make_latest: true
