@@ -3473,6 +3473,7 @@ const PLANS=[ // gammes vues sur ikea.com (nov. 2026) : stratifié 2,8 cm (EKBAC
   {n:"SÄLJAN stratifié effet béton",c:"#a9a7a2"},{n:"SÄLJAN stratifié noir",c:"#222"},
   {n:"KARLBY chêne plaqué",c:"#b88a57"},{n:"KARLBY noyer plaqué",c:"#6d4a33"},{n:"MÖLLEKULLA chêne massif",c:"#c4955f"},
   {n:"KASKER quartz sur mesure noir effet marbre blanc · 2 cm",c:"#1f1f22",v:"#e8e6e0",tile:0,marb:1},{n:"Plan quartz sur mesure blanc",c:"#f4f3ef"},{n:"Plan quartz sur mesure noir",c:"#1e1e1e"},
+  {n:"Carrelage Piemme Majestic Onyx Iron Grey levigato 120×120 sur Wedi 5 cm",c:"#56595d",tile:1,v:"#b9bcc0",wedi:1,onyx:1},
   {n:"Carrelage marbré blanc veiné or (Calacatta)",c:"#f2efe9",tile:1,v:"#b89a6a"},{n:"Carrelage marbré blanc veiné gris (Carrare)",c:"#eceae6",tile:1,v:"#8e9196"},
   {n:"Carrelage marbré noir veiné blanc (Marquina)",c:"#1f1f22",tile:1,v:"#e8e6e0"},{n:"Carrelage marbré vert (Verde Alpi)",c:"#2f4a3e",tile:1,v:"#cfd8cf"},
   {n:"Carrelage marbré beige (Crema Marfil)",c:"#e3d4ba",tile:1,v:"#b9a07a"},
@@ -3572,8 +3573,60 @@ function kitChecks(room){
 /* ---------- Cuisine : plans métriques cotés (élévation de chaque mur, vue de dessus) ---------- */
 function kitUse(w){ const rw=roomWalls(w), i=rw.indexOf(w), a=roomAdjust(w), nx=rw.length>1&&(i<rw.length-1||w.angle!=="libre")?rw[(i+1)%rw.length]:null;
   return [Math.max(0,-a.dx), w.L-(a.end==="rentrant"&&nx?wT(nx):0)]; }
+/* ---------- Plan de travail + crédence en carrelage 120×120 sur Wedi 5 cm : calepinage, coupes, carreaux ---------- */
+const ONX={T:1200,J:2,K:3,th:8.5,wedi:50,colle:5,cab:880,P:600,box:2,boxM2:2.88,ref:"Piemme Majestic Onyx Iron Grey levigato 120×120 rectifié (réf. 05536)"};
+ONX.top=ONX.cab+ONX.wedi+ONX.colle+ONX.th; ONX.nez=ONX.wedi+ONX.colle+ONX.th; ONX.cred=ONX.wedi+ONX.colle+ONX.th; ONX.front=ONX.wedi+ONX.J+ONX.P;
+function onyxSeg(L,a,avoid){ const T=ONX.T, J=ONX.J, n0=Math.max(1,Math.ceil((L+J)/(T+J))), cands=[];
+  const mk=lens=>{ let x=a; const segs=lens.map(l=>{ const s0={a:x,b:x+l}; x+=l+J; return s0; }); return segs; };
+  if(n0===1) cands.push([L]); else {
+    const full=n0-1, rest=L-full*(T+J); cands.push([...Array(full).fill(T),rest]); cands.push([rest,...Array(full).fill(T)]);
+    if(n0>2){ const r2=(L-(n0-2)*(T+J)-J)/2; if(r2>0&&r2<=T) cands.push([r2,...Array(n0-2).fill(T),r2]); }
+    const eq=(L-(n0-1)*J)/n0; cands.push(Array(n0).fill(eq)); }
+  let best=null; cands.forEach((lens,ci)=>{ const sg=mk(lens); let sc=ci*0.1+sg.length*5; sg.slice(1).forEach(q=>{ if(avoid.some(([u,v])=>q.a>u-60&&q.a<v+60)) sc+=1000; }); sg.forEach(q=>{ if(q.b-q.a<250) sc+=200; }); if(!best||sc<best.sc) best={sc,sg}; });
+  return best.sg.map(q=>({a:Math.round(q.a*10)/10,b:Math.round(q.b*10)/10})); }
+function onyxGeo(room){ const K=kitCfg(room); if(!K.on) return null; const PL=planOf(K,room); if(!PL.wedi) return null;
+  const runs=kitRuns(room), rw=S.walls.filter(w=>(w.room||"")===room), out=[], pieces=[];
+  runs.forEach((rn,ri)=>{ const w=rn.w, [u0,u1]=kitUse(w), its=K.items.filter(it=>it.wall===wid(w)).map(it=>({it,k:kitItem(it),b:kitBox(it,K,w.H)})).filter(o=>o.k&&o.b);
+    // angle : si le tronçon précédent (mur d'avant) finit dans l'angle, le plan de ce mur commence après sa profondeur
+    const i=rw.indexOf(w), pw=rw[(i+rw.length-1)%rw.length], pr=runs.find(q=>q.w===pw&&q.b>=kitUse(pw)[1]-5);
+    const cornerA=rn.a<=u0+5&&pr&&pw!==w, a=cornerA?rn.a+ONX.front:rn.a, b=rn.b, L=b-a; if(L<50) return;
+    const avoid=its.filter(o=>o.k.sink||o.k.hob).map(o=>[o.it.x,o.it.x+o.k.w]);
+    const segs=onyxSeg(L,a,avoid);
+    const high=its.filter(o=>o.k.t==="haut"&&o.it.x<rn.b&&o.it.x+o.k.w>rn.a).map(o=>o.b.z0), zc1=high.length?Math.min(...high):ONX.top+600, Hc=Math.max(0,Math.round((zc1-ONX.top-ONX.J)*10)/10);
+    const tall=x=>its.some(o=>(o.k.t==="col"||o.k.t==="app")&&o.b.z1>1200&&(Math.abs(o.it.x+o.k.w-x)<15||Math.abs(o.it.x-x)<15));
+    const endA=!cornerA&&!(rn.a<=u0+5)&&!tall(rn.a), endB=!(rn.b>=u1-5)&&!tall(rn.b)&&!runs.some(q=>q!==rn&&rw.indexOf(q.w)===(i+1)%rw.length&&q.a<=kitUse(q.w)[0]+5&&rn.b>=u1-5);
+    const nm=(w.name||"").split(" — ").pop(); let k=0;
+    segs.forEach((q,si)=>{ const l=Math.round((q.b-q.a)*10)/10; k++;
+      pieces.push({h:ONX.P,l,n:`Plan ${nm} n°${si+1}`,t:"plan",w,a:q.a});
+      if(Hc>20) pieces.push({h:Hc,l,n:`Crédence ${nm} n°${si+1}`,t:"cred",w,a:q.a});
+      pieces.push({h:Math.ceil(ONX.nez)+2,l,n:`Chant avant ${nm} n°${si+1} (onglet 45°)`,t:"nez",w,a:q.a}); });
+    if(endA) pieces.push({h:Math.ceil(ONX.nez)+2,l:ONX.P,n:`Chant de côté ${nm}, début (onglet 45°)`,t:"nez",w});
+    if(endB) pieces.push({h:Math.ceil(ONX.nez)+2,l:ONX.P,n:`Chant de côté ${nm}, fin (onglet 45°)`,t:"nez",w});
+    const cuts=its.filter(o=>o.k.sink||o.k.hob).map(o=>{ const m=o.it.x+o.k.w/2, sg=segs.findIndex(q=>m>=q.a-1&&m<=q.b+1); return {n:o.k.sink?"évier":"plaque de cuisson",m,seg:sg+1,dx:sg>=0?m-segs[sg].a:0}; });
+    out.push({w,nm,a,b,L,segs,Hc,zc1,cornerA,endA,endB,cuts}); });
+  // découpe des carreaux : bandes sur toute la largeur du carreau, regroupées par hauteur (premier qui rentre, plus grandes d'abord)
+  const tiles=[]; [...pieces].sort((p,q)=>q.h-p.h||q.l-p.l).forEach(p=>{ let ok=false;
+    for(const t of tiles){ for(const r of t.rows){ if(Math.abs(r.h-p.h)<0.6&&r.used+ONX.K+p.l<=ONX.T+0.1){ r.p.push(p); r.used+=ONX.K+p.l; ok=true; break; } } if(ok) break; }
+    if(!ok) for(const t of tiles){ if(t.used+ONX.K+p.h<=ONX.T+0.1){ t.rows.push({h:p.h,used:p.l,p:[p]}); t.used+=ONX.K+p.h; ok=true; break; } }
+    if(!ok) tiles.push({used:p.h,rows:[{h:p.h,used:p.l,p:[p]}]}); });
+  tiles.forEach((t,i)=>{ t.i=i+1; t.rows.forEach(r=>r.p.forEach(p=>p.tile=i+1)); });
+  const m2p=pieces.filter(p=>p.t==="plan").reduce((x,p)=>x+p.h*p.l,0)/1e6, m2c=pieces.filter(p=>p.t==="cred").reduce((x,p)=>x+p.h*p.l,0)/1e6, m2n=pieces.filter(p=>p.t==="nez").reduce((x,p)=>x+p.h*p.l,0)/1e6;
+  const lenP=out.reduce((x,r)=>x+r.L,0), lenC=out.reduce((x,r)=>x+(r.Hc>20?r.b-(r.cornerA?r.a-ONX.front:r.a):0),0), m2wc=out.reduce((x,r)=>x+(r.Hc>20?(r.b-(r.cornerA?r.a-ONX.front:r.a))*Math.min(600,r.zc1-ONX.cab):0),0)/1e6;
+  return {runs:out,pieces,tiles,m2p,m2c,m2n,lenP,lenC,m2wc}; }
+function onyxSvg(G){ const sc=0.13, T=ONX.T*sc, col={plan:"#8a8f96",cred:"#b4b8bd",nez:"#d9dbdd"};
+  return `<div style="display:flex;flex-wrap:wrap;gap:8px">${G.tiles.map(t=>{ let y=0, g="";
+    t.rows.forEach(r=>{ let x=0; r.p.forEach(p=>{ g+=`<rect x="${x*sc}" y="${y*sc}" width="${p.l*sc}" height="${r.h*sc}" fill="${col[p.t]}" stroke="#222" stroke-width=".6"/>`; if(r.h*sc>9) g+=`<text x="${(x+p.l/2)*sc}" y="${(y+r.h/2)*sc+3}" text-anchor="middle" font-size="${Math.min(8,r.h*sc*.5)}" fill="#111">${esc(p.n.replace(/ \(onglet 45°\)/,"").replace(/^Chant avant /,"Chant ").slice(0,24))}</text>`; x+=p.l+ONX.K; }); y+=r.h+ONX.K; });
+    return `<figure style="margin:0;text-align:center"><svg viewBox="-1 -1 ${T+2} ${T+2}" width="${T+2}" height="${T+2}" style="background:#f4f4f2"><rect x="0" y="0" width="${T}" height="${T}" fill="none" stroke="#555" stroke-dasharray="3 2"/>${g}</svg><figcaption class="cap">Carreau ${t.i}</figcaption></figure>`; }).join("")}</div>`; }
+function onyxPanel(room){ const G=onyxGeo(room); if(!G||!G.runs.length) return "";
+  const nT=G.tiles.length, nB=Math.ceil(nT/ONX.box);
+  return `<details open style="margin-top:10px"><summary style="cursor:pointer"><b>Plan de travail et crédence en carrelage 120×120 : calepinage et coupes</b></summary>
+    <p class="cap" style="margin:6px 0">${esc(ONX.ref)}, ${ONX.th} mm, joint ${ONX.J} mm. Sur Wedi 5 cm : plan fini à <b>${cm(ONX.top)} cm</b> du sol (caissons ${cm(ONX.cab)} + Wedi 5 + colle 0,5 + carreau 0,85), avant du plan à ${cm(ONX.front+ONX.th)} cm du mur fini, chant de ${cm(ONX.nez)} cm coupé en onglet 45°.</p>
+    <div class="tbl-wrap"><table class="cutl"><thead><tr><th>Mur</th><th style="text-align:right">Plan</th><th style="text-align:right">Crédence (h)</th><th>Joints du plan (depuis le début du mur)</th></tr></thead><tbody>${G.runs.map(r=>`<tr><td>${esc(r.nm)}${r.cornerA?" (après l'angle)":""}</td><td class="n">${cm(r.L)}</td><td class="n">${r.Hc>20?cm(r.Hc):"—"}</td><td>${r.segs.slice(1).map(q=>cm(q.a)).join(" · ")||"aucun"}${r.cuts.map(c=>`<br><span class="cap">${c.n} : pièce n°${c.seg}, axe à ${cm(c.dx)} cm du bord gauche de la pièce</span>`).join("")}</td></tr>`).join("")}</tbody></table></div>
+    <div class="tbl-wrap"><table class="cutl"><thead><tr><th>Pièce</th><th style="text-align:right">Longueur × largeur</th><th style="text-align:right">Carreau</th></tr></thead><tbody>${G.pieces.map(p=>`<tr><td>${esc(p.n)}</td><td class="n"><b>${cm(p.l)} × ${cm(p.h)}</b></td><td class="n">${p.tile}</td></tr>`).join("")}</tbody></table></div>
+    ${onyxSvg(G)}
+    <p class="cap" style="margin:6px 0"><b>${nT} carreaux</b> (${nB} carton${nB>1?"s":""} de 2) : chaque carreau donne une bande de plan (${cm(ONX.P)} cm) et, avec la chute, la crédence de la même longueur ; les chants sortent d'un carreau à part. Joints alignés entre plan, crédence et chant, jamais dans l'évier ni la plaque. Numérotez les carreaux au dos dans l'ordre de pose pour suivre le veinage, et gardez 1 carreau de réserve si possible.</p></details>`; }
 function kitFc(it,K,k){ return it.c||k.c||(FACADES.find(f=>f.n===(it.fac||K.facade))||FACADES[0]).c; }
-function kitPlanTh(PL){ return /3,8 cm/.test(PL.n)?38:/2,8 cm/.test(PL.n)?28:PL.tile?30:20; }
+function kitPlanTh(PL){ return PL.wedi?ONX.top-880:/3,8 cm/.test(PL.n)?38:/2,8 cm/.test(PL.n)?28:PL.tile?30:20; }
 function kitElevSvg(w){
   const room=w.room||"", K=kitCfg(room); if(!K.on) return "";
   const its=K.items.map((it,i)=>({it,i,b:it.wall===wid(w)?kitBox(it,K,w.H):null})).filter(o=>o.b); if(!its.length) return "";
@@ -3649,7 +3702,20 @@ function kitMaterials(room){
     if(HD.m!=="sans") add(`Poignée ${(HANDLES.find(h=>h[0]===HD.m)||[])[1]} · ${(HFIN.find(h=>h[0]===HD.f)||[])[1]}`,"une par porte ou tiroir",nh,"u"); }
   const runs=kitRuns(room), lenT=runs.reduce((a,r)=>a+(r.b-r.a),0);
   const PL=planOf(K,room);
-  if(PL.tile){ const m2=lenT*650/1e6, nez=lenT/1000;
+  const OG=PL.wedi?onyxGeo(room):null;
+  if(OG){ const C="Plan et crédence carrelés", A=(d,t,q,u)=>{ if(q>0) rows.push({cat:C,des:d,det:t,q,u}); }, nT=OG.tiles.length, m2=OG.m2p+OG.m2c+OG.m2n, pw=OG.runs.reduce((x,r)=>x+Math.ceil(r.L/2500),0), cw=OG.runs.reduce((x,r)=>x+(r.Hc>20?Math.ceil((r.b-(r.cornerA?r.a-ONX.front:r.a))/2500):0),0);
+    A(`${ONX.ref}`,`${nT} carreaux 120×120 d'après le calepinage (plan ${fr(OG.m2p,2)} m², crédence ${fr(OG.m2c,2)} m², chants ${fr(OG.m2n,2)} m²)`,Math.ceil(nT/ONX.box),"carton(s) de 2");
+    A("Panneau wedi Bauplatte 50 mm · 250×60 cm (plan de travail)",`${fr(OG.lenP/1000,2)} m de plan, posé sur les caissons, coupé à ${cm(ONX.P-ONX.J+ONX.J)} cm`,pw,"u");
+    A("Panneau wedi Bauplatte 50 mm · 250×60 cm (crédence, vissé au mur)",`${fr(OG.m2wc,2)} m², du dessus des caissons au bas des meubles hauts`,cw,"u");
+    A("Colle-mastic wedi 610 (cartouche 310 ml)","collage des panneaux sur les caissons et entre eux",Math.max(2,Math.ceil((OG.lenP*2+OG.lenC)/1000/3)),"u");
+    A("Vis wedi + rondelles 36 mm","crédence : dans les montants (6 par m²)",Math.ceil(OG.m2wc*6/50)*50||50,"u");
+    A("Bande d'armature wedi (joints des panneaux et angle plan / crédence)","rouleau de 50 m",1,"u");
+    A("Colle carrelage C2S1 déformable grand format (sac 25 kg)",`double encollage ≈ 6 kg/m² sur ${fr(m2,2)} m²`,Math.max(1,Math.ceil(m2*6/25)),"sac(s)");
+    A("Joint époxy gris (cuisine, anti-taches) · 2 kg","joints de 2 mm",1,"u");
+    A("Silicone sanitaire gris assorti","angle plan / crédence, évier",2,"u");
+    A("Croisillons autonivelants 1,5 mm + cales","grands formats",1,"lot");
+    rows.push({cat:"Outillage",des:"Ventouses de manutention double (carreaux 120×120)",det:"2 paires (Vevor)",q:2,u:"u"},{cat:"Outillage",des:"Disque diamant grès cérame Ø 125 + guide pour onglet 45°",det:"coupes d'évier, de plaque et chants",q:1,u:"u"}); }
+  else if(PL.tile){ const m2=lenT*650/1e6, nez=lenT/1000;
     add("Panneau support plan de travail hydrofuge 20 mm (type Wedi / panneau ciment) · 260×60 cm",`${fr(lenT/1000,2)} m de plan, profondeur 65 cm avec débord`,runs.reduce((a,r)=>a+Math.ceil((r.b-r.a)/2600)*2,0)/2,"u");
     add(`${PL.n} · grand format 60×120 cm, rectifié`,`plan ${fr(m2,2)} m² + chant avant ${fr(nez*0.04,2)} m² + 15 % de coupes`,Math.ceil((m2+nez*0.04)*1.15*10)/10,"m²");
     add("Colle carrelage C2S1 déformable (sac 25 kg)",`≈ 5 kg/m² en double encollage`,Math.max(1,Math.ceil((m2+nez*0.04)*5/25)),"sac");
@@ -3710,6 +3776,7 @@ function kitPanel(w){
     <div class="btns" style="margin-top:8px"><button type="button" data-act="kitadd">Ajouter un meuble sur ce mur</button>${room==="cuisine"?`<button type="button" class="ghost" data-ikea>Remettre ma cuisine IKEA (plan du 13/11)</button>`:""}</div>
     ${(()=>{ try{ const e=kitElevSvg(w); return e?`<details open style="margin-top:10px"><summary style="cursor:pointer"><b>Plan coté de ce mur</b></summary>${e}</details>`:""; }catch(er){ return ""; } })()}
     ${(()=>{ try{ const t=kitTopSvg(room); return t?`<details style="margin-top:6px"><summary style="cursor:pointer"><b>Vue de dessus cotée de la cuisine</b></summary>${t}</details>`:""; }catch(er){ return ""; } })()}
+    ${(()=>{ try{ return onyxPanel(room); }catch(er){ console.warn(er); return ""; } })()}
     ${ck.map(c=>`<div class="ck ${c.ok?"ok":"ko"}"><b>${c.ok?"✓":"!"}</b><span>${esc(c.t)}</span>${c.ref?`<em>${esc(c.ref)}</em>`:""}</div>`).join("")}
     <p class="hint">Dimensions standard du système METOD (élément bas 80 cm + pieds 8 cm, plan 63,5 cm, muraux 37 cm de profondeur), à vérifier sur ikea.fr avant commande. Les prix IKEA changent souvent : saisissez-les dans le détail des prix. Les teintes affichées sont indicatives.</p>`:""}
   </section>`;
@@ -4542,10 +4609,17 @@ function buildScene(){
       if(K.on) kitRuns(room).filter(rn=>rn.w===w).forEach(rn=>{ const PL=planOf(K,room), pc=PL.c; let wt=v3Mat(pc,{roughness:.45});
         if(PL.tile||PL.marb){ const t=marbleTex(PL).clone(); t.needsUpdate=true; t.repeat.set((rn.b-rn.a)/1200,1); wt=v3Mat("#ffffff",{map:t,roughness:.18}); }
         else if(PL.bc) wt=bcMat({...bcCfg(room),col:pc},[(rn.b-rn.a)/1500,635/1500]);
-        const m=v3Box(s,rn.a,rn.b,g.T,g.T+635,880,918,wt); m.userData={kind:"plan",room}; scene.add(m);
+        if(PL.wedi){ const OG=onyxGeo(room), R=OG&&OG.runs.find(q=>q.w===w&&q.b===rn.b), a0=R?R.a:rn.a, tm=wt;
+          const m=v3Box(s,a0,rn.b,g.T+ONX.wedi,g.T+ONX.front+ONX.th,ONX.cab,ONX.top,tm); m.userData={kind:"plan",room}; scene.add(m);
+          if(R) R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.wedi,g.T+ONX.front+ONX.th+0.5,ONX.top-1,ONX.top+0.3,v3Mat("#3a3b3d"))));
+          if(R&&R.Hc>20){ const ca=R.cornerA?R.a-ONX.front:R.a, ct=marbleTex(PL).clone(); ct.needsUpdate=true; ct.repeat.set((rn.b-ca)/1200,R.Hc/1200);
+            scene.add(v3Box(s,ca,rn.b,g.T,g.T+ONX.cred,ONX.top,ONX.top+R.Hc,v3Mat("#ffffff",{map:ct,roughness:.18})));
+            R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.cred,g.T+ONX.cred+0.5,ONX.top,ONX.top+R.Hc,v3Mat("#3a3b3d")))); } }
+        else { const m=v3Box(s,rn.a,rn.b,g.T,g.T+635,880,918,wt); m.userData={kind:"plan",room}; scene.add(m); }
         K.items.filter(it=>it.wall===wid(w)).forEach(it=>{ const kk=kitItem(it); if(!kk||kk.t!=="bas") return; const mx=it.x+kk.w/2;
-          if(kk.sink){ scene.add(v3Box(s,mx-kk.w*0.33,mx+kk.w*0.33,g.T+110,g.T+520,912,920,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50,g.T+80,918,1230,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50,g.T+230,1200,1230,M.steel)); }
-          if(kk.hob){ scene.add(v3Box(s,mx-290,mx+290,g.T+50,g.T+570,918,924,M.dark)); } }); });
+          const dz=PL.wedi?ONX.top-918:0, dd=PL.wedi?ONX.cred:0;
+          if(kk.sink){ scene.add(v3Box(s,mx-kk.w*0.33,mx+kk.w*0.33,g.T+110+dd,g.T+520+dd,912+dz,920+dz,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50+dd,g.T+80+dd,918+dz,1230+dz,M.steel)); scene.add(v3Box(s,mx-15,mx+15,g.T+50+dd,g.T+230+dd,1200+dz,1230+dz,M.steel)); }
+          if(kk.hob){ scene.add(v3Box(s,mx-290,mx+290,g.T+50+dd,g.T+570+dd,918+dz,924+dz,M.dark)); } }); });
       // points électriques sur la face finie
       (w.points||[]).forEach(p=>{ const d=PTS[p.type]||{}; scene.add(v3Box(s,p.x-40,p.x+40,g.T,g.T+12,p.y-40,p.y+40,d.c==="eau"?v3Mat("#2f7fd0"):v3Mat(appCol(),{roughness:/Alu|Titane|Inox|Or|Laiton|Aluminium/.test(appCfg().f)?.35:.5,metalness:/Alu|Titane|Inox|Or|Laiton|Aluminium/.test(appCfg().f)?.6:0}))); });
     }));
@@ -5474,14 +5548,14 @@ const IKEA_MAHDI={"source":"Planificateur de cuisine IKEA, 13/11/2026 (design 47
 function ikeaAuto(force){ try{ const rw=S.walls.filter(w=>(w.room||"")==="cuisine"); if(!rw.some(w=>/lin[eé]aire/i.test(w.name))||!rw.some(w=>/salon/i.test(w.name))) return "";
   if(!force&&(S.kitIkea||(S.kit&&S.kit.cuisine&&S.kit.cuisine.items&&S.kit.cuisine.items.length))) return "";
   const m=kitImport(JSON.parse(JSON.stringify(IKEA_MAHDI))); S.kitIkea=1; save(); return m; }catch(e){ return ""; } }
-setTimeout(()=>{ let ch=!!ikeaAuto(false); try{ if(!S.noiso){ S.noiso=1; Object.values(S.ceil||{}).forEach(c=>{ if(c&&c.mode==="sol"){ c.iso=false; c.mem=false; c.upTop=2810; } }); ch=true; } }catch(e){} try{ if(!S.upj){ S.upj=1; S.walls.forEach(w=>{ if(!isCol(w)&&(/lin[eé]aire/i.test(w.name||"")||/fen/i.test(w.name||"")||w.openings.some(o=>o.type==="Fenêtre"))) w.upJ=true; }); ch=true; } }catch(e){} try{ if(!S.latg){ S.latg=1; Object.values(S.ceil||{}).forEach(c=>{ if(c&&c.mode==="sol"){ c.lat="garde"; if(!c.latT) c.latT=25; } }); ch=true; } }catch(e){} try{ if(!S.solv){ S.solv=1; [...new Set(S.walls.map(x=>x.room||""))].forEach(n=>{ const c=ceilCfg(n); if(c.on&&c.mode==="susp") return; Object.assign(c,{on:true,mode:"sol",iso:false,isoN:S.iso.n,ep:200,mem:false,upTop:2810,memPose:"entre",e:500,len:2500,lat:"garde",latT:25}); }); ch=true; } }catch(e){} try{ if(!S.p250){ S.p250=1; S.pla.lens=[2500]; ch=true; } }catch(e){} try{ if(!S.credOff){ S.walls.filter(w=>(w.room||"")==="cuisine"&&/lin[eé]aire/i.test(w.name)&&w.tile&&w.tile.on).forEach(w=>{ w.tile.on=false; ch=true; }); S.credOff=1; save(); } }catch(e){} try{ if(!S.fl8001){ const D=["#f7f6f2","#efe9df",""]; S.fin.peint.teinte="#f3f4f1"; S.walls.forEach(w=>{ if(!w.teinte||D.includes(String(w.teinte).toLowerCase())) w.teinte="#f3f4f1"; }); S.fl8001=1; save(); ch=true; } }catch(e){} try{ if(!S.belfast){ const BN=SOLS.find(q=>q.grain==="belfast").n; [...new Set(S.walls.map(w=>w.room||""))].forEach(rm=>{ const F=floorCfg(rm); F.on=true; F.n=BN; F.c=""; F.L=0; F.W=0; F.pose=""; if(S.bc&&S.bc[rm]) S.bc[rm].sol=false; }); S.belfast=1; save(); ch=true; } }catch(e){} if(ch) renderAll(); },300);
+setTimeout(()=>{ let ch=!!ikeaAuto(false); try{ if(!S.onyxV1){ S.onyxV1=1; const rm=roomNames().find(n=>/cuisine/i.test(n)); if(rm!==undefined){ const K=kitCfg(rm); if(K.on&&K.items.length){ K.plan="Carrelage Piemme Majestic Onyx Iron Grey levigato 120×120 sur Wedi 5 cm"; ch=true; } } } }catch(e){} try{ if(!S.noiso){ S.noiso=1; Object.values(S.ceil||{}).forEach(c=>{ if(c&&c.mode==="sol"){ c.iso=false; c.mem=false; c.upTop=2810; } }); ch=true; } }catch(e){} try{ if(!S.upj){ S.upj=1; S.walls.forEach(w=>{ if(!isCol(w)&&(/lin[eé]aire/i.test(w.name||"")||/fen/i.test(w.name||"")||w.openings.some(o=>o.type==="Fenêtre"))) w.upJ=true; }); ch=true; } }catch(e){} try{ if(!S.latg){ S.latg=1; Object.values(S.ceil||{}).forEach(c=>{ if(c&&c.mode==="sol"){ c.lat="garde"; if(!c.latT) c.latT=25; } }); ch=true; } }catch(e){} try{ if(!S.solv){ S.solv=1; [...new Set(S.walls.map(x=>x.room||""))].forEach(n=>{ const c=ceilCfg(n); if(c.on&&c.mode==="susp") return; Object.assign(c,{on:true,mode:"sol",iso:false,isoN:S.iso.n,ep:200,mem:false,upTop:2810,memPose:"entre",e:500,len:2500,lat:"garde",latT:25}); }); ch=true; } }catch(e){} try{ if(!S.p250){ S.p250=1; S.pla.lens=[2500]; ch=true; } }catch(e){} try{ if(!S.credOff){ S.walls.filter(w=>(w.room||"")==="cuisine"&&/lin[eé]aire/i.test(w.name)&&w.tile&&w.tile.on).forEach(w=>{ w.tile.on=false; ch=true; }); S.credOff=1; save(); } }catch(e){} try{ if(!S.fl8001){ const D=["#f7f6f2","#efe9df",""]; S.fin.peint.teinte="#f3f4f1"; S.walls.forEach(w=>{ if(!w.teinte||D.includes(String(w.teinte).toLowerCase())) w.teinte="#f3f4f1"; }); S.fl8001=1; save(); ch=true; } }catch(e){} try{ if(!S.belfast){ const BN=SOLS.find(q=>q.grain==="belfast").n; [...new Set(S.walls.map(w=>w.room||""))].forEach(rm=>{ const F=floorCfg(rm); F.on=true; F.n=BN; F.c=""; F.L=0; F.W=0; F.pose=""; if(S.bc&&S.bc[rm]) S.bc[rm].sol=false; }); S.belfast=1; save(); ch=true; } }catch(e){} if(ch) renderAll(); },300);
 document.addEventListener("click",e=>{ if(!e.target.closest("[data-ikea]")) return; if(S.kit&&S.kit.cuisine&&S.kit.cuisine.items.length&&!confirm("Remplacer les meubles de la cuisine par ceux du plan IKEA du 13/11/2026 ?")) return; const m=ikeaAuto(true); renderAll(); if(m) alert(m); });
 function loadProject(txt){
   let d; try{ d=JSON.parse(txt); }catch(e){ ioMsg("Ce texte n'est pas un projet valide : copiez-le en entier depuis le bouton « Copier le projet »."); return; }
   if(d && d.kitImport){ const m=kitImport(d.kitImport); save(); renderAll(); ioMsg(m); try{ alert(m); }catch(e){} return; }
   if(!d || !Array.isArray(d.walls) || !d.walls.length){ ioMsg("Ce fichier ne contient pas de murs : ce n'est pas un projet de calepinage."); return; }
   delete d.app; delete d.version; delete d.date;
-  S=d; S.cur=0; migrate(); S.chaudV1=S.chaudV2=S.chaudV3=1; renderAll(); save();
+  S=d; S.cur=0; migrate(); S.chaudV1=S.chaudV2=S.chaudV3=S.mahdiV4=S.onyxV1=1; renderAll(); save();
   ioMsg(`Projet chargé : ${S.walls.length} mur${S.walls.length>1?"s":""}.`);
 }
 if(ONLINE){ document.getElementById("io-save").hidden=true; document.getElementById("io-print").hidden=true; }
@@ -6322,7 +6396,9 @@ function chaudV2(){ if(S.chaudV2) return; S.chaudV2=1; try{ const room=roomNames
   Object.assign(c,{tas:3,tg:20,tl:c.tl||40,te:c.te||20,pd:1000,cep:72,cdec:0,ht:0,cg:1,cgt:1,cgw:770,cgd:560,cgh:850});
   const w=creaWall(c,room), G=chaudGeo(c,room); if(w&&G.cl){ c.x=Math.round(((G.cl.x1+G.x1)/2-c.w/2)/10)*10; } save(); }catch(e){ console.warn("chaudV2",e); } }
 function chaudV3(){ if(S.chaudV3) return; S.chaudV3=1; try{ const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return; const c=creas(room).find(q=>q.t==="chaud"&&+q.cg===1&&+(q.cgt??1)===1); if(!c) return; c.cgr=1; save(); }catch(e){ console.warn("chaudV3",e); } }
-chaudInit(); chaudV2(); chaudV3(); renderAll(); // une seule fois, au démarrage, sur le projet ouvert (la cuisine de mahdi)
+function mahdiV4(){ if(S.mahdiV4) return; S.mahdiV4=1; try{ const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return; const c=creas(room).find(q=>q.t==="chaud"); if(c) c.y=1500;
+  save(); }catch(e){ console.warn("mahdiV4",e); } }
+chaudInit(); chaudV2(); chaudV3(); mahdiV4(); renderAll(); // une seule fois, au démarrage, sur le projet ouvert (la cuisine de mahdi)
 undoRec();
 setTimeout(()=>{ const sp=document.getElementById("splash"); if(sp){ sp.classList.add("out"); setTimeout(()=>sp.remove(),600); } },1100);
 
