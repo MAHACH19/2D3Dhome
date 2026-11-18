@@ -4601,7 +4601,7 @@ function buildScene(){
           add(v3Box(sg,o+b.x0,o+b.x1,T0,T0+b.d1,b.z0,b.z1,bm)); add(v3Box(sg,o+b.x0+20,o+b.x1-20,T0+b.d1,T0+b.d1+3,b.z0+40,b.z0+120,v3Mat("#3a3d42",{roughness:.4})));
           [.2,.4,.6,.8].forEach(f=>add(v3Box(sg,o+b.x0+(b.x1-b.x0)*f-9,o+b.x0+(b.x1-b.x0)*f+9,T0+60,T0+78,Math.max(0,b.z0-250),b.z0,pi)));
           add(v3Box(sg,o+(b.x0+b.x1)/2-50,o+(b.x0+b.x1)/2+50,T0+b.d1*0.4-50,T0+b.d1*0.4+50,b.z1,hh,v3Mat("#d9dadc",{metalness:.3,roughness:.4}))); // ventouse
-          if(G.cg){ const f=G.cg, fm=v3Mat("#eef0f2",{roughness:.3}); add(v3Box(sg,o+f.x0,o+f.x1,T0+f.d0,T0+f.d1,0,f.z1,fm)); if(f.coffre){ add(v3Box(sg,o+f.x0-3,o+f.x1+3,T0+f.d0-3,T0+f.d1+3,f.z1-70,f.z1-62,v3Mat("#b9bec3",{roughness:.4}))); add(v3Box(sg,(o+f.x0+o+f.x1)/2-80,(o+f.x0+o+f.x1)/2+80,T0+f.d1,T0+f.d1+20,f.z1-110,f.z1-80,v3Mat("#9aa0a6",{metalness:.5,roughness:.3}))); }
+          if(G.cg){ const f=G.cg, fm=v3Mat("#eef0f2",{roughness:.3}); add(v3Box(sg,o+f.x0,o+f.x1,T0+f.d0,T0+f.d1,0,f.z1,fm)); if(f.coffre){ add(v3Box(sg,o+f.x0-3,o+f.x1+3,T0+f.d0-3,T0+f.d1+3,f.z1-70,f.z1-62,v3Mat("#b9bec3",{roughness:.4}))); const hm=v3Mat("#9aa0a6",{metalness:.5,roughness:.3}); if(f.rot){ const xh=f.side>0?o+f.x1:o+f.x0-20, dm=(f.d0+f.d1)/2; add(v3Box(sg,xh,xh+20,T0+dm-80,T0+dm+80,f.z1-110,f.z1-80,hm)); } else add(v3Box(sg,(o+f.x0+o+f.x1)/2-80,(o+f.x0+o+f.x1)/2+80,T0+f.d1,T0+f.d1+20,f.z1-110,f.z1-80,hm)); }
             else add(v3Box(sg,o+f.x1-60,o+f.x1-45,T0+f.d1,T0+f.d1+25,f.z1-350,f.z1-80,v3Mat("#9aa0a6",{metalness:.5,roughness:.3}))); }
           if(G.cl) add(v3Box(sg,o+G.cl.x0,o+G.cl.x1,T0+G.cl.d0,T0+G.cl.d1,0,hh,pm));
           G.sl.forEach(q=>add(v3Box(sg,o+q.x0,o+q.x1,T0+q.d0,T0+q.d1,G.z0,G.zt,wm))); }
@@ -5481,7 +5481,7 @@ function loadProject(txt){
   if(d && d.kitImport){ const m=kitImport(d.kitImport); save(); renderAll(); ioMsg(m); try{ alert(m); }catch(e){} return; }
   if(!d || !Array.isArray(d.walls) || !d.walls.length){ ioMsg("Ce fichier ne contient pas de murs : ce n'est pas un projet de calepinage."); return; }
   delete d.app; delete d.version; delete d.date;
-  S=d; S.cur=0; migrate(); S.chaudV1=S.chaudV2=1; renderAll(); save();
+  S=d; S.cur=0; migrate(); S.chaudV1=S.chaudV2=S.chaudV3=1; renderAll(); save();
   ioMsg(`Projet chargé : ${S.walls.length} mur${S.walls.length>1?"s":""}.`);
 }
 if(ONLINE){ document.getElementById("io-save").hidden=true; document.getElementById("io-print").hidden=true; }
@@ -5673,11 +5673,11 @@ const CREA={
   rideau:{n:"Gorge à rideau (rail caché au plafond)",p:[["L","Longueur",3000],["pf","Largeur de la gorge",160],["h","Retombée de la joue",150],["x","Depuis la gauche",0],["rails","Rails",1,[[1,"1 rail (voilage ou rideau)"],[2,"2 rails (voilage + rideau occultant)"]]],["led","LED dans la gorge",0,[[0,"Non"],[1,"Oui, ruban LED indirect"]]],["col","Couleur du rideau","#e9e2d4"]]},
   chaud:{n:"Chaudière murale cachée par des tasseaux blancs",p:[["w","Largeur de la chaudière",440],["h","Hauteur de la chaudière",720],["pf","Profondeur de la chaudière",350],["x","Depuis la gauche",300],["y","Hauteur du bas de la chaudière",1300],["tas","Habillage en tasseaux",2,[[3,"Placard : cloison placo côté porte + façade de tasseaux aimantés, du sol au plafond"],[2,"Caisson qui cache la chaudière, jusqu'au plafond"],[1,"Seulement au-dessus (cache les conduits), jusqu'au plafond"],[0,"Aucun (chaudière visible)"]]],["tg","Espace entre tasseaux",10],["tl","Largeur d'un tasseau",40],["te","Épaisseur d'un tasseau",20],["jeu","Jeu autour de la chaudière",50],["deb","Le caisson descend sous la chaudière de",100],
     ["pd","Profondeur du placard (cloison)",1000],["cep","Épaisseur de la cloison placo",72],["cdec","Décalage de la cloison depuis le chambranle de la porte",0],["ht","Hauteur des tasseaux (0 = du sol au plafond fini)",0],
-    ["cg","Congélateur sous la chaudière",0,[[1,"Oui"],[0,"Non"]]],["cgt","Type de congélateur",1,[[1,"Coffre (couvercle sur le dessus)"],[0,"Armoire (porte devant)"]]],["cgw","Largeur du congélateur",550],["cgd","Profondeur du congélateur",580],["cgh","Hauteur du congélateur",850]]},
+    ["cg","Congélateur sous la chaudière",0,[[1,"Oui"],[0,"Non"]]],["cgt","Type de congélateur",1,[[1,"Coffre (couvercle sur le dessus)"],[0,"Armoire (porte devant)"]]],["cgr","Sens du coffre",0,[[0,"De face (sa largeur le long du mur)"],[1,"Tourné d'un quart de tour (sa profondeur le long du mur)"]]],["cgw","Largeur du congélateur",550],["cgd","Profondeur du congélateur",580],["cgh","Hauteur du congélateur",850]]},
   led:{n:"Ruban LED encastré dans le placo",p:[["L","Longueur",2000],["pos","Emplacement",0,[[0,"Horizontal sur le mur"],[1,"Vertical sur le mur"],[2,"Au plafond, parallèle au mur"]]],["x","Depuis la gauche",0],["y","Hauteur (ou distance du mur au plafond)",1000],["k","Couleur de lumière",3000,[[2700,"2700 K blanc très chaud"],[3000,"3000 K blanc chaud"],[4000,"4000 K blanc neutre"]]]]}
 };
-const CREA_INT=["n","joues","rails","led","pos","k","tas","cg","cgt"];
-function creas(room){ if(!S.crea) S.crea={}; if(!S.crea[room]) S.crea[room]=[]; const C=S.crea[room]; C.forEach(c=>{ ["pos","k","n","rails","led","joues","tas","cg","cgt"].forEach(k=>{ if(typeof c[k]==="string"&&c[k]!=="") c[k]=+c[k]; }); }); return C; }
+const CREA_INT=["n","joues","rails","led","pos","k","tas","cg","cgt","cgr"];
+function creas(room){ if(!S.crea) S.crea={}; if(!S.crea[room]) S.crea[room]=[]; const C=S.crea[room]; C.forEach(c=>{ ["pos","k","n","rails","led","joues","tas","cg","cgt","cgr"].forEach(k=>{ if(typeof c[k]==="string"&&c[k]!=="") c[k]=+c[k]; }); }); return C; }
 function creaSpan(w){ const g=roomGeom(w.room||""), k=g.segs.findIndex(q=>q.w===w); if(k<0) return {a:0,len:w.L};
   const s=g.segs[k], e=g.inner[k], pr=p=>(p[0]-s.x0)*s.dx+(p[1]-s.y0)*s.dy, a=pr(e.a), b=pr(e.b); return {a, len:Math.max(0,b-a)}; }
 const GLOWT={}; function ledGlow(vert,col){ const k=(vert?"v":"h")+col; if(GLOWT[k]) return GLOWT[k]; const c=document.createElement("canvas"); c.width=vert?128:4; c.height=vert?4:128; const x=c.getContext("2d");
@@ -5705,7 +5705,7 @@ function ceilLed(c,room,noSnap){ const w=creaWall(c,room); if(!w) return null; c
 function creaFit(c,room){ const w=creaWall(c,room); if(!w) return c; if(c.t==="led"&&+c.pos===2){ const Z=ceilLed(c,room); if(Z) return {...c,x:Z.x,L:Z.L,snap:Z.snap.length}; } const sp=creaSpan(w), k=c.t==="coffv"?"l":c.t==="niche"||c.t==="chaud"?"w":"L", x=Math.max(0,Math.min(c.x||0,sp.len-20)); if(c.t==="chaud"){ const hh=creaHH(w,room); let cw=Math.max(20,+c.w||440), m=chaudM({...c,w:cw}); for(let i=0;i<200&&cw+2*m>sp.len&&cw>20;i++){ cw=Math.max(20,Math.min(cw-10,Math.round(sp.len-2*m))); m=chaudM({...c,w:cw}); } const cx=Math.max(m,Math.min(+c.x||0,sp.len-cw-m)); return {...c,x:Math.round(cx),y:Math.max(0,Math.min(+c.y||0,hh-(+c.h||0)-20)),w:cw}; } if(c.t==="led"&&+c.pos===1){ const y=Math.max(0,Math.min(c.y||0,w.H-20)); return {...c,x,y,L:Math.max(20,Math.min(c.L,Math.round(w.H-y)))}; } return {...c,x,[k]:Math.max(20,Math.min(c[k],Math.round(sp.len-x)))}; }
 function creaLen(c){ return c.t==="coffv"?c.l:c.t==="niche"||c.t==="chaud"?c.w:c.L; }
 /* hauteur sous le plafond fini au droit d'un mur (les tasseaux de la chaudière s'y ajustent tout seuls) */
-function chaudShow(c,k){ const m=+(c.tas??2); if(["jeu"].includes(k)) return m===1||m===2; if(k==="deb") return m===2; if(["pd","cep","cdec","ht"].includes(k)) return m===3; if(["tg","tl","te"].includes(k)) return m>0; if(["cgw","cgd","cgh","cgt"].includes(k)) return +c.cg===1; return true; }
+function chaudShow(c,k){ const m=+(c.tas??2); if(["jeu"].includes(k)) return m===1||m===2; if(k==="deb") return m===2; if(["pd","cep","cdec","ht"].includes(k)) return m===3; if(["tg","tl","te"].includes(k)) return m>0; if(k==="cgr") return +c.cg===1&&+(c.cgt??1)===1; if(["cgw","cgd","cgh","cgt"].includes(k)) return +c.cg===1; return true; }
 /* placard (mode 3) : bord de la cloison côté porte, en repère du mur fini */
 function doorFrameW(o){ return o&&o.frame==="fronton"?95:50; } // largeur du montant du chambranle (vue 3D)
 /* une cloison de placard chaudière touche-t-elle le chambranle droit de cette porte ? (alors la frise et la corniche s'arrêtent au montant) */
@@ -5717,14 +5717,14 @@ function creaHH(w,room){ try{ return Math.min(w.H||2500,ceilFinH(room,roomGeom(r
 function chaudGeo(c,room){ const w=creaWall(c,room)||{H:2500}, P=creaFit(c,room), hh=creaHH(w,room), mode=+(P.tas??2);
   const jeu=Math.max(0,P.jeu??50), tl=Math.max(10,+P.tl||40), te=Math.max(10,+P.te||20), tg=Math.max(0,P.tg??10), x=P.x||0;
   const bo={x0:x,x1:x+P.w,d0:0,d1:P.pf,z0:P.y,z1:P.y+P.h};
-  const cg=+P.cg===1?(()=>{ const cw=Math.max(100,+P.cgw||550), cd=Math.max(100,+P.cgd||580), ch=Math.max(100,+P.cgh||850), m=x+P.w/2; return {x0:m-cw/2,x1:m+cw/2,d0:50,d1:50+cd,z0:0,z1:ch,coffre:+(P.cgt??1)===1}; })():null;
-  if(!mode) return {P,hh,mode,bo,cg,sl:[],tl,te,tg,jeu,Lt:0,nF:0,nS:0,W:0,D:0,z0:0,zt:hh};
+  const cg=+P.cg===1?(()=>{ const co=+(P.cgt??1)===1, rot=co&&+P.cgr===1, a=Math.max(100,+P.cgw||550), b=Math.max(100,+P.cgd||580), cw=rot?b:a, cd=rot?a:b, ch=Math.max(100,+P.cgh||850), m=x+P.w/2; return {x0:m-cw/2,x1:m+cw/2,d0:50,d1:50+cd,z0:0,z1:ch,coffre:co,rot}; })():null;
+  if(!mode){ const G0={P,hh,mode,bo,cg,sl:[],tl,te,tg,jeu,Lt:0,nF:0,nS:0,W:0,D:0,z0:0,zt:hh}; lidFit(G0); return G0; }
   if(mode===3){ const sp=creaSpan(w), dr=chaudDoor(P,w,sp), pd=Math.max(300,+P.pd||1000), cep=Math.max(40,+P.cep||72);
     const p0=dr?Math.max(0,dr.x+dr.w+doorFrameW(dr)+Math.max(0,+P.cdec||0)-sp.a):Math.max(0,+P.cdec||0), p1=p0+cep, W=Math.max(0,sp.len-p1), avail=hh-10, Lt=+P.ht>0?Math.min(+P.ht,hh-2):avail, z0=Math.max(0,(hh-Lt)/2), zt=z0+Lt;
     const n=Math.max(1,Math.floor((W+tg)/(tl+tg))), used=n*tl+(n-1)*tg, mg=(W-used)/2, sl=[]; for(let i=0;i<n;i++){ const u=p1+mg+i*(tl+tg); sl.push({s:"f",x0:u,x1:u+tl,d0:pd-te,d1:pd}); }
     // la chaudière et le congélateur restent dans le placard
     const hw=Math.max(P.w,cg?cg.x1-cg.x0:0)/2, av=sp.len-p1, mc=2*hw+100>av?p1+av/2:Math.max(p1+50+hw,Math.min(x+P.w/2,sp.len-50-hw)), dx=mc-(x+P.w/2); bo.x0+=dx; bo.x1+=dx; const cg2=cg&&{...cg,x0:cg.x0+dx,x1:cg.x1+dx};
-    return {P,hh,mode,bo,cg:cg2,sl,tl,te,tg,gF:tg,jeu,Lt,nF:n,nS:0,W,D:pd,Ds:0,x0:p0,x1:sp.len,z0,zt,cl:{x0:p0,x1:p1,d0:0,d1:pd},door:dr,mg,over:+P.ht>0&&+P.ht>hh-2?+P.ht:0}; }
+    const G3={P,hh,mode,bo,cg:cg2,sl,tl,te,tg,gF:tg,jeu,Lt,nF:n,nS:0,W,D:pd,Ds:0,x0:p0,x1:sp.len,z0,zt,cl:{x0:p0,x1:p1,d0:0,d1:pd},door:dr,mg,over:+P.ht>0&&+P.ht>hh-2?+P.ht:0}; lidFit(G3); return G3; }
   // l'espace entre tasseaux est respecté au millimètre : c'est la largeur du caisson qui s'ajuste (au tasseau près), centrée sur la chaudière
   const nF=Math.max(2,Math.ceil((P.w+2*(jeu+te)+tg)/(tl+tg))), W=nF*tl+(nF-1)*tg, nS=Math.max(1,Math.ceil((P.pf+jeu+tg)/(tl+tg))), Ds=nS*tl+(nS-1)*tg, D=Ds+te;
   const x0=x+P.w/2-W/2, x1=x0+W, z0=mode===2?Math.max(0,P.y-Math.max(0,P.deb||0)):P.y+P.h, zt=hh-5, Lt=Math.max(0,zt-z0);
@@ -5732,7 +5732,20 @@ function chaudGeo(c,room){ const w=creaWall(c,room)||{H:2500}, P=creaFit(c,room)
   even(W,nF).forEach(u=>sl.push({s:"f",x0:x0+u,x1:x0+u+tl,d0:D-te,d1:D}));
   even(Ds,nS).forEach(u=>{ sl.push({s:"g",x0:x0,x1:x0+te,d0:u,d1:u+tl}); sl.push({s:"d",x0:x1-te,x1:x1,d0:u,d1:u+tl}); });
   const gF=nF>1?(W-nF*tl)/(nF-1):0;
-  return {P,hh,mode,bo,cg,sl,tl,te,tg,gF,jeu,Lt,nF,nS,W,D,Ds,x0,x1,z0,zt}; }
+  const G2={P,hh,mode,bo,cg,sl,tl,te,tg,gF,jeu,Lt,nF,nS,W,D,Ds,x0,x1,z0,zt}; lidFit(G2); return G2; }
+/* couvercle du coffre : angle maxi avant de toucher la chaudière (pas de 1°), charnière au fond (de face) ou sur un côté (tourné) */
+function lidMax(f,b,side){ if(!f||!f.coffre) return 90; const R=f.rot?f.x1-f.x0:f.d1-f.d0;
+  if(f.rot?!(f.d0<b.d1&&f.d1>b.d0):!(f.x0<b.x1&&f.x1>b.x0)) return 90;
+  for(let t=1;t<=90;t++){ const c=Math.cos(t*Math.PI/180), sn=Math.sin(t*Math.PI/180);
+    for(let r=0;r<=R;r+=10){ const z=f.z1+r*sn; if(z<b.z0||z>b.z1) continue;
+      if(f.rot){ const xx=side>0?f.x0+r*c:f.x1-r*c; if(xx>=b.x0&&xx<=b.x1) return t-1; }
+      else { const dd=f.d0+15+r*c; if(dd>=b.d0&&dd<=b.d1) return t-1; } } }
+  return 90; }
+function lidFit(G){ const f=G.cg, b=G.bo; if(!f||!f.coffre) return; const lo=G.cl?G.cl.x1+20:-1e9, hi=G.cl?G.x1-20:1e9, w0=f.x1-f.x0;
+  let best=null; const tries=f.rot?[f.x0,lo,hi-w0].filter(v=>v>=lo-1&&v+w0<=hi+1):[f.x0];
+  tries.forEach(x0=>[1,-1].forEach(sd=>{ const g={...f,x0,x1:x0+w0}, a=lidMax(g,b,sd); if(!best||a>best.a+0.5) best={a,x0,sd}; }));
+  if(!best) best={a:lidMax(f,b,1),x0:f.x0,sd:1}; f.x0=best.x0; f.x1=best.x0+w0; f.side=best.sd; f.ang=best.a;
+  let z=b.z0; while(lidMax(f,{...b,z0:z,z1:z+(b.z1-b.z0)},f.side)<90&&z<4000) z+=10; f.zFull=z; }
 function creaWall(c,room){ const rw=S.walls.filter(w=>(w.room||"")===room); return rw.find(w=>wid(w)===c.wall)||rw[0]; }
 function creaCalc(c,room){
   const w=creaWall(c,room)||{H:2500}, H=w.H||2500, F=[], R=[], Mo=[], e=600; let ang=0;
@@ -5761,7 +5774,7 @@ function creaCalc(c,room){
   if(c.t==="led") X.push(...ledKit(P.L,P.k||3000,P.pos===2?"plafond":"mur"));
   const T=[]; if(c.t==="chaud"){ const G=chaudGeo(c,room), CH="Chaudière et habillage";
     X.push({cat:"Créations placo",des:"Renfort bois 45×70 mm dans l'ossature (fixation de la chaudière)",det:`2 traverses de ${cm(P.w+400)} cm entre montants, sous les pattes de fixation, avant les plaques`,q:Math.ceil(2*(P.w+400)/100)/10,u:"m"});
-    if(G.cg){ const cw=Math.round(G.cg.x1-G.cg.x0), cd=Math.round(G.cg.d1-G.cg.d0), vb=G.cg.coffre&&cw===770&&cd===560&&G.cg.z1===850; X.push({cat:CH,des:vb?"Congélateur coffre VALBERG CF 198 E W625C, 198 L, 77×56×85 cm (Electro Dépôt)":`Congélateur ${G.cg.coffre?"coffre":"armoire top"} ${cm(cw)}×${cm(cd)}×${cm(G.cg.z1)} cm (Electro Dépôt)`,det:`sous la chaudière, ${cm(P.y-G.cg.z1)} cm d'air au-dessus ; prise à part à côté, pas derrière`,q:1,u:"u"}); }
+    if(G.cg){ const cw=Math.round(G.cg.x1-G.cg.x0), cd=Math.round(G.cg.d1-G.cg.d0), vb=G.cg.coffre&&+P.cgw===770&&+P.cgd===560&&G.cg.z1===850; X.push({cat:CH,des:vb?"Congélateur coffre VALBERG CF 198 E W625C, 198 L, 77×56×85 cm (Electro Dépôt)":`Congélateur ${G.cg.coffre?"coffre":"armoire top"} ${cm(cw)}×${cm(cd)}×${cm(G.cg.z1)} cm (Electro Dépôt)`,det:`sous la chaudière${G.cg.rot?", tourné d'un quart de tour":""}, ${cm(P.y-G.cg.z1)} cm d'air au-dessus${G.cg.coffre?`, couvercle ouvrable à ${G.cg.ang}°`:""} ; prise à part à côté, pas derrière`,q:1,u:"u"}); }
     if(G.mode===3){ const cl=G.cl, hp=G.hh, pd=cl.d1-cl.d0, cep=cl.x1-cl.x0; face("Cloison du placard (2 faces)",pd,hp-10,2); face("Bout de la cloison (côté façade)",cep+25,hp-10);
       R.push({n:"Rail au sol et au plafond (cloison)",len:pd,q:2}); Mo.push({n:"Montant de cloison",len:hp-10,q:Math.ceil(pd/600)+1},{n:"Montant de bout (doublé, reçoit les aimants)",len:hp-10,q:1}); ang=2*(hp-10); }
     if(G.mode){ const nT=G.nF+2*G.nS, opt=[2000,2400,2700,3000].filter(b=>b>=G.Lt+5).map(b=>{ const per=Math.floor(b/(G.Lt+5)); return {b,per,n:Math.ceil(nT/per)}; }).sort((p,q)=>p.n*p.b-q.n*q.b||p.b-q.b)[0]||{b:Math.ceil((G.Lt+5)/100)*100,per:1,n:nT}, BL=opt.b, per=opt.per, bars=opt.n, trL=G.mode===3?2*G.W:3*(G.W+2*G.Ds);
@@ -5821,7 +5834,7 @@ function creaSvg(c,room){ const k=creaCalc(c,room), w=creaWall(c,room)||{L:3000,
   if(c.t==="chaud"){ const G=chaudGeo(c,room);
     const x=G.bo.x0;
     g+=`<rect x="${X(x)}" y="${Y(P.y+P.h)}" width="${P.w*sc}" height="${P.h*sc}" fill="#f4f3ef" stroke="#555" stroke-width="1" ${G.mode>=2?'stroke-dasharray="3 2"':''}/><text x="${X(x+P.w/2)}" y="${Y(P.y+P.h/2)+3}" text-anchor="middle" font-size="9" fill="#555">chaudière</text>`;
-    if(G.cg) g+=`<rect x="${X(G.cg.x0)}" y="${Y(G.cg.z1)}" width="${(G.cg.x1-G.cg.x0)*sc}" height="${G.cg.z1*sc}" fill="#eef1f3" stroke="#555" stroke-dasharray="3 2"/><text x="${X((G.cg.x0+G.cg.x1)/2)}" y="${Y(G.cg.z1/2)+3}" text-anchor="middle" font-size="9" fill="#555">${G.cg.coffre?"congélo coffre":"congélo"}</text>`;
+    if(G.cg) g+=`<rect x="${X(G.cg.x0)}" y="${Y(G.cg.z1)}" width="${(G.cg.x1-G.cg.x0)*sc}" height="${G.cg.z1*sc}" fill="#eef1f3" stroke="#555" stroke-dasharray="3 2"/><text x="${X((G.cg.x0+G.cg.x1)/2)}" y="${Y(G.cg.z1/2)+3}" text-anchor="middle" font-size="9" fill="#555">${G.cg.coffre?(G.cg.rot?"coffre tourné":"congélo coffre"):"congélo"}</text>`;
     if(G.cl){ g+=`<rect x="${X(G.cl.x0)}" y="${Y(G.hh)}" width="${(G.cl.x1-G.cl.x0)*sc}" height="${G.hh*sc}" fill="#ece8df" stroke="#1d63c4" stroke-width="1.5"/><text x="${X(G.cl.x0)-3}" y="${Y(G.hh/2)}" text-anchor="end" font-size="9" fill="#1d63c4">cloison ${cm(G.D)} cm</text>`; }
     G.sl.filter(q=>q.s==="f").forEach(q=>{ g+=`<rect x="${X(q.x0)}" y="${Y(G.zt)}" width="${Math.max(.6,(q.x1-q.x0)*sc)}" height="${G.Lt*sc}" fill="#ffffff" fill-opacity="${G.mode>=2?.85:1}" stroke="#8a9096" stroke-width=".5"/>`; });
     dim(x,P.y,P.w,P.h); g+=`<line x1="${X(x+P.w+60)}" x2="${X(x+P.w+60)}" y1="${Y(0)}" y2="${Y(P.y)}" stroke="#1d63c4" stroke-dasharray="3 2"/><text x="${X(x+P.w+70)}" y="${Y(P.y/2)}" font-size="10" fill="#1d63c4">${cm(P.y)}</text>`;
@@ -5854,7 +5867,8 @@ function creaPanel(w){ const room=w.room||"", C=creas(room), rw=S.walls.filter(x
         if(G.mode===3&&Math.abs(G.bo.x0-(G.P.x||0))>15) extra.push(`Chaudière recalée dans le placard, à ${cm(G.bo.x0)} cm de la gauche.`);
         if(G.mode===3&&(Math.max(G.bo.x1,G.cg?G.cg.x1:0)>G.x1+1||Math.min(G.bo.x0,G.cg?G.cg.x0:1e9)<G.cl.x1-1)) extra.push("Le placard est trop étroit pour la chaudière ou le congélateur.");
         const lidOver=G.cg&&G.cg.coffre&&G.bo.x0<G.cg.x1&&G.bo.x1>G.cg.x0, free=G.cg?G.bo.z0-G.cg.z1:0;
-        if(lidOver&&free<700) extra.push(`Couvercle du coffre : la notice demande 70 cm libres au-dessus du congélateur, il ne reste que ${cm(free)} cm sous la chaudière. Le couvercle (${cm(G.cg.d1-G.cg.d0)} cm de profondeur, charnière au fond) bute contre la chaudière avant d'être à la verticale. Solutions : bas de la chaudière à ${cm(G.cg.z1+700)} cm, ou congélateur armoire.`);
+        if(G.cg&&G.cg.coffre&&G.cg.ang<90) extra.push(`Couvercle du coffre${G.cg.rot?` (tourné, charnière côté ${G.cg.side>0?"cloison":"mur du fond"})`:""} : il s'ouvre jusqu'à ${G.cg.ang}° puis touche la chaudière. Pour l'ouvrir en grand, bas de la chaudière à ${cm(G.cg.zFull)} cm${free<700?` (la notice demande aussi 70 cm libres au-dessus, il en reste ${cm(free)})`:""}.`);
+        else if(G.cg&&G.cg.coffre&&lidOver&&free<700) extra.push(`Couvercle du coffre : il s'ouvre en grand sans toucher la chaudière, mais la notice demande 70 cm libres au-dessus (il en reste ${cm(free)}).`);
         if(G.mode===3&&G.cg){ const sg=Math.min(G.cg.x0-G.cl.x1,G.x1-G.cg.x1); if(sg<200) extra.push(`Air autour du congélateur : ${cm(Math.max(0,sg))} cm sur le côté le plus serré (la notice demande 20 cm). Les tasseaux espacés de ${cm(G.tg)} cm laissent passer l'air devant : ne bouchez pas le haut ni le bas de la façade.`); }
         if(G.cg&&!lidOver&&G.cg.z1>G.bo.z0-100) extra.push(`Le congélateur (${cm(G.cg.z1)} cm) touche presque la chaudière (bas à ${cm(G.bo.z0)} cm) : gardez au moins 10 cm d'air.`);
         if(G.mode===3&&G.cg&&G.cg.d1>G.D-G.te-20) extra.push("Le congélateur est plus profond que le placard.");
@@ -6307,7 +6321,8 @@ function chaudInit(){ if(S.chaudV1) return; S.chaudV1=1; try{
 function chaudV2(){ if(S.chaudV2) return; S.chaudV2=1; try{ const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return; const c=creas(room).find(q=>q.t==="chaud"); if(!c) return;
   Object.assign(c,{tas:3,tg:20,tl:c.tl||40,te:c.te||20,pd:1000,cep:72,cdec:0,ht:0,cg:1,cgt:1,cgw:770,cgd:560,cgh:850});
   const w=creaWall(c,room), G=chaudGeo(c,room); if(w&&G.cl){ c.x=Math.round(((G.cl.x1+G.x1)/2-c.w/2)/10)*10; } save(); }catch(e){ console.warn("chaudV2",e); } }
-chaudInit(); chaudV2(); renderAll(); // une seule fois, au démarrage, sur le projet ouvert (la cuisine de mahdi)
+function chaudV3(){ if(S.chaudV3) return; S.chaudV3=1; try{ const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return; const c=creas(room).find(q=>q.t==="chaud"&&+q.cg===1&&+(q.cgt??1)===1); if(!c) return; c.cgr=1; save(); }catch(e){ console.warn("chaudV3",e); } }
+chaudInit(); chaudV2(); chaudV3(); renderAll(); // une seule fois, au démarrage, sur le projet ouvert (la cuisine de mahdi)
 undoRec();
 setTimeout(()=>{ const sp=document.getElementById("splash"); if(sp){ sp.classList.add("out"); setTimeout(()=>sp.remove(),600); } },1100);
 
