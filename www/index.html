@@ -666,6 +666,7 @@ let S;
 try { S = JSON.parse(localStorage.getItem(KEY)) } catch(e) { S = null }
 if(!S || !S.walls || !S.walls.length) S = example();
 function migrate(){
+  if(!S.doorV2){ (S.walls||[]).forEach(w=>(w.openings||[]).forEach(o=>{ if(o.type==="Porte"&&o.style!=="coulissante"&&o.style!=="galandage") Object.assign(o,{style:"ovale",frame:"fronton",poignee:"laiton",color:"#ede8df"}); })); S.doorV2=1; } // portes du modèle choisi par mahdi (moulure ovale, chambranle cannelé + fronton, béquille laiton)
   const d=example();
   S.walls.forEach(w=>{ if(!w.points) w.points=[]; if(w.plaN===undefined) w.plaN=""; if(w.room===undefined) w.room=(w.name||"").split(" — ")[0]||"Pièce 1"; if(!w.angle) w.angle="libre"; });
   if(S.oss.doubleAll===undefined) S.oss.doubleAll=false;
@@ -1233,7 +1234,8 @@ function renderSide(){ renderQuick();
           <label class="f">Charnières<select data-b="w.openings.${i}.hinge" data-re><option value="g"${o.hinge!=="d"?" selected":""}>À gauche</option><option value="d"${o.hinge==="d"?" selected":""}>À droite</option></select></label>
           <label class="f">Ouvre<select data-b="w.openings.${i}.push" data-re><option value="in"${o.push!=="out"?" selected":""}>Vers cette pièce</option><option value="out"${o.push==="out"?" selected":""}>Vers l'autre côté</option></select></label>
           <label class="f">Couleur<input type="color" data-b="w.openings.${i}.color" value="${o.color||"#ece7dc"}" style="height:34px;padding:2px"></label>
-          <label class="f">Poignée<select data-b="w.openings.${i}.poignee" data-re><option value="inox"${o.poignee!=="noir"?" selected":""}>Inox</option><option value="noir"${o.poignee==="noir"?" selected":""}>Noir mat</option></select></label>
+          <label class="f">Cadre<select data-b="w.openings.${i}.frame" data-re>${CADRES.map(([k,l])=>`<option value="${k}"${(o.frame||"simple")===k?" selected":""}>${l}</option>`).join("")}</select></label>
+          <label class="f">Poignée<select data-b="w.openings.${i}.poignee" data-re><option value="laiton"${o.poignee==="laiton"?" selected":""}>Béquille laiton</option><option value="inox"${o.poignee!=="noir"&&o.poignee!=="laiton"?" selected":""}>Inox</option><option value="noir"${o.poignee==="noir"?" selected":""}>Noir mat</option></select></label>
         </div>`:`<div class="row">
           <label class="f">Menuiserie<select data-b="w.openings.${i}.wtype" data-re>${[["","Auto"],["1v","1 vantail"],["2v","2 vantaux"],["3v","3 vantaux"],["fixe","Fixe"]].map(([k,l])=>`<option value="${k}"${(o.wtype||"")===k?" selected":""}>${l}</option>`).join("")}</select></label>
           <label class="f">Couleur du cadre<input type="color" data-b="w.openings.${i}.fcol" value="${o.fcol||"#f4f4f1"}" style="height:34px;padding:2px"></label>
@@ -4468,7 +4470,14 @@ function buildScene(){
         } else if(o.type==="Porte"){
           const st=o.style||"pleine", dc=o.color||"#ece7dc", dm=v3Mat(dc,{roughness:.6}), W0=H.b-H.a, hinge=o.hinge==="d"?"d":"g", push=o.push==="out"?-1:1, ang=(st==="coulissante"||st==="galandage")?0:(o.open??70)*Math.PI/180;
           // huisserie
-          const fm=v3Mat(o.color||"#ece7dc"); [[H.a-50,H.a],[H.b,H.b+50]].forEach(q=>scene.add(v3Box(s,q[0],q[1],g.T-10,g.T+12,0,H.d+50,fm))); scene.add(v3Box(s,H.a-50,H.b+50,g.T-10,g.T+12,H.d,H.d+50,fm));
+          const fm=v3Mat(o.color||"#ece7dc");
+          if(o.frame==="fronton"){ const fm2=v3Mat(shade(o.color||"#ece7dc",0.93),{roughness:.6}), CW=95, T0=g.T-10;
+            [[H.a-CW,H.a],[H.b,H.b+CW]].forEach(q=>{ scene.add(v3Box(s,q[0],q[1],T0,g.T+16,0,H.d+CW,fm)); for(let k=1;k<=3;k++){ const x=q[0]+CW*k/4; scene.add(v3Box(s,x-7,x+7,g.T+16,g.T+20,30,H.d+CW-20,fm2)); } });
+            scene.add(v3Box(s,H.a-CW,H.b+CW,T0,g.T+16,H.d,H.d+CW,fm)); // linteau
+            scene.add(v3Box(s,H.a-CW-15,H.b+CW+15,T0,g.T+24,H.d+CW,H.d+CW+60,fm)); // frise
+            scene.add(v3Box(s,H.a-CW-30,H.b+CW+30,T0,g.T+38,H.d+CW+60,H.d+CW+85,fm2)); // corniche
+            scene.add(v3Box(s,H.a-CW-45,H.b+CW+45,T0,g.T+52,H.d+CW+85,H.d+CW+110,fm)); }
+          else { [[H.a-50,H.a],[H.b,H.b+50]].forEach(q=>scene.add(v3Box(s,q[0],q[1],g.T-10,g.T+12,0,H.d+50,fm))); scene.add(v3Box(s,H.a-50,H.b+50,g.T-10,g.T+12,H.d,H.d+50,fm)); }
           // ébrasement : habillage d'une seule teinte sur toute l'épaisseur (pierre + doublage), sinon on voit les couches comme un mur décollé
           if(cut!=="ecorche"&&lay.pla!==false){ const em=(V.couches||LAY.some(l=>lay[l.k]===false))&&(lay.peint===false||!LAY.some(l=>l.k==="peint"))?M.pla:finMat(w,paintColor(w)); [[H.a,H.a+12],[H.b-12,H.b]].forEach(q=>scene.add(v3Box(s,q[0],q[1],-supT(w)-1,g.T-10,0,H.d,em))); scene.add(v3Box(s,H.a,H.b,-supT(w)-1,g.T-10,0,6,v3Mat("#cfc6b6",{roughness:.8}))); scene.add(v3Box(s,H.a,H.b,-supT(w)-1,g.T-10,H.d-12,H.d,em)); }
           if(st==="galandage") return;
@@ -4476,10 +4485,16 @@ function buildScene(){
           const grp=new T3.Group(), leafW=W0-10, leafH=Math.min(H.d,o.h)-15, th=40;
           const leaf=new T3.Mesh(new T3.BoxGeometry(leafW/1000,leafH/1000,th/1000), dm); leaf.position.set((hinge==="g"?leafW/2:-leafW/2)/1000,(leafH/2+8)/1000,0); grp.add(leaf);
           if(st==="vitree"){ const gl=new T3.Mesh(new T3.BoxGeometry(leafW*0.6/1000,leafH*0.55/1000,(th+4)/1000),M.glass); gl.position.copy(leaf.position); gl.position.y+=leafH*0.12/1000; grp.add(gl); }
+          if(st==="ovale"){ const mm=v3Mat(shade(dc,0.97),{roughness:.5}), stad=(w2,h2)=>{ const sh=new T3.Shape(), r=w2/2, hy=h2/2-r; sh.moveTo(-r,-hy); sh.lineTo(-r,hy); sh.absarc(0,hy,r,Math.PI,0,true); sh.lineTo(r,-hy); sh.absarc(0,-hy,r,0,Math.PI,true); return sh; };
+            const ring=(w2,h2,bw,dep)=>{ const o2=stad(w2,h2); o2.holes.push(stad(w2-2*bw,h2-2*bw)); const gq=new T3.ExtrudeGeometry(o2,{depth:dep,bevelEnabled:true,bevelThickness:dep*0.4,bevelSize:Math.min(bw*0.3,0.006),bevelSegments:2,curveSegments:24}); return gq; };
+            const RW=leafW*0.56/1000, RH=leafH*0.74/1000, cy=leaf.position.y+leafH*0.01/1000;
+            [[RW,RH,0.042,0.012],[RW-0.085,RH-0.085,0.014,0.007]].forEach(([a,b2,bw,dep])=>[1,-1].forEach(sd=>{ const m=new T3.Mesh(ring(a,b2,bw,dep),mm); m.position.set(leaf.position.x,cy,sd*th/2000); if(sd<0) m.rotation.y=Math.PI; grp.add(m); })); }
           if(st==="panneaux"||st==="rainuree"){ const pm=v3Mat(shade(dc,0.9)); const cols=st==="panneaux"?2:6, rows=st==="panneaux"?2:1;
             for(let i=0;i<cols;i++) for(let j=0;j<rows;j++){ const pw=leafW*(st==="panneaux"?0.36:0.02), ph=leafH*(st==="panneaux"?0.38:0.9); const p=new T3.Mesh(new T3.BoxGeometry(pw/1000,ph/1000,(th+6)/1000),pm);
               p.position.set(leaf.position.x+((i+0.5)/cols-0.5)*leafW*0.8/1000, leaf.position.y+(rows>1?((j+0.5)/rows-0.5)*leafH*0.85/1000:0),0); grp.add(p); } }
-          const hx=(hinge==="g"?leafW-70:-(leafW-70))/1000, hm=v3Mat(o.poignee==="noir"?"#1f1f1f":"#c9ced3",{metalness:.7,roughness:.3});
+          const hx=(hinge==="g"?leafW-70:-(leafW-70))/1000, hm=v3Mat(o.poignee==="noir"?"#1f1f1f":o.poignee==="laiton"?"#b48a4e":"#c9ced3",{metalness:o.poignee==="laiton"?.85:.7,roughness:o.poignee==="laiton"?.28:.3});
+          if(o.poignee==="laiton") [-1,1].forEach(sd=>{ const ro=new T3.Mesh(new T3.CylinderGeometry(0.028,0.028,0.012,24),hm); ro.rotation.x=Math.PI/2; ro.position.set(hx,1.0,sd*(th/2+6)/1000); grp.add(ro);
+            const kr=new T3.Mesh(new T3.CylinderGeometry(0.02,0.02,0.01,24),hm); kr.rotation.x=Math.PI/2; kr.position.set(hx,0.9,sd*(th/2+5)/1000); grp.add(kr); });
           [-1,1].forEach(sd=>{ const hb=new T3.Mesh(new T3.BoxGeometry(0.13,0.02,0.02),hm); hb.position.set(hx+(hinge==="g"?-0.05:0.05),1.0,sd*(th/2+25)/1000); grp.add(hb); });
           const slide=st==="coulissante", sh0=slide?(hinge==="g"?-1:1)*leafW*0.85:0, hp=(hinge==="g"?H.a+5:H.b-5)+sh0, off=g.T+(slide?60:0);
           const base=[s.x0+s.dx*hp+s.nx*off, s.y0+s.dy*hp+s.ny*off]; grp.position.set(base[0]/1000,0,-base[1]/1000);
@@ -4818,6 +4833,8 @@ function v3PopHtml(){ const s=V3.sel, paints=[...DIVERS.filter(d=>/laque|Finish|
     <button type="button" data-pop="wreset" class="ghost">Teinte du produit</button>`; }
   if(s.kind==="door"){ const w=S.walls[s.i], o=w.openings[s.op]; return `${close}<b>Porte ${opName(o,s.op)}</b>
     <label class="f" style="margin-top:6px">Modèle<select data-popk="dstyle">${DOORS.map(([k,l])=>`<option value="${k}"${(o.style||"pleine")===k?" selected":""}>${l}</option>`).join("")}</select></label>
+    <label class="f">Cadre<select data-popk="dframe">${CADRES.map(([k,l])=>`<option value="${k}"${(o.frame||"simple")===k?" selected":""}>${l}</option>`).join("")}</select></label>
+    <label class="f">Poignée<select data-popk="dpg">${[["laiton","Béquille laiton"],["inox","Inox"],["noir","Noir mat"]].map(([k,l])=>`<option value="${k}"${(o.poignee||"inox")===k?" selected":""}>${l}</option>`).join("")}</select></label>
     <label class="f">Couleur<input type="color" data-popk="dcol" value="${o.color||"#ece7dc"}" style="height:34px;padding:2px"></label>${sw(o.color)}
     <label class="f">Ouverture (°)<input type="range" min="0" max="110" data-popk="dopen" value="${o.open??70}"></label>`; }
   if(s.kind==="lum"){ const L=lumList(s.room)[s.idx], lm=lusOf(L); if(L.t==="susp"||L.t==="plaf") return `${close}<b>${esc(lm?lm.n:(LUM.find(t=>t.id===L.t)||{}).n||"")}</b>
@@ -4838,10 +4855,12 @@ function v3PopHtml(){ const s=V3.sel, paints=[...DIVERS.filter(d=>/laque|Finish|
     ${isK?kitCfgHtml(s):""}
     ${(()=>{ const HD=handleOf(it,isK?s.room:undefined); return handleSw(HD.m,HD.f,isK?(S.v3.pgOne?"ce meuble seulement":"toute la cuisine"):"")+(isK?`<label class="chk" style="margin-top:4px"><input type="checkbox" data-popk="pgone" ${S.v3.pgOne?"checked":""}> Changer seulement ce meuble</label>`:""); })()}
     ${v3MovePad()}<p class="hint">Vous pouvez aussi faire glisser le meuble sélectionné${isK?" : il suit le mur le plus proche, vous pouvez le changer de mur":""}.</p>`; }
-const DOORS=[["pleine","Pleine lisse"],["panneaux","4 panneaux (moulurée)"],["rainuree","Rainurée"],["vitree","Vitrée"],["coulissante","Coulissante en applique"],["galandage","Galandage (dans la cloison)"]];
+const DOORS=[["ovale","Moulure ovale (classique)"],["pleine","Pleine lisse"],["panneaux","4 panneaux (moulurée)"],["rainuree","Rainurée"],["vitree","Vitrée"],["coulissante","Coulissante en applique"],["galandage","Galandage (dans la cloison)"]];
+const CADRES=[["fronton","Chambranle cannelé + fronton"],["simple","Chambranle simple"]];
+const DOOR_DEF={style:"ovale",frame:"fronton",poignee:"laiton",color:"#ede8df"};
 function v3PopInput(e){ const el=e.target, k=el.dataset&&el.dataset.popk; if(!k) return; const s=V3.sel; if(!s) return;
   if(s.kind==="wall"){ const w=S.walls[s.i]; if(k==="wpeint") w.peintN=el.value; if(k==="wcol") w.teinte=el.value; }
-  else if(s.kind==="door"){ const o=S.walls[s.i].openings[s.op]; if(k==="dstyle") o.style=el.value; if(k==="dcol") o.color=el.value; if(k==="dopen") o.open=+el.value; }
+  else if(s.kind==="door"){ const o=S.walls[s.i].openings[s.op]; if(k==="dstyle") o.style=el.value; if(k==="dframe") o.frame=el.value; if(k==="dpg") o.poignee=el.value; if(k==="dcol") o.color=el.value; if(k==="dopen") o.open=+el.value; }
   else if(s.kind==="kit"&&/^k(k|f|fac|et|ti|jg|jd|led)$/.test(k)){ const it=kitCfg(s.room).items[s.idx], f={kk:"k",kf:"f",kfac:"fac",et:"et",ket:"et",kti:"ti",kjg:"jg",kjd:"jd",kled:"led"}[k];
     if(el.type==="checkbox") it[f]=el.checked; else if(f==="et") it.et=el.value===""?undefined:+el.value; else if(f==="ti") it.ti=+el.value; else if(f==="k"){ it.k=el.value; delete it.f; delete it.w; } else it[f]=el.value||undefined;
     if(e.type==="change"){ save(); v3Rebuild(); renderSide(); const pop=document.getElementById("v3pop"), st=pop.scrollTop; pop.innerHTML=v3PopHtml(); fillThumbs(pop); pop.scrollTop=st; } return; }
@@ -5375,7 +5394,7 @@ side.addEventListener("click",e=>{
   else if(b.dataset.act==="deldiv"){ w.divers.splice(+b.dataset.i,1); }
   else if(b.dataset.act==="addeau"){ w.points.push({type:"Arrivée eau froide",x:Math.min(w.L-100,S.oss.e*1.5),y:550}); }
   else if(b.dataset.act==="addwin"){ w.openings.push({type:"Fenêtre",x:Math.max(0,Math.round(w.L/2-600)),y:900,w:1200,h:1150}); }
-  else if(b.dataset.act==="adddoor"){ w.openings.push({type:"Porte",x:Math.min(200,Math.max(0,w.L-930)),y:0,w:830,h:2040}); }
+  else if(b.dataset.act==="adddoor"){ w.openings.push({type:"Porte",x:Math.min(200,Math.max(0,w.L-930)),y:0,w:830,h:2040,...DOOR_DEF}); }
   else if(b.dataset.act==="addwall"){ S.walls.push({name:"Mur "+(S.walls.length+1),room:w.room||"Pièce 1",angle:"rentrant",L:3000,H:w.H,plaN:"",peintN:"",openings:[],points:[],divers:[]}); S.cur=S.walls.length-1; }
   else if(b.dataset.act==="dupwall"){ const c=JSON.parse(JSON.stringify(w)); c.name+=" (copie)"; S.walls.push(c); S.cur=S.walls.length-1; }
   else if(b.dataset.act==="delwall"){
