@@ -4251,22 +4251,28 @@ function v3AO(scene,s,a,b,o,h){ // ombre douce dans les angles (sol, plafond, co
   const PL=(xa,xb,za,zb,m)=>{ const g=new THREE.PlaneGeometry((xb-xa)/1000,(zb-za)/1000); g.translate((xa+xb)/2000,(za+zb)/2000,(o+1.5)/1000); g.applyMatrix4(wallMatrix(s,0)); return new THREE.Mesh(g,m); };
   q.push(PL(a,b,0,240,M("b")), PL(a,b,h-200,h,M("t")), PL(a,a+200,0,h,M("l")), PL(b-200,b,0,h,M("r")));
   q.forEach(m=>{ m.userData.ao=1; m.renderOrder=2; scene.add(m); }); }
+/* lumière du ciel qui entre par les fenêtres (jour) : un projecteur doux par fenêtre, bleuté, proportionnel à la surface vitrée */
+function v3WinLights(scene,V){ if(V.nuit) return; try{ const {g}=v3Fit(), W=[]; g.segs.forEach(sg=>sg.w.openings.filter(o=>o.type==="Fenêtre"||o.type==="Autre").forEach(o=>{ const xm=o.x+o.w/2; W.push({A:o.w*o.h/1e6,x:sg.x0+sg.dx*xm,y:sg.y0+sg.dy*xm,nx:sg.nx,ny:sg.ny,z:(o.y+o.h/2)/1000,w:o.w/1000}); }));
+  W.sort((a,b)=>b.A-a.A).slice(0,4).forEach(q=>{ const sl=new THREE.SpotLight("#dfe9ff",Math.min(1.6,0.45+q.A*0.55),9,1.25,1,1.3); sl.position.set((q.x-q.nx*250)/1000,q.z+0.15,-(q.y-q.ny*250)/1000); sl.target.position.set((q.x+q.nx*2500)/1000,0.2,-(q.y+q.ny*2500)/1000); sl.userData.sky=1; scene.add(sl); scene.add(sl.target); }); }catch(e){} }
 function v3Realify(scene){ if(!V3.r) return; const V=S.v3; scene.environment=v3EnvTex();
   let ctr=[0,0], ext=6, win=null; try{ const {c,g}=v3Fit(), P=g.inner.flatMap(e=>[e.a,e.b]); ctr=c; ext=Math.max(4,Math.max(...P.map(p=>Math.hypot(p[0]-c[0],p[1]-c[1])))/1000+1.5);
     g.segs.forEach(sg=>sg.w.openings.filter(o=>o.type==="Fenêtre"||o.type==="Autre").forEach(o=>{ const A=o.w*o.h; if(!win||A>win.A){ const xm=o.x+o.w/2; win={A,x:sg.x0+sg.dx*xm,y:sg.y0+sg.dy*xm,nx:sg.nx,ny:sg.ny,z:o.y+o.h/2}; } })); }catch(e){}
-  scene.traverse(o=>{ if(o.isHemisphereLight) o.intensity=V.nuit?.08:.1;
+  let nLamp=0; scene.traverse(o=>{ if(o.userData&&o.userData.lamp) nLamp++; });
+  scene.traverse(o=>{ if(o.isHemisphereLight) o.intensity=V.nuit?.03:.16;
     if(o.isDirectionalLight){ o.intensity=V.nuit?0.02:2.1; o.color.set("#fff1dc"); if(win){ const tx=(win.x+win.nx*1800)/1000, ty=-(win.y+win.ny*1800)/1000; o.position.set(tx-win.nx*9,win.z/1000+5.5,ty+win.ny*9); o.target.position.set(tx,0,ty); ext=Math.max(ext,12); }
       else { o.position.set(ctr[0]/1000+ext*.7,ext*1.4,-ctr[1]/1000+ext*.5); o.target.position.set(ctr[0]/1000,0,-ctr[1]/1000); } scene.add(o.target);
       o.castShadow=true; o.shadow.mapSize.set(2048,2048); const sc=o.shadow.camera; sc.left=sc.bottom=-ext; sc.right=sc.top=ext; sc.near=.5; sc.far=ext*5; sc.updateProjectionMatrix(); o.shadow.bias=-.0004; o.shadow.normalBias=.02; }
-    if(o.isPointLight){ o.castShadow=false; o.intensity*=1.6; }
+    if(o.isPointLight||o.isSpotLight){ o.castShadow=false; o.intensity*=o.userData.sky?1.3:1.6; if(o.userData.lamp&&V.nuit&&!o.userData.shd&&(V3.__shd=(V3.__shd||0)+1)<=2){ o.castShadow=true; o.userData.shd=1; o.shadow.mapSize.set(512,512); o.shadow.bias=-.001; o.shadow.normalBias=.03; o.shadow.radius=3; o.shadow.camera.near=.05; o.shadow.camera.far=12; } }
+    if(o.isAmbientLight&&o.userData.bounce) o.intensity=.12;
     if(o.isMesh){ const ms=[].concat(o.material); const tr=ms.some(m=>m&&m.transparent); o.castShadow=!tr&&!o.userData.ao; o.receiveShadow=!o.userData.ao; ms.forEach(m=>{ if(m&&m.isMeshStandardMaterial&&!m.bumpMap) m.envMapIntensity=m.roughness<.5?.7:.25; }); } });
   let sun=null; scene.traverse(o=>{ if(o.isDirectionalLight&&!sun) sun=o; });
   { let bx=[ctr[0]-1500,ctr[0]+1500,ctr[1]-1500,ctr[1]+1500]; try{ const {g}=v3Fit(), P=g.inner.flatMap(e=>[e.a,e.b]), xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys), mx=(x1-x0)*.25, my=(y1-y0)*.25; bx=[x0+mx,x1-mx,y0+my,y1-my]; }catch(e){}
     const rm=(S.walls[S.cur]||{}).room||"", hs=S.walls.filter(w=>(w.room||"")===rm).map(w=>+w.H||2500), top=Math.max(1.2,(hs.length?Math.min(...hs):2500)/1000-.2);
     let fx=(bx[0]+bx[1])/2, fy=(bx[2]+bx[3])/2; if(!insideAny(fx,fy)){ const q=[ctr[0],ctr[1]]; if(insideAny(q[0],q[1])){ fx=q[0]; fy=q[1]; } else if(V3.fp&&insideAny(V3.fp.x,V3.fp.y)){ fx=V3.fp.x; fy=V3.fp.y; } }
-    const fill=new THREE.PointLight("#fff3e2",V.nuit?.06:.55,0,1); fill.position.set(fx/1000,Math.min(1.5,top),-fy/1000); fill.userData.top=top; fill.castShadow=true; fill.shadow.mapSize.set(512,512); fill.shadow.bias=-.003; fill.shadow.radius=4; fill.shadow.camera.near=.05; fill.shadow.camera.far=30; fill.userData.hdFill=1; scene.add(fill);
+    V3.__shd=0; const fill=new THREE.PointLight(V.nuit?"#ffcf9a":"#fff3e2",V.nuit?(nLamp?.1:.06):.55,0,1); fill.position.set(fx/1000,Math.min(1.5,top),-fy/1000); fill.userData.top=top; fill.castShadow=true; fill.shadow.mapSize.set(512,512); fill.shadow.bias=-.003; fill.shadow.radius=4; fill.shadow.camera.near=.05; fill.shadow.camera.far=30; fill.userData.hdFill=1; scene.add(fill);
     V3.hdL={sun,fill,box:bx}; }
-  scene.background=V.nuit?new THREE.Color("#10141c"):v3Sky(); v3Lin(scene); }
+  scene.background=V.nuit?new THREE.Color("#10141c"):v3Sky(); v3Lin(scene);
+  scene.traverse(o=>{ if(o.material) [].concat(o.material).forEach(m=>{ if(m&&m.envMapIntensity!==undefined){ if(m.userData.__ei===undefined) m.userData.__ei=m.envMapIntensity; m.envMapIntensity=m.userData.__ei*(V.nuit?.06:1); } }); }); }
 /* Couleurs en espace linéaire (éclairage physiquement juste) : on convertit une fois chaque matière, et on revient en arrière hors mode Réaliste */
 function v3Lin(scene){ const seen=new Set(), tx=t=>{ if(t&&t.encoding!==THREE.sRGBEncoding){ if(t.__enc0===undefined) t.__enc0=t.encoding; t.encoding=THREE.sRGBEncoding; t.needsUpdate=true; } };
   scene.traverse(o=>{ [].concat(o.material||[]).forEach(m=>{ if(!m||seen.has(m)) return; seen.add(m); tx(m.map); tx(m.emissiveMap); if(m.userData.lin) return; m.userData.lin=1; if(m.color) m.color.convertSRGBToLinear(); if(m.emissive) m.emissive.convertSRGBToLinear(); m.needsUpdate=true; }); });
@@ -4566,9 +4572,10 @@ function netMaterials(room){
 
 function buildScene(){
   const T3=THREE, scene=new T3.Scene(), V=S.v3, cw=S.walls[S.cur], curRoom=cw.room||"";
-  scene.background=new T3.Color(V.nuit?"#1b2230":"#dfe6ee");
-  scene.add(new T3.HemisphereLight("#ffffff","#b9a88e",V.nuit?0.18:0.75));
-  const sun=new T3.DirectionalLight("#fff6e8",V.nuit?0.05:0.55); sun.position.set(4,8,3); scene.add(sun);
+  scene.background=new T3.Color(V.nuit?"#0d1119":"#dfe6ee");
+  // v159 : jour = ciel bleuté + rebond chaud du sol + soleil ; nuit = clair de lune très faible, ce sont les luminaires qui éclairent
+  scene.add(new T3.HemisphereLight(V.nuit?"#3a4766":"#e3ecf8",V.nuit?"#15130f":"#c2ae8f",V.nuit?0.07:0.62));
+  const sun=new T3.DirectionalLight(V.nuit?"#9fb4dc":"#fff1dc",V.nuit?0.03:0.62); sun.position.set(4,8,3); scene.add(sun);
   const pick=[], rooms=V.all?roomNames().filter(n=>!(S.r3.hide||{})[n]):[curRoom], LAY=wallLayers(), cut=V.cut, lay=S.r3.lay||{};
   const M={stone:v3Mat("#ffffff",{map:texStone()}), fibre:v3Mat("#ffffff",{map:texFibre()}), mem:v3Mat("#ffffff",{map:texMem(),emissive:new THREE.Color("#808080"),emissiveMap:texMem(),roughness:.55,transparent:true,opacity:.93}),
     pla:v3Mat("#e8e7e2"), end:v3Mat("#f3f1ea"), metal:v3Mat("#a9b1b8",{metalness:.6,roughness:.4}), white:v3Mat("#fbfbf8"), glass:v3Mat("#a9d3ef",{transparent:true,opacity:.35,roughness:.1}),
@@ -4746,7 +4753,10 @@ function buildScene(){
         else if(t==="susp"){ mk(new T3.CylinderGeometry(0.004,0.004,0.8,6),M.dark,0.4); mk(new T3.ConeGeometry(0.18,0.2,24,1,true),v3Mat("#3a3a3a"),0.88); mk(new T3.SphereGeometry(0.05,12,8),emis,0.92); }
         if(t==="regl") mk(new T3.BoxGeometry(1.2,0.03,0.06),emis,0.02);
         if(t==="vmc"||t==="vmcins"){ mk(new T3.CylinderGeometry(0.075,0.075,0.02,24),M.white,0.01); mk(new T3.TorusGeometry(0.05,0.006,6,24).rotateX(Math.PI/2),v3Mat("#c9c9c9"),0.022); }
-        if((t==="spot"||t==="plaf"||t==="susp"||t==="regl") && lights.length<8){ const pl=new T3.PointLight("#ffe7b8",V.nuit?(t==="spot"?0.55:0.9):0.18,6,1.6); pl.position.copy(pos); pl.position.y-=lm?lowY*0.9:t==="susp"?1.0:0.15; scene.add(pl); lights.push(pl); } });
+        if(t==="spot"||t==="plaf"||t==="susp"||t==="regl"||t==="lustre"){ const nL=lumList(room).filter(q=>/^(spot|plaf|susp|regl|lustre)$/.test(q.t)).length, kk=Math.max(1,nL/Math.min(nL,10)), y0=pos.y-(lm?lowY*0.9:t==="susp"?1.0:0.15), wc=V.nuit?"#ffd3a1":"#ffe7c4"; // 2700 K le soir
+          if(lights.length<10){ const ia=V.nuit?(t==="spot"?1.0:t==="regl"?0.9:1.5)*kk:0.12;
+            if(t==="spot"){ const sl=new T3.SpotLight(wc,ia*1.6,7,0.75,0.6,1.2); sl.position.set(pos.x,pos.y-0.02,pos.z); sl.target.position.set(pos.x,0,pos.z); scene.add(sl); scene.add(sl.target); sl.userData.lamp=1; lights.push(sl); }
+            else { const pl=new T3.PointLight(wc,ia,9,1.25); pl.position.set(pos.x,y0,pos.z); pl.userData.lamp=1; scene.add(pl); lights.push(pl); } } } });
       // créations en placo
       creas(room).forEach(c=>{ const sg=g.segs.find(q=>wid(q.w)===c.wall)||g.segs[0]; if(!sg) return; const ww=sg.w, sp=creaSpan(ww), T0=g.Ts?g.Ts[g.segs.indexOf(sg)]:g.T, hh=Math.min(ww.H,ceilFinH(room,g)), pm=v3Mat("#efebe3",{roughness:.8}), P=creaFit(c,room), x=sp.a+(P.x||0); if(c.t==="led"&&+c.pos===1){ P.y=Math.max(0,Math.min(P.y||0,hh-20)); P.L=Math.max(20,Math.min(P.L,hh-P.y)); }
         const add=m=>{ if(m){ scene.add(m); } };
@@ -4806,7 +4816,9 @@ function buildScene(){
     const NN=V.res?v3Net(scene,pick,room,g,X,wallSets):netRoom(room,g,X); if(V.ceil||V.res) v3Traps(scene,pick,room,NN.traps,ceilFinH(room,g));
   });
   if(V.res) v3Vmc(scene,pick,rooms);
-  if(V.nuit && !lights.length){ const a=new T3.AmbientLight("#ffffff",0.25); scene.add(a); }
+  if(V.nuit && !lights.length){ const a=new T3.AmbientLight("#ffe2bf",0.3); scene.add(a); }
+  if(V.nuit&&lights.length){ const a=new T3.AmbientLight("#ffdcb4",0.08); a.userData.bounce=1; scene.add(a); } // lumière renvoyée par les murs clairs
+  v3WinLights(scene,V);
   if(V.real) v3Realify(scene); else { v3Unlin(scene); V3.hdL=null; } return {scene,pick,wallSets}; }
 function v3Fit(){ // point de départ de la visite
   const cw=S.walls[S.cur], room=cw.room||"", g=S.v3.all?geomXf(roomGeom(room),room):roomGeom(room), P=g.poly||g.inner.flatMap(e=>[e.a,e.b]);
@@ -4857,7 +4869,7 @@ function v3Init(){
   V3.fp={x:c[0],y:c[1],yaw:0,pitch:0}; V3.orb={th:-0.6,ph:0.9,r:Math.max(5,ext*(wrap.clientWidth<600?2.4:1.7)+2),t:[c[0],c[1]]};
   v3Rebuild(); v3Events(); v3Loop(); VR.on=null;
   try{ if(navigator.xr&&navigator.xr.isSessionSupported) navigator.xr.isSessionSupported("immersive-vr").then(ok=>{ VR.xr=!!ok; }).catch(()=>{}); }catch(e){} }
-function v3Rebuild(){ if(!V3.r) return; { const R=V3.r, real=!!S.v3.real; R.toneMapping=real?THREE.ACESFilmicToneMapping:THREE.NoToneMapping; R.toneMappingExposure=real?.75:1; R.shadowMap.enabled=real; R.shadowMap.type=THREE.PCFSoftShadowMap; R.physicallyCorrectLights=false; } if(V3.scene) V3.scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.shadow&&o.shadow.map){ o.shadow.map.dispose(); o.shadow.map=null; } if(o.material) [].concat(o.material).forEach(m=>{ if(m&&m.map&&m.map.__own){ m.map.dispose(); } }); });
+function v3Rebuild(){ if(!V3.r) return; { const R=V3.r, real=!!S.v3.real; R.toneMapping=real?THREE.ACESFilmicToneMapping:THREE.NoToneMapping; R.toneMappingExposure=real?(S.v3&&S.v3.nuit?1.05:.8):1; R.shadowMap.enabled=real; R.shadowMap.type=THREE.PCFSoftShadowMap; R.physicallyCorrectLights=false; } if(V3.scene) V3.scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.shadow&&o.shadow.map){ o.shadow.map.dispose(); o.shadow.map=null; } if(o.material) [].concat(o.material).forEach(m=>{ if(m&&m.map&&m.map.__own){ m.map.dispose(); } }); });
   const b=buildScene(); V3.scene=b.scene; V3.pick=b.pick; V3.walls=b.wallSets; V3.dirty=true; MES.g=null; mesDraw(); }
 function v3Cam(){ const V=S.v3, cam=V3.cam, wrap=V3.wrap, W=wrap.clientWidth, H=wrap.clientHeight;
   if(V3.r.domElement.width!==Math.round(W*V3.r.getPixelRatio())||V3.r.domElement.height!==Math.round(H*V3.r.getPixelRatio())){ V3.r.setSize(W,H,false); }
