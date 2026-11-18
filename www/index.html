@@ -3452,7 +3452,7 @@ const FACADES=[ // gammes vues sur ikea.com (nov. 2026), puis anciennes gammes g
   {n:"HAVSTORP gris clair",c:"#c9cbc8"},{n:"HAVSTORP vert profond",c:"#3f5a4b"},{n:"HAVSTORP brun-beige",c:"#a58f74"},
   {n:"NICKEBO gris-vert mat",c:"#8a958a"},{n:"UPPLÖV anthracite mat",c:"#3e4042"},{n:"LERHYTTAN bleu",c:"#4a6680"},
   {n:"FORSBACKA chêne",c:"#c49a68"},{n:"SINARP brun",c:"#7a5236"},
-  {n:"ASPUDDEN blanc mat",c:"#f0efea"},{n:"ASPUDDEN gris clair",c:"#c2c9c1"},{n:"ASPUDDEN gris-vert foncé",c:"#55625a"},{n:"VOXTORP gris foncé",c:"#4b4d4f"},{n:"VOXTORP effet noyer",c:"#7a5a3e"},
+  {n:"ASPUDDEN blanc mat",c:"#f0efea"},{n:"ASPUDDEN gris clair",c:"#d6d7d2"},{n:"ASPUDDEN gris-vert foncé",c:"#55625a"},{n:"VOXTORP gris foncé",c:"#4b4d4f"},{n:"VOXTORP effet noyer",c:"#7a5a3e"},
   {n:"AXSTAD blanc mat",c:"#f3f2ee"},{n:"AXSTAD gris-vert",c:"#8d998c"},
   {n:"ASKERSUND effet frêne clair",c:"#cdb79a"},{n:"BODBYN blanc cassé",c:"#eae5d8"},{n:"BODBYN gris",c:"#8f9592"},
   {n:"ENKÖPING effet bois blanc",c:"#e6dfd2"},{n:"ENKÖPING gris-vert",c:"#7f8d82"},{n:"HAVSTORP beige",c:"#d9cdb5"},
@@ -4693,7 +4693,7 @@ function buildScene(){
           else { add(v3Box(s,p[0]+1.5,p[1]-1.5,d1,d1+19,p[2]+1.5,p[3]-1.5,pm));
             // façades à cadre (ASPUDDEN, STENSUND…) : cadre étroit en relief + rainure autour du panneau
             const fn=it.fac||K.facade||"", a=p[0]+1.5, bb=p[1]-1.5, c=p[2]+1.5, d=p[3]-1.5;
-            if(/ASPUDDEN|STENSUND|BODBYN|SANNIDAL|HAVSTORP|AXSTAD|ENKÖPING/i.test(fn)&&(!p[4]||p[4]==="lvf")&&kk.f!=="fil"&&bb-a>140&&d-c>140){ const fw=Math.min(20,(bb-a)*0.08,(d-c)*0.08), gm=v3Mat(shade(fc,0.82),{roughness:.7});
+            if(/ASPUDDEN|STENSUND|BODBYN|SANNIDAL|HAVSTORP|AXSTAD|ENKÖPING/i.test(fn)&&(!p[4]||p[4]==="lvf")&&kk.f!=="fil"&&bb-a>140&&d-c>140){ const fw=Math.min(15,(bb-a)*0.08,(d-c)*0.08), gm=v3Mat(shade(fc,0.88),{roughness:.7}), pm=v3Mat(shade(fc,1.03),{roughness:.55}); // ASPUDDEN (photo IKEA) : cadre fin un peu plus clair que le panneau, rainure grise
               [[a,a+fw,c,d],[bb-fw,bb,c,d],[a+fw,bb-fw,c,c+fw],[a+fw,bb-fw,d-fw,d]].forEach(q=>add(v3Box(s,q[0],q[1],d1+19,d1+21,q[2],q[3],pm)));
               [[a+fw,a+fw+2,c+fw,d-fw],[bb-fw-2,bb-fw,c+fw,d-fw],[a+fw,bb-fw,c+fw,c+fw+2],[a+fw,bb-fw,d-fw-2,d-fw]].forEach(q=>add(v3Box(s,q[0],q[1],d1+19,d1+19.6,q[2],q[3],gm))); } }
           if(p[4]==="four") add(v3Box(s,p[0]+60,p[1]-60,d1+19,d1+21,p[2]+80,p[3]-120,v3Mat("#3d4248",{roughness:.2})));
