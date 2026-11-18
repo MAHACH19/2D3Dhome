@@ -4047,7 +4047,7 @@ function solPanel(w){
 
 /* ---------- Visite 3D immersive (three.js) ---------- */
 const NUANCIER=[["Flügger White FL 8001","#f3f4f1"],["Blanc pur","#f7f6f2"],["Blanc cassé","#efeadf"],["Lin","#e6dcc8"],["Greige","#cfc6b8"],["Gris perle","#c9cac6"],["Gris anthracite","#4b4e52"],["Vert sauge","#b3bca4"],["Vert olive","#7d7f5a"],["Bleu gris","#8e9aa6"],["Bleu nuit","#2f3d55"],["Terracotta","#b9674a"],["Ocre","#c99a4a"],["Rose poudré","#e3c7bf"],["Noir","#232323"]];
-function paintColor(w){ if(w&&w.teinte) return w.teinte; const prod=(w&&w.peintN)||S.fin.peint.n; return /teint/i.test(prod)?(S.fin.peint.teinte||"#efe9df"):"#fbfbf9"; }
+function paintColor(w){ if(w&&w.teinte) return w.teinte; const prod=(w&&w.peintN)||S.fin.peint.n; return /teint/i.test(prod)?(S.fin.peint.teinte||"#efe9df"):"#f4f4f1"; } // blanc standard Flügger (base blanche non teintée, LRV ≈ 90 %)
 const LUM=[
   {id:"plaf",n:"Plafonnier (point DCL)",c:"lum"},{id:"susp",n:"Suspension (point DCL)",c:"lum"},{id:"spot",n:"Spot LED encastré Ø 8 cm",c:"lum"},
   {id:"regl",n:"Réglette / ruban LED",c:"lum"},{id:"vmc",n:"Bouche d'extraction VMC hygro",c:"vmc"},{id:"vmcins",n:"Bouche d'insufflation VMC double flux",c:"vmc"},
@@ -4237,7 +4237,8 @@ function texBeton(col,fin){ const key="bc|"+col+"|"+fin; V3.tex=V3.tex||{}; if(V
   const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.anisotropy=8; t.encoding=THREE.sRGBEncoding; t.repeat.set(1/1.5,1/1.5); V3.tex[key]=t; return t; }
 function bcMat(B,rep){ const t=texBeton(B.col||"#c9c6c0",B.fin||"satin"); let m=t; if(rep){ m=t.clone(); m.needsUpdate=true; m.repeat.set(rep[0],rep[1]); }
   return v3Mat("#ffffff",{map:m,bumpMap:m,bumpScale:.0015,roughness:B.fin==="brillant"?.18:B.fin==="satin"?.38:.72,envMapIntensity:B.fin==="mat"?.5:1}); }
-function finMat(w,pc){ return bcOnWall(w)?bcMat(bcCfg(w.room||"")):v3Mat(pc,{roughness:.92}); }
+function paintRough(w){ const n=(w&&w.peintN)||S.fin.peint.n||"", g=+((n.match(/(?:Dekso|Flutex|Iso)\s*(?:Air\s*)?(\d+)/i)||[])[1]||5); return g<=2?.97:g<=5?.92:g<=7?.86:g<=10?.78:.6; } // brillance (Flutex 7 = mat velouté) → rugosité
+function finMat(w,pc){ return bcOnWall(w)?bcMat(bcCfg(w.room||"")):v3Mat(pc,{roughness:paintRough(w)}); }
 /* Rendu réaliste : éclairage d'ambiance (reflets), soleil avec ombres, rendu cinéma (ACES) */
 function v3EnvTex(){ if(V3.env&&V3.envR===V3.r) return V3.env; const c=document.createElement("canvas"); c.width=512; c.height=256; const x=c.getContext("2d");
   const g=x.createLinearGradient(0,0,0,256); g.addColorStop(0,"#fdfbf6"); g.addColorStop(.45,"#e9e4da"); g.addColorStop(.55,"#bdb3a3"); g.addColorStop(1,"#7d7364"); x.fillStyle=g; x.fillRect(0,0,512,256);
@@ -6606,6 +6607,11 @@ function freeSpot(room){ const g=roomGeom(room); if(!g.poly) return null; const 
   for(let x=Math.min(...xs);x<=Math.max(...xs);x+=50) for(let y=Math.min(...ys);y<=Math.max(...ys);y+=50){ if(!inP(P,x,y)) continue; const d=Math.min(...P.map((p,i)=>dS(x,y,p,P[(i+1)%P.length])),...R.map(Q=>dQ(Q,x,y))); if(!best||d>best.d+1) best={x,y,d}; }
   return best?[best.x,best.y]:null; }
 chaudInit(); chaudV2(); chaudV3(); mahdiV4(); renderAll();
+/* 18/11 : peinture réelle de mahdi = Flügger Flutex 7 Pro mat velouté, blanc standard (non teinté) sur tous les murs */
+function mahdiV7(){ if(S.mahdiV7) return false; if(!S.fin||!S.fin.peint) return false; S.mahdiV7=1; const P=PEINT.find(m=>m.n==="Flügger Flutex 7 Pro mat velouté"); if(!P){ save(); return false; }
+  S.fin.peint.n=P.n; S.fin.peint.r=P.r; let k=0; S.walls.forEach(w=>{ if(w.peintN&&!/H2O|eau/i.test(w.peintN)){ w.peintN=P.n; k++; } if(w.teinte){ delete w.teinte; k++; } });
+  (S.mahdiV5log=S.mahdiV5log||[]).push("peinture des murs : Flügger Flutex 7 Pro mat velouté, blanc standard"); save(); return true; }
+setTimeout(()=>{ try{ if(mahdiV7()){ renderAll(); if(typeof v3Rebuild==="function") v3Rebuild(); } }catch(e){ console.warn("mahdiV7",e); } },1000);
 /* 18/11 soir : 2 tabourets Stooly Léon autour de la table carrelée */
 function mahdiV6(){ if(S.mahdiV6) return false; const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return false; const M=meubles(room), T=M.find(m=>m.cat==="tcarr"); if(!T) return false; S.mahdiV6=1;
   if(M.some(m=>m.cat==="leon")){ save(); return false; } const o=MOB.find(q=>q.t==="leon"); if(!o){ save(); return false; }
