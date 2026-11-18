@@ -3740,7 +3740,13 @@ function kitMaterials(room){
       add(`Rehausse jusqu'au plafond : panneau de finition ${K.facade} 62×240 recoupé en bandes de ${fr(rh/10,1)} cm`,`${fr(Lr/1000,2)} m de bandes au-dessus des colonnes et des meubles hauts, collées-vissées sur tasseaux`,Math.ceil(Lr/per),"u"); add("Tasseau 27×27 pour fixer la rehausse","en haut des caissons",Math.ceil(Lr/1000*2/2.4),"u (2,40 m)"); } }catch(e){} } add("Tiroir intérieur MAXIMERA","à l'intérieur d'un élément à porte",ti,"u"); add("Tablette METOD / UTRUSTA","étagères choisies",et,"u");
     add("Éclairage LED sous meuble mural","réglette + alimentation",led.length,"u");
     const HD=handleOf(null,room), nh=K.items.reduce((a,it)=>{ const k=kitItem(it); return a+(k&&k.t!=="app"&&!/ouvert|etag|hotteinox|fil|pieds/.test(it.f||k.f)?frontPanels(it.f||k.f,0,k.w,0,700).filter(p=>p[4]!=="four"&&p[4]!=="lv").length:0); },0);
-    if(HD.m!=="sans") add(`Poignée ${(HANDLES.find(h=>h[0]===HD.m)||[])[1]} · ${(HFIN.find(h=>h[0]===HD.f)||[])[1]}`,"une par porte ou tiroir",nh,"u"); }
+    if(HD.m==="retro"){ const fn=(HFIN.find(h=>h[0]===HD.f)||[])[1], cnt={t:0,c:0,b:0};
+      K.items.forEach(it=>{ const k=kitItem(it), w=S.walls.find(q=>wid(q)===it.wall), b=k&&w&&kitBox(it,K,w.H); if(!b||k.t==="app"||/ouvert|etag|hotteinox|fil|pieds/.test(it.f||k.f)) return;
+        frontPanels(it.f||k.f,0,k.w,(k.t==="bas"||k.t==="col")?80:b.z0,b.z1).filter(p=>p[4]!=="four"&&p[4]!=="lv").forEach(p=>{ if(k.t==="haut"||p[4]==="rel"||k.t==="col"&&p[2]>=850) cnt.t++; else if(k.t==="col") cnt.c++; else cnt.b++; }); });
+      if(cnt.b) add(`Poignée Retro barre entraxe 160 mm · ${fn}`,"meubles bas (portes et tiroirs)",cnt.b,"u");
+      if(cnt.c) add(`Poignée Retro barre entraxe 320 mm · ${fn}`,"portes de colonne sous le plan",cnt.c,"u");
+      if(cnt.t) add(`Bouton Retro en T · ${fn}`,"au-dessus du plan de travail",cnt.t,"u"); }
+    else if(HD.m!=="sans") add(`Poignée ${(HANDLES.find(h=>h[0]===HD.m)||[])[1]} · ${(HFIN.find(h=>h[0]===HD.f)||[])[1]}`,"une par porte ou tiroir",nh,"u"); }
   const runs=kitRuns(room), lenT=runs.reduce((a,r)=>a+(r.b-r.a),0);
   const PL=planOf(K,room);
   const OG=PL.wedi?onyxGeo(room):null;
@@ -4649,8 +4655,8 @@ function buildScene(){
               [[a+fw,a+fw+2,c+fw,d-fw],[bb-fw-2,bb-fw,c+fw,d-fw],[a+fw,bb-fw,c+fw,c+fw+2],[a+fw,bb-fw,d-fw-2,d-fw]].forEach(q=>add(v3Box(s,q[0],q[1],d1+19,d1+19.6,q[2],q[3],gm))); } }
           if(p[4]==="four") add(v3Box(s,p[0]+60,p[1]-60,d1+19,d1+21,p[2]+80,p[3]-120,v3Mat("#3d4248",{roughness:.2})));
           if(kk.t!=="app"||kk.f==="frigo"||kk.f==="us"){ const hor=(p[3]-p[2])<500||(p[4]&&p[4]!=="vit"), HD=handleOf(it,room), hm=handleMat(HD.f);
-            const rel=p[4]==="rel", hor2=hor||rel, c=rel?[(p[0]+p[1])/2,p[2]+50]:hor?[(p[0]+p[1])/2,p[3]-52]:[kk.f==="2p"&&p[0]>x0+10||kk.f!=="2p"&&kk.f!=="us"&&it.hg==="d"?p[0]+40:p[1]-40, kk.t==="haut"?p[2]+140:p[3]-120];
-            if(!it.open) handleBoxes(HD.m,[p[0],p[1],p[2],p[3]],c,hor2,kk.t==="haut"||rel).forEach(q=>add(v3Box(s,q[0],q[1],d1+19+q[4],d1+19+q[5],q[2],q[3],hm))); } });
+            const rel=p[4]==="rel", hor2=hor||rel, upT=kk.t==="haut"||rel||HD.m==="retro"&&kk.t==="col"&&p[2]>=850, ent=HD.m==="retro"&&kk.t==="col"?320:160, c=rel?[(p[0]+p[1])/2,p[2]+50]:hor?[(p[0]+p[1])/2,p[3]-52]:[kk.f==="2p"&&p[0]>x0+10||kk.f!=="2p"&&kk.f!=="us"&&it.hg==="d"?p[0]+40:p[1]-40, kk.t==="haut"||upT?p[2]+140:kk.t==="col"&&HD.m==="retro"?Math.min(p[3]-230,Math.max(p[2]+230,1050)):p[3]-120];
+            if(!it.open) handleBoxes(HD.m,[p[0],p[1],p[2],p[3]],c,hor2,upT,ent).forEach(q=>add(v3Box(s,q[0],q[1],d1+19+q[4],d1+19+q[5],q[2],q[3],hm))); } });
         if(kk.f==="ouvert"||kk.f==="etag"){ const ns=Math.max(1,Math.round((b.z1-fz0)/350)); for(let q=1;q<ns;q++){ const z=fz0+(b.z1-fz0)*q/ns; add(v3Box(s,x0+19,x1-19,d0,d1,z,z+19,carc)); } }
         if(kk.f==="hotte") add(v3Box(s,x0,x1,d0,d1+30,b.z0-40,b.z0,M.steel));
       });
@@ -5129,16 +5135,16 @@ function thumbOf(kind,o){ const key=kind+":"+o.id+":"+(o.c||o.col||""); if(THUMB
     sc.traverse(x=>{ if(x.geometry) x.geometry.dispose(); }); THUMBS[key]=url; return url; }catch(e){ return ""; } }
 function fillThumbs(root){ const L=[...root.querySelectorAll("img[data-th]")]; let i=0; const step=()=>{ const t=performance.now(); while(i<L.length&&performance.now()-t<30){ const im=L[i++], [k,id]=im.dataset.th.split(":"), o=k==="mob"?MOB.find(q=>q.id===id):LUSTRES.find(q=>q.id===id); if(o) im.src=thumbOf(k,o); } if(i<L.length) requestAnimationFrame(step); }; requestAnimationFrame(step); }
 function altGrid(list,kind,curId,act){ return `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:6px 0">${list.map(o=>`<button type="button" data-pop="${act}:${o.id}" style="display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:4px;text-align:left;border-radius:8px;${o.id===curId?"border:2px solid #1d63c4;":""}"><img data-th="${kind}:${o.id}" alt="" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:5px;background:#eef0f2"><span style="font-size:12px;line-height:1.2;font-weight:600">${esc(o.n)}</span><span class="cap" style="font-size:11px">${kind==="mob"?`${cm(o.w)} × ${cm(o.d)} × ${cm(o.h)} cm`:o.sh==="lin"?`${cm(o.d)} cm de long`:`Ø ${cm(o.d)} cm${o.n2>1?` · ${o.n2} têtes`:""}`}</span></button>`).join("")}</div>`; }
-const HANDLES=[["retro","Retro gris inox (grande en bas, T en haut)"],["kallror","KALLRÖR 21 cm (IKEA)"],["barre","Barre 16 cm"],["longue","Barre longue 32 cm"],["bouton","Bouton rond"],["coquille","Coquille"],["profil","Profilé sur le chant"],["sans","Sans poignée (push)"]];
+const HANDLES=[["retro","Retro gris inox (160 bas, 320 colonnes, T au-dessus du plan)"],["kallror","KALLRÖR 21 cm (IKEA)"],["barre","Barre 16 cm"],["longue","Barre longue 32 cm"],["bouton","Bouton rond"],["coquille","Coquille"],["profil","Profilé sur le chant"],["sans","Sans poignée (push)"]];
 const HFIN=[["inox","Inox brossé","#d3d7db",.45,.3],["noir","Noir mat","#1f1f1f",.3,.55],["laiton","Laiton brossé","#b8935a",.8,.35],["cuivre","Cuivre","#b87333",.8,.35],["blanc","Blanc","#f2f2f0",.1,.5],["chene","Chêne","#b98d5c",0,.7]];
 const HMATS={}; function handleMat(f){ const h=HFIN.find(q=>q[0]===f)||HFIN[0]; return HMATS[h[0]]||(HMATS[h[0]]=v3Mat(h[2],{metalness:h[3],roughness:h[4]})); }
 function handleOf(it,room){ const K=room!==undefined&&S.kit&&S.kit[room]||{}; return {m:it&&it.pg||K.pg||"barre", f:it&&(it.pf||it.poignee)||K.pf||"inox"}; }
 /* boîtes d'une poignée, repère de la face (mm) : u horizontal, v vertical, w sortant de la face ; F=[u0,u1,v0,v1] face, c=[cu,cv] position par défaut, hor, low (meuble haut : profil en bas) */
-function handleBoxes(m,F,c,hor,low){ const [cu,cv]=c, B=[], seg=(L)=>{ const a=L/2; if(hor){ B.push([cu-a,cu+a,cv-6,cv+6,22,32],[cu-a+4,cu-a+12,cv-5,cv+5,0,22],[cu+a-12,cu+a-4,cv-5,cv+5,0,22]); } else { B.push([cu-6,cu+6,cv-a,cv+a,22,32],[cu-5,cu+5,cv-a+4,cv-a+12,0,22],[cu-5,cu+5,cv+a-12,cv+a-4,0,22]); } };
+function handleBoxes(m,F,c,hor,low,ent){ const [cu,cv]=c, B=[], seg=(L)=>{ const a=L/2; if(hor){ B.push([cu-a,cu+a,cv-6,cv+6,22,32],[cu-a+4,cu-a+12,cv-5,cv+5,0,22],[cu+a-12,cu+a-4,cv-5,cv+5,0,22]); } else { B.push([cu-6,cu+6,cv-a,cv+a,22,32],[cu-5,cu+5,cv-a+4,cv-a+12,0,22],[cu-5,cu+5,cv+a-12,cv+a-4,0,22]); } };
   if(m==="sans") return B;
   if(m==="retro"){ // Univers des Poignées « Retro » : barre Ø12 à embouts moletés, T court sur les meubles hauts
     if(low){ const a=30; if(hor) B.push([cu-a,cu+a,cv-6,cv+6,30,42],[cu-5,cu+5,cv-5,cv+5,0,30],[cu-9,cu+9,cv-9,cv+9,0,4]); else B.push([cu-6,cu+6,cv-a,cv+a,30,42],[cu-5,cu+5,cv-5,cv+5,0,30],[cu-9,cu+9,cv-9,cv+9,0,4]); return B; }
-    const L=Math.min(330,(hor?F[1]-F[0]:F[3]-F[2])-80), a=L/2, k=Math.min(60,L*0.2), e=Math.min(128,a-20);
+    const en=ent||160, L=Math.min(en+52,(hor?F[1]-F[0]:F[3]-F[2])-40), a=L/2, k=Math.min(60,L*0.17), e=Math.min(en/2,a-20); // entraxe 160 (bas) / 320 (portes de colonne)
     if(hor) B.push([cu-a+k,cu+a-k,cv-6,cv+6,30,42],[cu-a,cu-a+k,cv-7,cv+7,29,43],[cu+a-k,cu+a,cv-7,cv+7,29,43],[cu-e-5,cu-e+5,cv-5,cv+5,0,30],[cu+e-5,cu+e+5,cv-5,cv+5,0,30]);
     else B.push([cu-6,cu+6,cv-a+k,cv+a-k,30,42],[cu-7,cu+7,cv-a,cv-a+k,29,43],[cu-7,cu+7,cv+a-k,cv+a,29,43],[cu-5,cu+5,cv-e-5,cv-e+5,0,30],[cu-5,cu+5,cv+e-5,cv+e+5,0,30]);
     return B; }
