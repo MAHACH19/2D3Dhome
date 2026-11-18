@@ -1702,6 +1702,9 @@ function renderPiece(r){
     { const K=kitCfg(w.room||""); if(K.on) K.items.filter(it=>it.wall===wid(w)).forEach(it=>{ const b=kitBox(it,K,w.H); if(!b) return; const a=it.x, e=it.x+b.k.w, d0=T, d1=T+b.d;
         const PQ=(x,o)=>Q(x0+dx*x+nlx*o, y0+dy*x+nly*o), fc=b.k.c||(FACADES.find(f=>f.n===K.facade)||FACADES[0]).c;
         parts.push(`<polygon points="${PQ(a,d0)} ${PQ(e,d0)} ${PQ(e,d1)} ${PQ(a,d1)}" fill="${fc}" fill-opacity="${b.k.t==="haut"?0.35:0.9}" stroke="#0058a3" stroke-width="${fs*.05}" ${b.k.t==="haut"?`stroke-dasharray="${fs*.3} ${fs*.2}"`:""}/>`); }); }
+    creas(w.room||"").filter(c=>c.t==="chaud"&&c.wall===wid(w)).forEach(c=>{ const G=chaudGeo(c,w.room||""), o=creaSpan(w).a, PQ=(x,d)=>Q(x0+dx*(o+x)+nlx*(T+d), y0+dy*(o+x)+nly*(T+d)), a=G.mode?G.x0:G.bo.x0, e=G.mode?G.x1:G.bo.x1, d1=G.mode?G.D:G.bo.d1;
+      parts.push(`<polygon points="${PQ(a,0)} ${PQ(e,0)} ${PQ(e,d1)} ${PQ(a,d1)}" fill="#ffffff" fill-opacity=".9" stroke="#8a6d3b" stroke-width="${fs*.05}" stroke-dasharray="${fs*.25} ${fs*.15}"/>`);
+      const m=[x0+dx*(o+(a+e)/2)+nlx*(T+d1/2), y0+dy*(o+(a+e)/2)+nly*(T+d1/2)]; parts.push(`<text x="${m[0].toFixed(0)}" y="${Yf(m[1]).toFixed(0)}" text-anchor="middle" dominant-baseline="middle" font-size="${(fs*.35).toFixed(0)}" fill="#8a6d3b">chaudière</text>`); });
     { const r=sg.r, X=r.isoOn&&r.murMode&&r.ins&&r.ins.length?r.ins.flatMap(p=>[p.x,p.x+p.w]):null, short=(w.name||"").split(" — ").pop();
       const dims=`brut ${cm(w.L)} · ${isCol(w)?"collé":"ossature"} ${cm(r.L)}${X?` · fibre ${cm(Math.max(...X)-Math.min(...X))}`:""} cm`;
       // textes parallèles au mur, côté pièce, taille limitée à la longueur du mur pour ne pas déborder sur les voisins
@@ -3090,7 +3093,7 @@ function renderRoom3D(){
         if(k.t==="haut" && vis(0,0,-1)) face([P(x0,d0,z0),P(x1,d0,z0),P(x1,d1,z0),P(x0,d1,z0)],{op,fill:shade(fc,0.75),stroke:"#00000044"});
       });
       // créations en placo (coffrages, banquettes, étagères, rubans LED…)
-      creas(room).filter(c=>c.wall===wid(w)).forEach(c=>{ const sp=creaSpan(w), hh=w.H, P=creaFit(c,room), x=sp.a+(P.x||0);
+      creas(room).filter(c=>c.wall===wid(w)).forEach(c=>{ const sp=creaSpan(w), hh=c.t==="chaud"?creaHH(w,room):w.H, P=creaFit(c,room), x=sp.a+(P.x||0);
         if(front && V.front==="cut") return;
         const wd=[[...I.a,0],[...I.b,0],[...I.b,h],[...I.a,h]].reduce((a,p)=>a+pr(...p)[2],0)/4, n0=faces.length;
         const box=(x0,x1,d0,d1,z0,z1,fc,stk)=>{ const Q=(a,d,z)=>at(a,d,z), st=stk||"#00000033";
@@ -3107,6 +3110,7 @@ function renderRoom3D(){
         if(c.t==="niche") box(x,x+P.w,T,T+3,P.y,P.y+P.h,"#b9b2a4");
         if(c.t==="rideau"){ box(x,x+P.L,T+P.pf,T+P.pf+60,hh-P.h,hh,pc); box(x+10,x+10+P.L*.3,T+P.pf*.3,T+P.pf*.7,15,hh-40,P.col||"#e9e2d4"); box(x+P.L*.7-10,x+P.L-10,T+P.pf*.3,T+P.pf*.7,15,hh-40,P.col||"#e9e2d4"); }
         if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; box(x,x+40,T,T+P.pf,y0,y0+P.h,pc); box(x+P.L-40,x+P.L,T,T+P.pf,y0,y0+P.h,pc); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; box(x,x+P.L,T,T+P.pf,Math.max(0,yy-20),Math.max(20,yy+20),pc); } }
+        if(c.t==="chaud"){ const G=chaudGeo(c,room), o=sp.a; if(G.mode!==2) box(o+G.bo.x0,o+G.bo.x1,T,T+G.bo.d1,G.bo.z0,G.bo.z1,"#f4f3ef"); G.sl.forEach(q=>box(o+q.x0,o+q.x1,T+q.d0,T+q.d1,G.z0,G.zt,"#fbfbf9","#00000022")); }
         if(c.t==="led"){ const gl=P.k<=2700?"#ffe0b0":P.k>=4000?"#f7fbff":"#fff0d6";
           if(+P.pos===1) ledSegs(w,P,x,hh).forEach(([a,b])=>box(x,x+50,T,T+3,a,b,gl,"#9aa0a6"));
           else if(+P.pos===2) box(x,x+P.L,T+P.y,T+P.y+40,hh-3,hh,gl,"#9aa0a6");
@@ -4591,6 +4595,11 @@ function buildScene(){
           else if(P.pos===2){ m=v3Box(sg,x,x+P.L,T0+P.y,T0+P.y+40,hh-1.5,hh,lm); add(m); }
           else ledSegs(ww,P,x,hh).forEach(([a,b])=>{ m=ledW(a,b,P.y,P.y+40,false); });
           if(m&&V.nuit&&lights.length<10){ m.geometry.computeBoundingSphere(); const q=new T3.PointLight(kc,.45,3.5,1.6), cpos=m.geometry.boundingSphere.center.clone(); const nn=new T3.Vector3(sg.nx,0,-sg.ny).multiplyScalar(.25); q.position.copy(cpos.add(nn)); scene.add(q); lights.push(q); } }
+        if(c.t==="chaud"){ const G=chaudGeo(c,room), o=sp.a, bm=v3Mat("#f2f2f0",{roughness:.35}), pi=v3Mat("#b08d57",{metalness:.6,roughness:.35}), wm=v3Mat("#fbfbf9",{roughness:.55}), b=G.bo;
+          add(v3Box(sg,o+b.x0,o+b.x1,T0,T0+b.d1,b.z0,b.z1,bm)); add(v3Box(sg,o+b.x0+20,o+b.x1-20,T0+b.d1,T0+b.d1+3,b.z0+40,b.z0+120,v3Mat("#3a3d42",{roughness:.4})));
+          [.2,.4,.6,.8].forEach(f=>add(v3Box(sg,o+b.x0+(b.x1-b.x0)*f-9,o+b.x0+(b.x1-b.x0)*f+9,T0+60,T0+78,Math.max(0,b.z0-250),b.z0,pi)));
+          add(v3Box(sg,o+(b.x0+b.x1)/2-50,o+(b.x0+b.x1)/2+50,T0+b.d1*0.4-50,T0+b.d1*0.4+50,b.z1,hh,v3Mat("#d9dadc",{metalness:.3,roughness:.4}))); // ventouse
+          G.sl.forEach(q=>add(v3Box(sg,o+q.x0,o+q.x1,T0+q.d0,T0+q.d1,G.z0,G.zt,wm))); }
         if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; add(v3Box(sg,x,x+40,T0,T0+P.pf,y0,y0+P.h,pm)); add(v3Box(sg,x+P.L-40,x+P.L,T0,T0+P.pf,y0,y0+P.h,pm)); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; add(v3Box(sg,x,x+P.L,T0,T0+P.pf,Math.max(0,yy-35),Math.max(35,yy+35),pm)); } }
       });
       // meubles libres
@@ -5122,7 +5131,7 @@ function renderOut(){
     const L=Math.ceil(m.raw*(1+MG)*10)/10, Lb=part?Math.max(L,Math.ceil(roomOf(m)*(1+MG)*10)/10):L, share=Lb?L/Lb:1;
     const best=potCombo(m.des,Lb), tag=part&&Lb>L+0.05?`achat groupé pour toute la pièce ${w.room||""} : ${fr(Lb,1)} L (marge ${pc} % comprise), ${S.scope==="ceil"?"le plafond":"ce mur"} en utilise ${fr(L,1)} L (${Math.round(share*100)} %)`:`${fr(L,1)} L nécessaires (marge ${pc} % comprise)`;
     return best.n.map((n,i)=>({cat:m.cat,des:`${m.des} · pot ${fr(best.v[i],best.v[i]%1?2:0)} L`,det:!n?"non retenu : entrez son prix pour comparer":(m.det?m.det+" · ":"")+tag+` · ${best.n.map((k,j)=>k?k+" × "+fr(best.v[j],best.v[j]%1?2:0)+" L":"").filter(Boolean).join(" + ")} = ${fr(best.tot,1)} L`+(best.est?" (choix estimé : saisissez le prix de chaque pot pour l'optimiser)":""),q:n,u:"pot(s)",share,potL:best.v[i]})); });
-  const ORD=["Isolant","Membrane","Ossature","Électricité","Plomberie","Plaques","Plâtrerie","Finition","Peinture","Plafond","VMC","Sol","Béton ciré","Créations placo","Rideaux et LED","Cuisine IKEA","Mes meubles","Divers"];
+  const ORD=["Isolant","Membrane","Ossature","Électricité","Plomberie","Plaques","Plâtrerie","Finition","Peinture","Plafond","VMC","Sol","Béton ciré","Créations placo","Rideaux et LED","Chaudière et habillage","Cuisine IKEA","Mes meubles","Divers"];
   const oi=c=>{ const i=ORD.indexOf(c); return i<0?ORD.length:i; }; rows.sort((a,b)=>oi(a.cat)-oi(b.cat));
   rows.forEach(m=>{ if(m.pack){ const n=Math.ceil(m.q/m.pack); m.det=(m.det?m.det+" · ":"")+`soit ${n} ${m.packName}`; } });
   let total=0;
@@ -5657,10 +5666,11 @@ const CREA={
   muret:{n:"Muret / tête de lit",p:[["L","Longueur",1800],["h","Hauteur",1100],["ep","Épaisseur",100],["x","Depuis la gauche",0]]},
   etag:{n:"Bibliothèque / étagères en placo",p:[["L","Longueur",1200],["h","Hauteur",2000],["pf","Profondeur",300],["n","Nombre d'étagères",4],["x","Depuis la gauche",0],["y","Hauteur du bas",0]]},
   rideau:{n:"Gorge à rideau (rail caché au plafond)",p:[["L","Longueur",3000],["pf","Largeur de la gorge",160],["h","Retombée de la joue",150],["x","Depuis la gauche",0],["rails","Rails",1,[[1,"1 rail (voilage ou rideau)"],[2,"2 rails (voilage + rideau occultant)"]]],["led","LED dans la gorge",0,[[0,"Non"],[1,"Oui, ruban LED indirect"]]],["col","Couleur du rideau","#e9e2d4"]]},
+  chaud:{n:"Chaudière murale cachée par des tasseaux blancs",p:[["w","Largeur de la chaudière",440],["h","Hauteur de la chaudière",720],["pf","Profondeur de la chaudière",350],["x","Depuis la gauche",300],["y","Hauteur du bas de la chaudière",1300],["tas","Habillage en tasseaux",2,[[2,"Caisson qui cache la chaudière, jusqu'au plafond"],[1,"Seulement au-dessus (cache les conduits), jusqu'au plafond"],[0,"Aucun (chaudière visible)"]]],["tg","Espace entre tasseaux",10],["tl","Largeur d'un tasseau",40],["te","Épaisseur d'un tasseau",20],["jeu","Jeu autour de la chaudière",50],["deb","Le caisson descend sous la chaudière de",100]]},
   led:{n:"Ruban LED encastré dans le placo",p:[["L","Longueur",2000],["pos","Emplacement",0,[[0,"Horizontal sur le mur"],[1,"Vertical sur le mur"],[2,"Au plafond, parallèle au mur"]]],["x","Depuis la gauche",0],["y","Hauteur (ou distance du mur au plafond)",1000],["k","Couleur de lumière",3000,[[2700,"2700 K blanc très chaud"],[3000,"3000 K blanc chaud"],[4000,"4000 K blanc neutre"]]]]}
 };
-const CREA_INT=["n","joues","rails","led","pos","k"];
-function creas(room){ if(!S.crea) S.crea={}; if(!S.crea[room]) S.crea[room]=[]; const C=S.crea[room]; C.forEach(c=>{ ["pos","k","n","rails","led","joues"].forEach(k=>{ if(typeof c[k]==="string"&&c[k]!=="") c[k]=+c[k]; }); }); return C; }
+const CREA_INT=["n","joues","rails","led","pos","k","tas"];
+function creas(room){ if(!S.crea) S.crea={}; if(!S.crea[room]) S.crea[room]=[]; const C=S.crea[room]; C.forEach(c=>{ ["pos","k","n","rails","led","joues","tas"].forEach(k=>{ if(typeof c[k]==="string"&&c[k]!=="") c[k]=+c[k]; }); }); return C; }
 function creaSpan(w){ const g=roomGeom(w.room||""), k=g.segs.findIndex(q=>q.w===w); if(k<0) return {a:0,len:w.L};
   const s=g.segs[k], e=g.inner[k], pr=p=>(p[0]-s.x0)*s.dx+(p[1]-s.y0)*s.dy, a=pr(e.a), b=pr(e.b); return {a, len:Math.max(0,b-a)}; }
 const GLOWT={}; function ledGlow(vert,col){ const k=(vert?"v":"h")+col; if(GLOWT[k]) return GLOWT[k]; const c=document.createElement("canvas"); c.width=vert?128:4; c.height=vert?4:128; const x=c.getContext("2d");
@@ -5685,8 +5695,24 @@ function ceilLed(c,room,noSnap){ const w=creaWall(c,room); if(!w) return null; c
     if(Math.abs(t-x)<=200&&Math.abs(t-x)>0.5){ const e1=x+L; x=t; L=Math.max(20,e1-x); snap.push(q); }
     else if(Math.abs(t-(x+L))<=200&&Math.abs(t-(x+L))>0.5){ L=Math.max(20,t-x); snap.push(q); } });
   return {x:Math.round(x),L:Math.round(L),O,d,lo,hi,snap}; }
-function creaFit(c,room){ const w=creaWall(c,room); if(!w) return c; if(c.t==="led"&&+c.pos===2){ const Z=ceilLed(c,room); if(Z) return {...c,x:Z.x,L:Z.L,snap:Z.snap.length}; } const sp=creaSpan(w), k=c.t==="coffv"?"l":c.t==="niche"?"w":"L", x=Math.max(0,Math.min(c.x||0,sp.len-20)); if(c.t==="led"&&+c.pos===1){ const y=Math.max(0,Math.min(c.y||0,w.H-20)); return {...c,x,y,L:Math.max(20,Math.min(c.L,Math.round(w.H-y)))}; } return {...c,x,[k]:Math.max(20,Math.min(c[k],Math.round(sp.len-x)))}; }
-function creaLen(c){ return c.t==="coffv"?c.l:c.t==="niche"?c.w:c.L; }
+function creaFit(c,room){ const w=creaWall(c,room); if(!w) return c; if(c.t==="led"&&+c.pos===2){ const Z=ceilLed(c,room); if(Z) return {...c,x:Z.x,L:Z.L,snap:Z.snap.length}; } const sp=creaSpan(w), k=c.t==="coffv"?"l":c.t==="niche"||c.t==="chaud"?"w":"L", x=Math.max(0,Math.min(c.x||0,sp.len-20)); if(c.t==="chaud"){ const hh=creaHH(w,room); let cw=Math.max(20,+c.w||440), m=chaudM({...c,w:cw}); for(let i=0;i<200&&cw+2*m>sp.len&&cw>20;i++){ cw=Math.max(20,Math.min(cw-10,Math.round(sp.len-2*m))); m=chaudM({...c,w:cw}); } const cx=Math.max(m,Math.min(+c.x||0,sp.len-cw-m)); return {...c,x:Math.round(cx),y:Math.max(0,Math.min(+c.y||0,hh-(+c.h||0)-20)),w:cw}; } if(c.t==="led"&&+c.pos===1){ const y=Math.max(0,Math.min(c.y||0,w.H-20)); return {...c,x,y,L:Math.max(20,Math.min(c.L,Math.round(w.H-y)))}; } return {...c,x,[k]:Math.max(20,Math.min(c[k],Math.round(sp.len-x)))}; }
+function creaLen(c){ return c.t==="coffv"?c.l:c.t==="niche"||c.t==="chaud"?c.w:c.L; }
+/* hauteur sous le plafond fini au droit d'un mur (les tasseaux de la chaudière s'y ajustent tout seuls) */
+function chaudM(c){ if(!+(c.tas??2)) return 0; const jeu=Math.max(0,c.jeu??50), tl=Math.max(10,+c.tl||40), te=Math.max(10,+c.te||20), tg=Math.max(0,c.tg??10), nF=Math.max(2,Math.ceil((c.w+2*(jeu+te)+tg)/(tl+tg))); return (nF*tl+(nF-1)*tg-c.w)/2; }
+function creaHH(w,room){ try{ return Math.min(w.H||2500,ceilFinH(room,roomGeom(room))); }catch(e){ return w.H||2500; } }
+/* chaudière + tasseaux : géométrie en repère du mur fini (x depuis l'angle gauche fini, d depuis la face des plaques, z depuis le sol) */
+function chaudGeo(c,room){ const w=creaWall(c,room)||{H:2500}, P=creaFit(c,room), hh=creaHH(w,room), mode=+(P.tas??2);
+  const jeu=Math.max(0,P.jeu??50), tl=Math.max(10,+P.tl||40), te=Math.max(10,+P.te||20), tg=Math.max(0,P.tg??10), x=P.x||0;
+  const bo={x0:x,x1:x+P.w,d0:0,d1:P.pf,z0:P.y,z1:P.y+P.h};
+  if(!mode) return {P,hh,mode,bo,sl:[],tl,te,tg,jeu,Lt:0,nF:0,nS:0,W:0,D:0,z0:0,zt:hh};
+  // l'espace entre tasseaux est respecté au millimètre : c'est la largeur du caisson qui s'ajuste (au tasseau près), centrée sur la chaudière
+  const nF=Math.max(2,Math.ceil((P.w+2*(jeu+te)+tg)/(tl+tg))), W=nF*tl+(nF-1)*tg, nS=Math.max(1,Math.ceil((P.pf+jeu+tg)/(tl+tg))), Ds=nS*tl+(nS-1)*tg, D=Ds+te;
+  const x0=x+P.w/2-W/2, x1=x0+W, z0=mode===2?Math.max(0,P.y-Math.max(0,P.deb||0)):P.y+P.h, zt=hh-5, Lt=Math.max(0,zt-z0);
+  const even=(len,n)=>n<2?[0]:Array.from({length:n},(_,i)=>i*(len-tl)/(n-1)), sl=[];
+  even(W,nF).forEach(u=>sl.push({s:"f",x0:x0+u,x1:x0+u+tl,d0:D-te,d1:D}));
+  even(Ds,nS).forEach(u=>{ sl.push({s:"g",x0:x0,x1:x0+te,d0:u,d1:u+tl}); sl.push({s:"d",x0:x1-te,x1:x1,d0:u,d1:u+tl}); });
+  const gF=nF>1?(W-nF*tl)/(nF-1):0;
+  return {P,hh,mode,bo,sl,tl,te,tg,gF,jeu,Lt,nF,nS,W,D,Ds,x0,x1,z0,zt}; }
 function creaWall(c,room){ const rw=S.walls.filter(w=>(w.room||"")===room); return rw.find(w=>wid(w)===c.wall)||rw[0]; }
 function creaCalc(c,room){
   const w=creaWall(c,room)||{H:2500}, H=w.H||2500, F=[], R=[], Mo=[], e=600; let ang=0;
@@ -5713,6 +5739,17 @@ function creaCalc(c,room){
       {des:`Rideau confectionné (largeur ×2 pour l'ampleur), hauteur ≈ ${cm(H-50)} cm (sous plafond, moins rail, crochets et 1,5 cm au sol)`,det:`tissu : ${cm(P.L*2)} cm de large${P.rails>1?", par rail (voilage + occultant)":""}`,q:Math.ceil(P.L*2/1000*10)/10*(P.rails>1?2:1),u:"m"});
     if(P.led) X.push(...ledKit(P.L,3000,"gorge")); }
   if(c.t==="led") X.push(...ledKit(P.L,P.k||3000,P.pos===2?"plafond":"mur"));
+  const T=[]; if(c.t==="chaud"){ const G=chaudGeo(c,room), CH="Chaudière et habillage";
+    X.push({cat:"Créations placo",des:"Renfort bois 45×70 mm dans l'ossature (fixation de la chaudière)",det:`2 traverses de ${cm(P.w+400)} cm entre montants, sous les pattes de fixation, avant les plaques`,q:Math.ceil(2*(P.w+400)/100)/10,u:"m"});
+    if(G.mode){ const nT=G.nF+2*G.nS, opt=[2000,2400,2700,3000].filter(b=>b>=G.Lt+5).map(b=>{ const per=Math.floor(b/(G.Lt+5)); return {b,per,n:Math.ceil(nT/per)}; }).sort((p,q)=>p.n*p.b-q.n*q.b||p.b-q.b)[0]||{b:Math.ceil((G.Lt+5)/100)*100,per:1,n:nT}, BL=opt.b, per=opt.per, bars=opt.n, trL=3*(G.W+2*G.Ds);
+      T.push({n:"Tasseau de façade",q:G.nF,len:G.Lt},{n:"Tasseau de côté (gauche + droite)",q:2*G.nS,len:G.Lt},{n:"Traverse du cadre, façade (haut, milieu, bas)",q:3,len:G.W-2*G.te},{n:"Traverse du cadre, côtés",q:6,len:G.Ds});
+      const area=nT*G.Lt*(2*G.tl+2*G.te)/1e6;
+      X.push({cat:CH,des:`Tasseau pin raboté ${G.te}×${G.tl} mm · ${BL/10} cm (ou tasseau déjà peint blanc)`,det:`${nT} tasseaux coupés à ${cm(G.Lt)} cm, ${per} par barre`,q:bars,u:"barre(s)"},
+        {cat:CH,des:"Liteau 27×40 mm · 240 cm (cadre caché derrière les tasseaux)",det:`traverses : ${fr(trL/1000,1)} m`,q:Math.ceil(trL*1.1/2400),u:"barre(s)"},
+        {cat:CH,des:"Mildecor MIL'54 laque satinée PU ultra résistante blanc",det:`tasseaux : ${fr(area,1)} m², 2 couches (inutile si tasseaux déjà peints)`,q:Math.max(0.5,Math.ceil(area*2/10*10)/10),u:"L"},
+        {cat:CH,des:"Vis bois 3,5×30 (tasseaux sur le cadre)",det:"1 vis par tasseau et par traverse",q:nT*3,u:"u"},
+        {cat:CH,des:"Équerres 40 mm + vis et chevilles (cadre au mur et au plafond)",det:"dans le renfort et les fourrures du plafond",q:8,u:"u"});
+      if(G.mode===2) X.push({cat:CH,des:"Loqueteaux magnétiques (façade démontable pour l'entretien)",det:"la façade s'enlève d'un bloc",q:4,u:"u"}); } }
   // découpe en morceaux de plaque (≤ 120 × 250 cm)
   const PW=S.pla.W||1200, PH=Math.max(...S.pla.lens.filter(Boolean)); const pieces=[];
   F.forEach(f=>{ for(let k=0;k<f.q;k++){ const a=Math.max(f.w,f.h)>PH&&Math.min(f.w,f.h)<=PW?null:null;
@@ -5720,7 +5757,7 @@ function creaCalc(c,room){
     for(let x=0;x<W0-1;x+=PW) for(let y=0;y<H0-1;y+=PH) pieces.push({n:f.n,w:Math.min(PW,W0-x),h:Math.min(PH,H0-y)}); } });
   const area=pieces.reduce((a,q)=>a+q.w*q.h,0)/1e6, plates=pieces.length?Math.max(1,Math.ceil(area*1.15/(PW*PH/1e6))):0;
   const railL=R.reduce((a,r)=>a+r.len*r.q,0), montL=Mo.reduce((a,r)=>a+r.len*r.q,0);
-  return {F,R,Mo,X,pieces,area,plates,railL,montL,ang,vis:Math.ceil(area*30),visM:Mo.reduce((a,r)=>a+r.q,0)*4};
+  return {F,R,Mo,X,T,pieces,area,plates,railL,montL,ang,vis:Math.ceil(area*30),visM:Mo.reduce((a,r)=>a+r.q,0)*4};
 }
 function ledKit(L,k,where){ const m=Math.ceil(L/1000*10)/10, W=Math.ceil(L/1000*12*1.25/10)*10, X=[];
   if(where!=="gorge") X.push({des:"Profilé aluminium à encastrer dans le placo (à enduire, avec diffuseur opale)",det:`rainure ≈ 15 × 60 mm dans la plaque, ${fr(m,1)} m`,q:Math.ceil(L/2000),u:"barre(s) de 2 m"},{des:"Embouts et clips du profilé",det:"2 embouts par ligne",q:2,u:"u"});
@@ -5736,7 +5773,7 @@ function creaMaterials(room){ const C=creas(room); if(!C.length) return []; cons
   add(`${o.rail(48)} · 300 cm`,`${fr(rl/1000,1)} m`,Math.ceil(rl*1.1/3000),"u"); add(`${o.mont(48)} · 300 cm`,`${fr(ml/1000,1)} m`,Math.ceil(ml*1.1/3000),"u");
   add("Cornière d'angle / bande armée",`angles sortants : ${fr(an/1000,1)} m`,Math.ceil(an/1000),"m"); add("Vis TTPC 25 (plaques)","≈ 30 par m²",v,"u"); add("Vis TRPF 13 (rail-montant)","4 par montant",vm,"u");
   add("Bande à joint papier","joints et angles",Math.ceil(an/1000+ar*1.2),"m");
-  const xs={}; C.forEach(c=>creaCalc(c,room).X.forEach(x=>{ const kk=x.des; if(xs[kk]){ xs[kk].q+=x.q; } else xs[kk]={...x}; })); Object.values(xs).forEach(x=>rows.push({cat:"Rideaux et LED",des:x.des,det:x.det,q:Math.round(x.q*10)/10,u:x.u}));
+  const xs={}; C.forEach(c=>creaCalc(c,room).X.forEach(x=>{ const kk=x.des; if(xs[kk]){ xs[kk].q+=x.q; } else xs[kk]={...x}; })); Object.values(xs).forEach(x=>rows.push({cat:x.cat||"Rideaux et LED",des:x.des,det:x.det,q:Math.round(x.q*10)/10,u:x.u}));
   return rows; }
 function creaSvg(c,room){ const k=creaCalc(c,room), w=creaWall(c,room)||{L:3000,H:2500};
   // vue de face du mur fini (entre les angles, devant les plaques) avec la création, cotée
@@ -5755,15 +5792,21 @@ function creaSvg(c,room){ const k=creaCalc(c,room), w=creaWall(c,room)||{L:3000,
   if(c.t==="led"){ const v=P.pos===1, col=P.k<=2700?"#ffcf8a":P.k>=4000?"#dfe9f5":"#ffe3b0"; if(v) g+=`<line x1="${X(x)}" x2="${X(x)}" y1="${Y(P.y||0)}" y2="${Y(Math.min(H,(P.y||0)+P.L))}" stroke="${col}" stroke-width="5"/><line x1="${X(x)}" x2="${X(x)}" y1="${Y(P.y||0)}" y2="${Y(Math.min(H,(P.y||0)+P.L))}" stroke="#1d63c4" stroke-width="1"/>`;
     else { const yy=P.pos===2?H:P.y; g+=`<line x1="${X(x)}" x2="${X(x+P.L)}" y1="${Y(yy)}" y2="${Y(yy)}" stroke="${col}" stroke-width="6"/><line x1="${X(x)}" x2="${X(x+P.L)}" y1="${Y(yy)}" y2="${Y(yy)}" stroke="#1d63c4" stroke-width="1"/><text x="${X(x+P.L/2)}" y="${Y(yy)+(P.pos===2?14:-6)}" text-anchor="middle" font-size="10" fill="#1d63c4">${cm(P.L)}</text>`; }
     g+=`<text x="${X(x)}" y="${Y(0)+24}" font-size="10" fill="var(--muted)">${P.pos===2?`au plafond, à ${cm(P.y)} cm du mur`:P.pos===1?`vertical, ${cm(P.L)} cm de haut, de ${cm(P.y||0)} à ${cm((P.y||0)+P.L)} cm`:`à ${cm(P.y)} cm du sol`}</text>`; }
+  if(c.t==="chaud"){ const G=chaudGeo(c,room);
+    g+=`<rect x="${X(x)}" y="${Y(P.y+P.h)}" width="${P.w*sc}" height="${P.h*sc}" fill="#f4f3ef" stroke="#555" stroke-width="1" ${G.mode===2?'stroke-dasharray="3 2"':''}/><text x="${X(x+P.w/2)}" y="${Y(P.y+P.h/2)+3}" text-anchor="middle" font-size="9" fill="#555">chaudière</text>`;
+    G.sl.filter(q=>q.s==="f").forEach(q=>{ g+=`<rect x="${X(q.x0)}" y="${Y(G.zt)}" width="${Math.max(.6,(q.x1-q.x0)*sc)}" height="${G.Lt*sc}" fill="#ffffff" fill-opacity="${G.mode===2?.85:1}" stroke="#8a9096" stroke-width=".5"/>`; });
+    dim(x,P.y,P.w,P.h); g+=`<line x1="${X(x+P.w+60)}" x2="${X(x+P.w+60)}" y1="${Y(0)}" y2="${Y(P.y)}" stroke="#1d63c4" stroke-dasharray="3 2"/><text x="${X(x+P.w+70)}" y="${Y(P.y/2)}" font-size="10" fill="#1d63c4">${cm(P.y)}</text>`;
+    g+=`<text x="${X(0)}" y="${Y(0)+24}" font-size="10" fill="var(--muted)">${G.mode?`${G.nF+2*G.nS} tasseaux de ${cm(G.Lt)} cm (plafond fini à ${cm(G.hh)} cm), écart ${cm(G.gF)} cm`:`bas de la chaudière à ${cm(P.y)} cm du sol`}</text>`; }
   if(c.t==="etag"){ box(x,P.y||0,P.L,P.h,"none"); const n=Math.max(1,P.n||1); for(let i=0;i<=n;i++){ const yy=(P.y||0)+P.h*i/n; g+=`<line x1="${X(x)}" x2="${X(x+P.L)}" y1="${Y(yy)}" y2="${Y(yy)}" stroke="#1d63c4" stroke-width="3"/>`; } dim(x,P.y||0,P.L,P.h); }
   g+=`<text x="${X(x)}" y="${Y(H)-2}" font-size="10" fill="var(--muted)">à ${cm(x)} cm de l'angle gauche · mur fini ${cm(L)} cm</text>`;
-  const over=c.t==="led"&&+c.pos===1?(c.y||0)+c.L-H:(c.x||0)+creaLen(c)-L; if(over>1) g+=`<text x="${X(0)}" y="${Y(0)+38}" font-size="10" font-weight="700" fill="#c0392b">⚠ Trop long de ${cm(over)} cm : ramené à ${cm(creaLen(P))} cm</text>`;
+  const over=c.t==="chaud"?Math.max(chaudM(c)-(c.x||0),(c.x||0)+c.w+chaudM(c)-L):c.t==="led"&&+c.pos===1?(c.y||0)+c.L-H:(c.x||0)+creaLen(c)-L; if(over>1) g+=`<text x="${X(0)}" y="${Y(0)+38}" font-size="10" font-weight="700" fill="#c0392b">⚠ ${c.t==="chaud"?`Le caisson dépassait l'angle de ${cm(over)} cm : chaudière recalée à ${cm(P.x)} cm de la gauche`:`Trop long de ${cm(over)} cm : ramené à ${cm(creaLen(P))} cm`}</text>`;
   return `<svg viewBox="0 0 ${Math.max(330,ox+L*sc+40)} ${oy+H*sc+44}" style="width:100%;max-width:380px;height:auto">${g}</svg>`; }
 function creaTable(c,room){ const k=creaCalc(c,room);
   return `${k.F.length?"":"<!--"}<div class="tbl-wrap"><table class="cutl"><thead><tr><th>Pièce de plaque</th><th style="text-align:right">Qté</th><th style="text-align:right">Largeur × hauteur</th></tr></thead><tbody>${k.F.map(f=>`<tr><td>${esc(f.n)}</td><td class="n">${f.q}</td><td class="n"><b>${cm(f.w)} × ${cm(f.h)}</b></td></tr>`).join("")}</tbody></table></div>
     <div class="tbl-wrap"><table class="cutl"><thead><tr><th>Ossature (${S.oss.g} mm)</th><th style="text-align:right">Qté</th><th style="text-align:right">Longueur à couper</th></tr></thead><tbody>${[...k.R.map(r=>({...r,t:"Rail"})),...k.Mo.map(r=>({...r,t:"Montant"}))].map(r=>`<tr><td>${r.t} — ${esc(r.n)}</td><td class="n">${r.q}</td><td class="n"><b>${cm(r.len)}</b></td></tr>`).join("")}</tbody></table></div>${k.F.length?"":"-->"}
-    ${k.X.length?`<div class="tbl-wrap"><table class="cutl"><thead><tr><th>Rideau, rail et LED</th><th style="text-align:right">Qté</th></tr></thead><tbody>${k.X.map(x=>`<tr><td>${esc(x.des)}<br><span class="cap">${esc(x.det)}</span></td><td class="n"><b>${fr(x.q,x.q%1?1:0)}</b> ${esc(x.u)}</td></tr>`).join("")}</tbody></table></div>`:""}
-    <p class="cap" style="margin:4px 0 0">${c.t==="led"?"Rainurer la plaque à la défonceuse (ou poser le profilé avant les plaques), coller le profilé, enduire les ailes comme une bande. Ruban posé après la peinture.":`${k.plates} plaque(s) à prévoir · ${fr(k.ang/1000,1)} m de cornière d'angle · ≈ ${k.vis} vis TTPC.`}${c.t==="rideau"?" Le rail se fixe au plafond dans la gorge, avant la pose des plaques de la joue ; une joue de 15 cm cache le rail et les crochets.":""}</p>`; }
+    ${k.T&&k.T.length?`<div class="tbl-wrap"><table class="cutl"><thead><tr><th>Tasseaux et cadre (coupes)</th><th style="text-align:right">Qté</th><th style="text-align:right">Longueur à couper</th></tr></thead><tbody>${k.T.map(r=>`<tr><td>${esc(r.n)}</td><td class="n">${r.q}</td><td class="n"><b>${cm(r.len)}</b></td></tr>`).join("")}</tbody></table></div>`:""}
+    ${k.X.length?`<div class="tbl-wrap"><table class="cutl"><thead><tr><th>${c.t==="chaud"?"Chaudière et tasseaux":"Rideau, rail et LED"}</th><th style="text-align:right">Qté</th></tr></thead><tbody>${k.X.map(x=>`<tr><td>${esc(x.des)}<br><span class="cap">${esc(x.det)}</span></td><td class="n"><b>${fr(x.q,x.q%1?1:0)}</b> ${esc(x.u)}</td></tr>`).join("")}</tbody></table></div>`:""}
+    <p class="cap" style="margin:4px 0 0">${c.t==="chaud"?`Les tasseaux se coupent à la hauteur réelle sous le plafond fini, moins 5 mm : si la hauteur du plafond change, leur longueur suit toute seule. Ils sont vissés sur un cadre en liteaux (3 traverses), fixé au mur dans le renfort et au plafond dans les fourrures.${+(c.tas??2)===2?" La façade s'enlève d'un bloc (loqueteaux aimantés) pour l'entretien annuel.":""} Respecter les dégagements de la notice de la chaudière, et ne jamais fermer la ventouse ou le conduit : les espaces entre tasseaux laissent l'air circuler.`:c.t==="led"?"Rainurer la plaque à la défonceuse (ou poser le profilé avant les plaques), coller le profilé, enduire les ailes comme une bande. Ruban posé après la peinture.":`${k.plates} plaque(s) à prévoir · ${fr(k.ang/1000,1)} m de cornière d'angle · ≈ ${k.vis} vis TTPC.`}${c.t==="rideau"?" Le rail se fixe au plafond dans la gorge, avant la pose des plaques de la joue ; une joue de 15 cm cache le rail et les crochets.":""}</p>`; }
 function creaPanel(w){ const room=w.room||"", C=creas(room), rw=S.walls.filter(x=>(x.room||"")===room);
   return `<section class="box"><h2><span class="sw" style="background:#ece8df"></span>Créations en placo : ${esc(room)}</h2>
     ${C.map((c,i)=>{ const d=CREA[c.t]; return `<div style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px">
@@ -5776,6 +5819,9 @@ function creaPanel(w){ const room=w.room||"", C=creas(room), rw=S.walls.filter(x
         :`<label class="f">${c.t==="led"&&k==="y"?(+c.pos===2?"Distance du mur, au plafond":+c.pos===1?"Hauteur du bas du ruban":"Hauteur depuis le sol"):l}${CREA_INT.includes(k)?"":" (cm)"}<input type="number" step="${CREA_INT.includes(k)?1:0.5}" min="0" data-cr="${i}" data-ck="${k}" value="${CREA_INT.includes(k)?c[k]:c[k]/10}"></label>`).join("")}</div>
       ${(()=>{ const ww=creaWall(c,room); if(!ww) return ""; const sp=creaSpan(ww), a=roomAdjust(ww), pl=ww.L+(a.dL||0); return Math.abs(ww.L-sp.len)>5?`<p class="hint" style="margin:4px 0">${esc((ww.name||"").split(" — ").pop())} : brut ${cm(ww.L)} cm, plaques de ce mur ${cm(pl)} cm${pl-sp.len>5?" (elles vont jusqu'à la pierre au bout et passent derrière le doublage du mur suivant)":""}, face visible entre les angles finis ${cm(sp.len)} cm. La création se place sur la face visible.</p>`:""; })()}
       ${(()=>{ if(c.t!=="led"||+c.pos===2) return ""; const ww=creaWall(c,room); if(!ww) return ""; const P=creaFit(c,room), sp=creaSpan(ww), x=sp.a+P.x, sg=ledSegs(ww,P,x,ww.H), tot=sg.reduce((a,[u,v])=>a+v-u,0); return tot<P.L-5?`<div class="ck ko"><b>!</b><span>Le ruban croise une ouverture : il est coupé en ${sg.length} morceau(x) (${sg.map(([u,v])=>cm(v-u)+" cm").join(" + ")}), 2 cm avant chaque tableau.</span></div>`:""; })()}
+      ${c.t==="chaud"?(()=>{ const ww=creaWall(c,room); if(!ww) return ""; const ent=+ww.e||+S.oss.e||600, G=chaudGeo(c,room), sp=creaSpan(ww), a=sp.a+(G.mode?G.x0:G.bo.x0), b=sp.a+(G.mode?G.x1:G.bo.x1), z0=G.mode?Math.min(G.z0,G.bo.z0):G.bo.z0;
+        const hit=(ww.openings||[]).filter(o=>o.w>0&&o.h>0&&o.x<b&&o.x+o.w>a&&o.y<(G.mode?G.hh:G.bo.z1)&&o.y+o.h>z0);
+        return `${ent>400&&!isCol(ww)?`<div class="ck ko"><b>!</b><span>Ce mur porte une chaudière (30 à 45 kg) : montants à 40 cm conseillés (DTU 25.41), ici ${cm(ent)} cm. <button type="button" data-chaud40="${wid(ww)}">Mettre ce mur à 40 cm</button></span></div>`:""}${hit.length?`<div class="ck ko"><b>!</b><span>${G.mode?"Le caisson":"La chaudière"} touche ${hit.map(o=>o.type.toLowerCase()).join(", ")} de ce mur : décalez « Depuis la gauche ».</span></div>`:""}<p class="hint" style="margin:4px 0">Hauteur sous plafond fini ici : <b>${cm(G.hh)} cm</b>${G.mode?`, tasseaux de ${cm(G.Lt)} cm`:""}. Électricité : la chaudière a son circuit à part (NF C 15-100), sortie de câble à côté, pas derrière.</p>`; })():""}
       ${c.t==="led"&&+c.pos===2&&c.y>1500?`<div class="ck ko"><b>!</b><span>Ruban au plafond à ${cm(c.y)} cm du mur : il est au milieu du plafond. Pour une gorge le long du mur, mettez 5 à 30 cm.</span></div>`:""}
       ${creaSvg(c,room)}${creaTable(c,room)}</div>`; }).join("")}
     <div class="btns" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${Object.entries(CREA).map(([k,d])=>`<button type="button" data-cradd="${k}">＋ ${esc(d.n.split(" (")[0])}</button>`).join("")}</div>
@@ -5786,6 +5832,7 @@ document.getElementById("side").addEventListener("click",e=>{ const lp=e.target.
   const n=rw.length, closed=roomGeom(room).closed, ins=a=>pos===2?y/Math.tan(angDeg(a)*Math.PI/360):0;
   const add=rw.map((ww,i)=>{ const sp=creaSpan(ww), a=(i>0||closed)?ins(rw[(i+n-1)%n]):0, b=(i<n-1||closed)?ins(ww):0, L=Math.round(sp.len-a-b); return L>=200?{t:"led",wall:wid(ww),pos,x:Math.round(a),y,L,k:c.k||3000}:null; }).filter(Boolean);
   C.length=0; C.push(...keep.filter(q=>q!==c),...add); save(); renderAll(); });
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-chaud40]"); if(!b) return; const w=S.walls.find(x=>wid(x)===b.dataset.chaud40); if(!w) return; if(+S.oss.e===400) delete w.e; else w.e=400; save(); renderAll(); });
 document.getElementById("side").addEventListener("change",e=>{ const el=e.target.closest("[data-crsep]"); if(!el) return; const C=creas(S.walls[S.cur].room||""), c=C[+el.dataset.crsep]; if(c){ if(el.checked) c.sep=true; else delete c.sep; save(); renderAll(); } });
 document.getElementById("side").addEventListener("click",e=>{ const a=e.target.closest("[data-cradd]"), d=e.target.closest("[data-crdel]"); if(!a&&!d) return; const w=S.walls[S.cur], C=creas(w.room||"");
   if(a){ const t=a.dataset.cradd, c={t,wall:wid(w)}; CREA[t].p.forEach(([k,,v])=>c[k]=v); C.push(c); } else C.splice(+d.dataset.crdel,1); save(); renderAll(); });
@@ -6209,6 +6256,17 @@ function undoBar(){ let b=document.getElementById("undobar"); if(!b){ b=document
   b.style.bottom=S.view==="visite"&&SCR!=="home"?"calc(150px + env(safe-area-inset-bottom))":"calc(14px + env(safe-area-inset-bottom))"; }
 { const s1=save; save=function(){ s1(); undoRec(); }; }
 document.addEventListener("keydown",e=>{ if(!(e.ctrlKey||e.metaKey)||/INPUT|TEXTAREA/.test((e.target||{}).tagName||"")) return; const k=e.key.toLowerCase(); if(k==="z"&&!e.shiftKey){ e.preventDefault(); undoGo(-1); } else if(k==="y"||(k==="z"&&e.shiftKey)){ e.preventDefault(); undoGo(1); } });
+function chaudInit(){ if(S.chaudV1) return; S.chaudV1=1; try{
+  const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return; const C=creas(room); if(C.some(c=>c.t==="chaud")) return;
+  const w=S.walls.find(x=>(x.room||"")===room&&/chambre/i.test(x.name||"")); if(!w) return;
+  const c={t:"chaud",wall:wid(w)}; CREA.chaud.p.forEach(([k,,v])=>c[k]=v); const sp=creaSpan(w), m=chaudM(c), need=c.w+2*m, hh=creaHH(w,room), K=kitCfg(room);
+  let free=[[sp.a,sp.a+sp.len]]; const cut=(a,b)=>{ free=free.flatMap(([u,v])=>b<=u||a>=v?[[u,v]]:[[u,Math.min(v,a)],[Math.max(u,b),v]].filter(([p,q])=>q-p>1)); };
+  (w.openings||[]).forEach(o=>{ if(o.w>0&&o.y<hh&&o.y+o.h>c.y-c.deb) cut(o.x-100,o.x+o.w+100); });
+  if(K.on) K.items.filter(it=>it.wall===wid(w)).forEach(it=>{ const b=kitBox(it,K,w.H); if(b&&b.z1>c.y-c.deb) cut(it.x,it.x+b.k.w); });
+  const best=free.sort((p,q)=>(q[1]-q[0])-(p[1]-p[0]))[0]||[sp.a,sp.a+sp.len];
+  c.x=Math.max(Math.ceil(m/10)*10,Math.round(((best[0]+best[1])/2-c.w/2-sp.a)/10)*10); if(best[1]-best[0]<need) c.x=Math.ceil((best[0]-sp.a+m)/10)*10;
+  C.push(c); save(); }catch(e){ console.warn("chaudInit",e); } }
+chaudInit(); renderAll(); // une seule fois, au démarrage, sur le projet ouvert (la cuisine de mahdi)
 undoRec();
 setTimeout(()=>{ const sp=document.getElementById("splash"); if(sp){ sp.classList.add("out"); setTimeout(()=>sp.remove(),600); } },1100);
 
