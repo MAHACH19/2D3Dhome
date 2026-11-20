@@ -1136,7 +1136,7 @@ function materials(r){
     addC("Plaques","Retours de placo en tableau autour des fenêtres (BA13, collés au MAP)",`profondeur jusqu'à la menuiserie (${nm.join(", ")}), 2 tableaux + linteau`,retA,"m²");
     add("Plaques","Cornière d'angle perforée (protège-angle) 2,50 m",`arêtes des tableaux : ${fr(retL/1000,2)} m`,retL?Math.ceil(retL/2500):0,"u");
     add("Plaques","Mortier adhésif MAP (sac 25 kg)","collage des retours de tableau",retA?1:0,"sac");
-    if(tiles){ add("Fenêtres",`Tablette de fenêtre en carrelage ${ONX.ref}`,`${tabs.join(", ")} (débord 3 cm de chaque côté, nez 2 cm, chant en onglet 45°)`,Math.ceil(tiles),"carreau(x)");
+    if(tiles){ add("Fenêtres",`Tablette de fenêtre en carrelage ${ONX.ref}`,`${tabs.join(", ")} (longueur × profondeur ; épaisseur finie ${fr((ONX.wp+ONX.colle+ONX.th)/10,2)} cm = Wedi ${cm(ONX.wp)} cm + colle + Onyx ${fr(ONX.th,1)} mm ; débord 3 cm de chaque côté, nez 2 cm, chant en onglet 45°)`,Math.ceil(tiles),"carreau(x)");
       add("Fenêtres","Panneau wedi Bauplatte 20 mm (support de tablette)",`${fr(wA,2)} m², collé-vissé sur l'appui`,Math.max(1,Math.ceil(wA/1.5)),"u");
       add("Fenêtres","Colle carrelage C2S1 grand format (sac 25 kg)","tablette Onyx, double encollage",1,"sac"); } }
   (r.wall.divers||[]).forEach(d=>{ const D=DIVERS.find(x=>x.n===d.n); if(D && d.q>0) rows.push({cat:"Divers",des:D.n,det:d.why||"",q:d.q,u:D.u}); });
@@ -4624,7 +4624,11 @@ function buildScene(){
           const nv=o.wtype==="fixe"||o.wtype==="1v"?1:o.wtype==="3v"?3:(b-a>900?2:1); for(let i=1;i<nv;i++){ const xm=a+(b-a)*i/nv; scene.add(v3Box(s,xm-ft/2,xm+ft/2,off-35,off+35,c,d,fm)); }
           scene.add(v3Box(s,a+ft,b-ft,off-4,off+4,c+ft,d-ft,M.glass));
           const onyxT=o.tab==="onyx", tabT=onyxT?ONX.wp+ONX.colle+ONX.th:20;
-          if(o.y>0){ if(onyxT){ const P=PLANS.find(p=>p.onyx)||PLANS[0], tx=marbleTex(P).clone(); tx.needsUpdate=true; scene.add(v3Box(s,a-30,b+30,-prof,g.T+20,c-tabT,c,v3Mat("#ffffff",{map:tx,roughness:.15}))); }
+          if(o.y>0){ if(onyxT){ const P=PLANS.find(p=>p.onyx)||PLANS[0], L=b-a+60, Dp=prof+g.T+20, om=(ru,rv)=>{ const tx=marbleTex(P).clone(); tx.needsUpdate=true; tx.wrapS=tx.wrapT=THREE.MirroredRepeatWrapping; tx.repeat.set(ru,rv); return v3Mat("#ffffff",{map:tx,roughness:.15}); }, yN=g.T+20-ONX.th, zN=c-ONX.th;
+              scene.add(v3Box(s,a-30,b+30,-prof,g.T+20,zN,c,om(L/1200,Dp/1200))); // dessus Onyx d'un seul tenant
+              scene.add(v3Box(s,a-30,b+30,-prof,yN,c-tabT,zN,om(L/1200,Dp/1200))); // âme Wedi + colle (cachée)
+              scene.add(v3Box(s,a-30,b+30,yN,g.T+20,c-tabT,zN,om(L/1200,Math.max(.02,(tabT-ONX.th)/1200)))); // nez Onyx en onglet
+              [a-30,b+30-ONX.th].forEach(x=>scene.add(v3Box(s,x,x+ONX.th,-prof,g.T+20,c-tabT,zN,om(Dp/1200,.03)))); } // joues Onyx aux deux bouts
             else scene.add(v3Box(s,a-30,b+30,-prof,g.T+40,c-20,c,M.white)); }
           if(o.type==="Fenêtre"&&o.ret!=="0"&&cut!=="ecorche"&&lay.pla!==false){ const em=finMat(w,paintColor(w)), z0=o.y>0?c:c; [[a,a+12.5],[b-12.5,b]].forEach(q=>scene.add(v3Box(s,q[0],q[1],-prof,g.T,z0,d,em))); scene.add(v3Box(s,a,b,-prof,g.T,d-12.5,d,em)); }
           if(V.nuit===false){ const L=new T3.PointLight("#fff3dc",0.25,4); }
@@ -6454,7 +6458,7 @@ function libSwitch(id,fresh){ const L=libCur(); if(id===L.cur&&!fresh) return;
   L.cur=id; libMeta(L.items.find(i=>i.id===id),S); L.items.sort((a,b)=>(b.id===id)-(a.id===id)||b.t-a.t); libSet(L);
   S.cur=Math.min(S.cur||0,S.walls.length-1); migrate(); if(!fresh){ try{ runMig(); }catch(e){} } save(); renderAll(); renderHome(); }
 function libPanel(){ const L=libCur(), d=t=>new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
-  return `<div class="libbox"><div class="lib-h"><b>Mes projets</b><span class="cap">Appli v2.158 · ${L.items.length} projet(s) · ${clOn()?"sur cet appareil et dans le cloud":"enregistrés sur cet appareil"}</span></div>${cloudBox()}
+  return `<div class="libbox"><div class="lib-h"><b>Mes projets</b><span class="cap">Appli v2.159 · ${L.items.length} projet(s) · ${clOn()?"sur cet appareil et dans le cloud":"enregistrés sur cet appareil"}</span></div>${cloudBox()}
     <div class="lib-l">${L.items.map(it=>{ const on=it.id===L.cur; return `<div class="lib-i${on?" on":""}"><button type="button" class="lib-o" data-lib="open" data-id="${it.id}"><b>${esc(it.nom||"Projet")}</b><small>${it.pieces||0} pièce(s) · ${it.murs||0} mur(s) · ${d(it.t||Date.now())}${on?" · ouvert":""}</small></button>
       <button type="button" class="lib-m" data-lib="ren" data-id="${it.id}" aria-label="Renommer">✎</button><button type="button" class="lib-m" data-lib="dup" data-id="${it.id}" aria-label="Dupliquer">⧉</button>${on?"":`<button type="button" class="lib-m" data-lib="del" data-id="${it.id}" aria-label="Supprimer">🗑</button>`}</div>`; }).join("")}</div>
     <div class="lib-b"><button type="button" class="pri" data-lib="new">＋ Nouveau projet</button></div></div>`; }
