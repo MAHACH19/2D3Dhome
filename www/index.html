@@ -3666,11 +3666,6 @@ function onyxGeo(room){ const K=kitCfg(room); if(!K.on) return null; const PL=pl
     if(endB) pieces.push({h:Math.ceil(ONX.nez)+2,l:ONX.P,n:`Chant de côté ${nm}, fin (onglet 45°)`,t:"nez",w});
     const cuts=its.filter(o=>o.k.sink||o.k.hob).map(o=>{ const m=o.it.x+o.k.w/2, sg=segs.findIndex(q=>m>=q.a-1&&m<=q.b+1); return {n:o.k.sink?"évier":"plaque de cuisson",m,seg:sg+1,dx:sg>=0?m-segs[sg].a:0}; });
     out.push({w,nm,a,b,L,segs,Hc,zc1,cornerA,endA,endB,cuts,credParts,sideA:hA,sideB:hB,sideL,sideUp}); });
-  // table carrelée (mobilier de la pièce) : dessus, dessous, 4 chants et 4 faces du pied dans les mêmes carreaux
-  meubles(room).filter(m=>m.cat==="tcarr").forEach((m,ti)=>{ const nm=`Table${ti?" "+(ti+1):""}`, t=TCARR.top, pw=TCARR.pied, ph=Math.round(m.h-t);
-    pieces.push({h:m.d,l:m.w,n:`${nm} : dessus (onglet 45° sur les 4 bords)`,t:"table"},{h:m.d,l:m.w,n:`${nm} : dessous (onglet 45°, ouverture ${cm(pw-2*(ONX.th+ONX.colle))}×${cm(pw-2*(ONX.th+ONX.colle))} cm pour le pied)`,t:"table"});
-    [m.w,m.w,m.d,m.d].forEach((l,k)=>pieces.push({h:t+2,l,n:`${nm} : chant ${k+1} (onglet 45° en haut, en bas et aux 2 bouts)`,t:"table"}));
-    for(let k=0;k<4;k++) pieces.push({h:ph,l:pw,n:`${nm} : face ${k+1} du pied (onglet 45° sur les 2 côtés)`,t:"table"}); });
   // découpe des carreaux : bandes sur toute la largeur du carreau, regroupées par hauteur (premier qui rentre, plus grandes d'abord)
   const tiles=[]; [...pieces].sort((p,q)=>q.h-p.h||q.l-p.l).forEach(p=>{ let ok=false;
     for(const t of tiles){ for(const r of t.rows){ if(p.h<=r.h+0.6&&r.h-p.h<=130&&r.used+ONX.K+p.l<=ONX.T+0.1){ r.p.push(p); r.used+=ONX.K+p.l; ok=true; break; } } if(ok) break; }
@@ -3784,13 +3779,6 @@ function kitMaterials(room){
   const OG=PL.wedi?onyxGeo(room):null;
   if(OG){ const C="Plan et crédence carrelés", A=(d,t,q,u)=>{ if(q>0) rows.push({cat:C,des:d,det:t,q,u}); }, ILT=K.items.filter(i=>i.k==="ilot").map(i=>kitItem(i)).filter(Boolean), TBO=meubles(room).filter(m=>m.cat==="tableonyx"), nT=OG.tiles.length+ILT.length*4+TBO.length*2, m2=OG.m2p+OG.m2c+OG.m2n, pw=OG.runs.reduce((x,r)=>x+Math.ceil(r.L/2500),0), cw=OG.runs.reduce((x,r)=>x+(r.Hc>20?Math.ceil((r.b-(r.cornerA?r.a-ONX.front:r.a))/2500):0),0);
     A(`${ONX.ref}`,`${nT} carreaux 120×120 d'après le calepinage (plan ${fr(OG.m2p,2)} m², crédence ${fr(OG.m2c,2)} m², chants ${fr(OG.m2n,2)} m²${OG.m2t?`, table ${fr(OG.m2t,2)} m²`:""})`,Math.ceil(nT/ONX.box),"carton(s) de 2");
-    const nTab=meubles(room).filter(m=>m.cat==="tcarr").length; if(nTab){ const TB="Table carrelée 100×100", B=(d,t,q,u)=>rows.push({cat:TB,des:d,det:t,q,u}), core=1000-2*(ONX.th+ONX.colle);
-      B("Panneau wedi Bauplatte 50 mm · 250×60 cm (plateau)",`plateau ${cm(core)}×${cm(core)} cm en 2 morceaux (${cm(core)}×60 + ${cm(core)}×${cm(core-600)}), collés à la colle-mastic wedi 610 + bande d'armature`,nTab,"u");
-      B("Panneau wedi Bauplatte 20 mm · 250×60 cm (habillage du pied)",`caisson du pied ${cm(TCARR.pied-2*(ONX.th+ONX.colle))}×${cm(TCARR.pied-2*(ONX.th+ONX.colle))} cm autour du tube acier`,nTab,"u");
-      B("Tube acier carré 80×80×3 mm (pied, coupé à la hauteur)",`${cm(750-TCARR.top-12)} cm, soudé ou boulonné sur 2 platines`,nTab,"u");
-      B("Platine acier 250×250×8 mm percée (sol + dessous du plateau)","celle du haut vissée dans le plateau wedi par 8 vis wedi + rondelles, celle du bas chevillée dans la dalle",2*nTab,"u");
-      B("Goujon d'ancrage M10 (béton) ou tige filetée scellée","4 par table : le plateau carrelé pèse ≈ 55 kg, le pied central doit être fixé au sol pour ne pas basculer",4*nTab,"u");
- }
     TBO.forEach(m=>{ A("Table carrée tout Onyx sur pied central",`2 carreaux 120×120 : plateau ${cm(Math.min(m.w,1200))}×${cm(Math.min(m.d,1200))} d'un seul tenant (sans joint), pied central habillé (4 faces en onglet 45°) ; plateau sur Wedi 20 mm + platine acier`,2,"u");
       A("Panneau wedi Bauplatte 20 mm (support du plateau et du pied)","plateau + caisson du pied, collés et armés",2,"u"); });
     ILT.forEach(k=>{ A("Table péninsule tout en Onyx (dessus + 2 côtés + face)",`4 carreaux 120×120 : dessus ${cm(Math.min(k.w,1200))}×${cm(Math.min(k.d,1200))} d'un seul tenant, 2 côtés ${cm(Math.min(k.d,1200))}×94, face ${cm(k.w)}×88 ; angles en onglet 45°, sans joint visible`,4,"u");
@@ -5198,8 +5186,6 @@ const MOB=[
   ["chaise","Chaises · Sklum","Sklum BIANCA chaise bouclé et chêne (≈)",500,560,800,"#efe9dd"],
   ["chaise","Chaises · Sklum","Sklum TENTO chaise rotin (≈)",450,520,800,"#c8a878"],
   ["chaise","Chaises · Sklum","Sklum UISH Edition chaise orme (≈)",450,500,780,"#b78d60"],
-  ["tcarr","Tables","Table carrelée Onyx 100×100 sur Wedi 5 cm, chants en onglet 45°, pied central carrelé",1000,1000,750,"#bdbcb8"],
-  ["leon","Assises · Stooly","Stooly Léon tabouret pliable Standard 42 cm, Gris Eiffel RAL 7040, coussin assorti (Ø ≈ 35)",350,350,420,"#7b7c79"]
 ].map(([t,g,n,w,d,h,c],i)=>({id:"m"+i,t,g,n,w,d,h,c}));
 /* Vignettes 3D des articles (rendu hors écran, mises en cache) */
 const THUMBS={}; let THR=null;
@@ -6602,12 +6588,11 @@ function mahdiV4(){ if(S.mahdiV4) return; S.mahdiV4=1; try{ const room=roomNames
   save(); }catch(e){ console.warn("mahdiV4",e); } }
 /* v158 (demandes de mahdi du 18/11/2026) : colonne 80 cm du mur fenêtre collée au mur avec le frigo VALBERG dedans, table carrelée 100×100, porte MDF rainurée du placard chaudière */
 function mahdiV5(){ if(S.mahdiV5) return false; const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return false; const K=kitCfg(room); if(!K.on||!K.items.length) return false; S.mahdiV5=1; const log=[];
-  try{ log.push(mahdiCols(room)); }catch(e){ console.warn("mahdiV5 colonnes",e); }
-  try{ log.push(mahdiTable(room)); }catch(e){ console.warn("mahdiV5 table",e); }
+  try{ log.push(mahdiCols(room,true)); }catch(e){ console.warn("mahdiV5 colonnes",e); }
   try{ const c=creas(room).find(q=>q.t==="chaud"); if(c&&+(c.tas??2)>=2){ c.fac=1; if(c.rg===undefined) c.rg=20; if(c.rl===undefined) c.rl=40; if(c.rb===undefined) c.rb=100; log.push("porte MDF rainurée sur le placard chaudière"); } }catch(e){ console.warn("mahdiV5 chaudière",e); }
   S.mahdiV5log=log.filter(Boolean); save(); return true; }
 /* colonnes du mur fenêtre : la rangée part de l'angle (collée au mur), les 2 colonnes de 40 côté fenêtre deviennent une colonne 80 cm à 2 portes avec le frigo dedans */
-function mahdiCols(room){ const K=kitCfg(room), rw=S.walls.filter(w=>(w.room||"")===room), w=rw.find(x=>/fen/i.test(x.name||"")&&K.items.some(it=>it.wall===wid(x)&&/^c\d/.test(it.k))); if(!w) return "";
+function mahdiCols(room,noMerge){ const K=kitCfg(room), rw=S.walls.filter(w=>(w.room||"")===room), w=rw.find(x=>/fen/i.test(x.name||"")&&K.items.some(it=>it.wall===wid(x)&&/^c\d/.test(it.k))); if(!w) return "";
   const its=K.items.filter(it=>it.wall===wid(w)), [u0,u1]=kitUse(w), win=(w.openings||[]).filter(o=>o.type!=="Porte").sort((a,b)=>a.x-b.x);
   const cols=its.filter(it=>it.k==="c400x2000").sort((a,b)=>a.x-b.x); if(cols.length<2) return "";
   const x0=Math.min(...its.map(it=>it.x-(it.jg?19:0))), x1=Math.max(...its.map(it=>{ const k=kitItem(it); return it.x+(k?k.w:0)+(it.jd?19:0); })), mid=(x0+x1)/2;
@@ -6617,6 +6602,7 @@ function mahdiCols(room){ const K=kitCfg(room), rw=S.walls.filter(w=>(w.room||""
   if(pw&&pw!==w){ const [,p1]=kitUse(pw); K.items.filter(it=>it.wall===wid(pw)).forEach(it=>{ const b=kitBox(it,K,pw.H); if(b&&it.x+b.k.w+(it.jd?19:0)>=p1-5) occ=Math.max(occ,b.d+(b.k.t==="bas"?ONX.front+ONX.th-600:0)); });
     creas(room).filter(c=>c.t==="chaud"&&c.wall===wid(pw)).forEach(c=>{ const G=chaudGeo(c,room), sp=creaSpan(pw); if(G.mode&&G.x1>=sp.len-5) occ=Math.max(occ,(G.D||0)+5); }); }
   const start=u0+occ, dx=toEnd?start-x0:0; if(Math.abs(dx)>0.5) its.forEach(it=>{ it.x=Math.round((it.x+dx)*10)/10; });
+  if(noMerge) return dx?`colonnes du mur fenêtre collées à l'angle (décalées de ${cm(Math.abs(dx))} cm)`:""; // 20/11 : la colonne frigo est celle de la version principale
   // fusion des 2 colonnes (et de leurs surmeubles) les plus proches de la fenêtre
   const A=toEnd?cols[cols.length-2]:cols[0], B=toEnd?cols[cols.length-1]:cols[1]; if(Math.abs(B.x-A.x-400)>2) return dx?`colonnes décalées de ${cm(-dx)} cm vers l'angle`:"";
   const keep={wall:A.wall,x:A.x,no:A.no,jg:A.jg||B.jg,jd:A.jd||B.jd};
@@ -6650,6 +6636,16 @@ setTimeout(()=>{ try{ if(mahdiV7()){ renderAll(); if(typeof v3Rebuild==="functio
 function mahdiV8(){ if(S.mahdiV8) return false; S.mahdiV8=1; let ok=false; S.walls.map(w=>w.room||"").filter((v,i,a)=>a.indexOf(v)===i).forEach(r=>creas(r).filter(c=>c.t==="chaud"&&+c.fac===1).forEach(c=>{ if(+c.rl===40||c.rl===undefined) c.rl=30; if(+c.rb===100||c.rb===undefined) c.rb=80; if(c.mc===undefined) c.mc=0; ok=true; }));
   if(ok) (S.mahdiV5log=S.mahdiV5log||[]).push("porte MDF redessinée : cadre de 8 cm tout autour, bandes de 2 cm à bouts arrondis tous les 5 cm, chanfrein 2 mm, feutre noir au dos, gris clair comme la cuisine"); save(); return ok; }
 setTimeout(()=>{ try{ if(mahdiV8()){ renderAll(); if(typeof v3Rebuild==="function") v3Rebuild(); } }catch(e){ console.warn("mahdiV8",e); } },1100);
+/* 20/11 : on garde la table carrée tout Onyx et la colonne frigo de la version principale : retrait de la table carrelée 100×100, des tabourets Léon et de la colonne 80 avec frigo des pré-versions */
+function mahdiV9(){ if(S.mahdiV9) return false; S.mahdiV9=1; let ch=false; const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined){ save(); return false; }
+  const M=meubles(room); for(let i=M.length-1;i>=0;i--) if(M[i].cat==="tcarr"||M[i].cat==="leon"){ M.splice(i,1); ch=true; }
+  const K=kitCfg(room); (K.items||[]).filter(it=>it.k==="c800x2000"&&it.frigo).forEach(A=>{ const base={wall:A.wall,f:"1p",et:2,n:"Colonne avec étagères 40×60×200"};
+    const B=Object.assign({},base,{k:"c400x2000",x:Math.round((A.x+400)*10)/10,hg:"d"}); if(A.jd) B.jd=A.jd; delete A.frigo; delete A.open; delete A.jd; Object.assign(A,base,{k:"c400x2000",hg:"g"}); K.items.splice(K.items.indexOf(A)+1,0,B);
+    const H=K.items.find(it=>it.wall===A.wall&&it.k==="h800x400"&&Math.abs(it.x-A.x)<2); if(H){ const H2=Object.assign({},H,{k:"h400x400",x:Math.round((H.x+400)*10)/10,n:"Surmeuble 40×60×40",hg:"d"}); delete H2.jg; Object.assign(H,{k:"h400x400",n:"Surmeuble 40×60×40",hg:"g"}); delete H.jd; K.items.splice(K.items.indexOf(H)+1,0,H2); }
+    ch=true; });
+  if(ch) (S.mahdiV5log=S.mahdiV5log||[]).push("table carrée tout Onyx et colonne frigo de la version principale gardées : table carrelée 100×100, tabourets Léon et colonne 80 avec frigo retirés");
+  save(); return ch; }
+setTimeout(()=>{ try{ if(mahdiV9()){ renderAll(); if(typeof v3Rebuild==="function") v3Rebuild(); } }catch(e){ console.warn("mahdiV9",e); } },650);
 /* 18/11 soir : 2 tabourets Stooly Léon autour de la table carrelée */
 function mahdiV6(){ if(S.mahdiV6) return false; const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return false; const M=meubles(room), T=M.find(m=>m.cat==="tcarr"); if(!T) return false; S.mahdiV6=1;
   if(M.some(m=>m.cat==="leon")){ save(); return false; } const o=MOB.find(q=>q.t==="leon"); if(!o){ save(); return false; }
@@ -6658,7 +6654,6 @@ function mahdiV6(){ if(S.mahdiV6) return false; const room=roomNames().find(n=>/
   const pairs=[[pt(off,0),pt(-off,0)],[pt(0,off),pt(0,-off)]].map(q=>({q,d:Math.min(...q.map(p=>clr(p[0],p[1])))})).sort((x,y)=>y.d-x.d), q=pairs[0].q;
   q.forEach(p=>M.push({n:o.n,cat:o.t,x:Math.round(p[0]),y:Math.round(p[1]),rot:0,w:o.w,d:o.d,h:o.h,c:o.c}));
   (S.mahdiV5log=S.mahdiV5log||[]).push("2 tabourets Stooly Léon 42 cm Gris Eiffel de part et d'autre de la table"); save(); return true; }
-setTimeout(()=>{ try{ if(mahdiV6()){ renderAll(); if(typeof v3Rebuild==="function") v3Rebuild(); } }catch(e){ console.warn("mahdiV6",e); } },900);
 setTimeout(()=>{ try{ if(mahdiV5()){ renderAll(); if(S.view==="visite"&&typeof v3Rebuild==="function") v3Rebuild(); } }catch(e){ console.warn("mahdiV5",e); } },700); // une seule fois, au démarrage, sur le projet ouvert (la cuisine de mahdi)
 undoRec();
 setTimeout(()=>{ const sp=document.getElementById("splash"); if(sp){ sp.classList.add("out"); setTimeout(()=>sp.remove(),600); } },1100);
