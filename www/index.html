@@ -4360,6 +4360,7 @@ function v3CeilSol(scene,room,g,X,V,R){ const T3=THREE, H=g.H, c=R.c, P=pt=>X.p(
   if(lay.pla!==false||!cut){ const pm=v3Mat("#fbfbf9",{transparent:V.mode!=="visite"||V.res,opacity:V.res?0.14:V.mode!=="visite"?0.25:1,depthWrite:!V.res});
     flat(cut?half(.5):PL.map(R.BW),R.Hf,pm); }
 }
+let FAC_EMI=0.45; /* v178 : façades NCS S 2500-N fidèles en rendu Réaliste de jour (compense l'éclairage chaud et le tone mapping) */
 function v3Mat(color,o){ return new THREE.MeshStandardMaterial(Object.assign({color:new THREE.Color(color),roughness:.85,metalness:0,side:THREE.DoubleSide},o||{})); }
 function wallMatrix(s,o0){ const m=new THREE.Matrix4(); m.set(s.dx,0,s.nx,(s.x0+s.nx*o0)/1000, 0,1,0,0, -s.dy,0,-s.ny,-(s.y0+s.ny*o0)/1000, 0,0,0,1); return m; }
 const LAYSHORT={pierre:"Pierre",fibre:"Fibre de bois",mem:"Membrane Vario",oss:"Ossature",pla:"Plaque",end:"Enduit",peint:"Peinture"};
@@ -4666,7 +4667,7 @@ function buildScene(){
       // cuisine
       if(K.on) K.items.forEach((it,idx)=>{ if(it.wall!==wid(w)) return; const b=kitBox(it,K,w.H); if(!b) return; const kk=b.k;
         const fc=kk.c||(FACADES.find(f=>f.n===(it.fac||K.facade))||FACADES[0]).c, x0=it.x, x1=it.x+kk.w, d0=g.T, d1=g.T+b.d-20, base=kk.t==="bas"||kk.t==="col";
-        const tg={kind:"kit",room,idx}, carc=v3Mat(fc,{roughness:.55}), fm=v3Mat(fc,{roughness:.55});
+        const tg={kind:"kit",room,idx}, FEM=(S.v3.real&&!S.v3.nuit)?{emissive:new THREE.Color(fc),emissiveIntensity:FAC_EMI}:{}, carc=v3Mat(fc,{roughness:.55,...FEM}), fm=v3Mat(fc,{roughness:.55,...FEM});
         const add=(m)=>{ m.userData=tg; scene.add(m); pick.push(m); };
         if(kk.f==="pieds"){ const st=v3Mat("#c9ced3",{metalness:.6,roughness:.35}); [x0+60,x1-60].forEach(a=>{ add(v3Box(s,a-30,a+30,d1-90,d1-30,0,b.z1-51,st)); add(v3Box(s,a-50,a+50,d1-110,d1-10,b.z1-51,b.z1-45,st)); add(v3Box(s,a-35,a+35,d1-95,d1-25,0,12,st)); }); add(v3Box(s,x0+5,x1-5,d1-130,d1+10,b.z1-45,b.z1,carc)); add(v3Box(s,x0+5,x1-5,d0,d0+45,b.z1-45,b.z1,carc)); return; }
         if(it.k==="nichefrigo"){ const zt=b.z1, wm=fm, D1=d1; add(v3Box(s,x0,x0+19,d0,D1,0,zt,wm)); add(v3Box(s,x1-19,x1,d0,D1,0,zt,wm)); add(v3Box(s,x0+19,x1-19,d0,D1,zt-19,zt,wm)); add(v3Box(s,x0+19,x1-19,d0,d0+8,0,zt-19,carc)); add(v3Box(s,x0+19,x1-19,d0+8,D1,0,19,carc));
@@ -6436,7 +6437,7 @@ function libSwitch(id,fresh){ const L=libCur(); if(id===L.cur&&!fresh) return;
   L.cur=id; libMeta(L.items.find(i=>i.id===id),S); L.items.sort((a,b)=>(b.id===id)-(a.id===id)||b.t-a.t); libSet(L);
   S.cur=Math.min(S.cur||0,S.walls.length-1); migrate(); if(!fresh){ try{ runMig(); }catch(e){} } save(); renderAll(); renderHome(); }
 function libPanel(){ const L=libCur(), d=t=>new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
-  return `<div class="libbox"><div class="lib-h"><b>Mes projets</b><span class="cap">Appli v2.153 · ${L.items.length} projet(s) · ${clOn()?"sur cet appareil et dans le cloud":"enregistrés sur cet appareil"}</span></div>${cloudBox()}
+  return `<div class="libbox"><div class="lib-h"><b>Mes projets</b><span class="cap">Appli v2.154 · ${L.items.length} projet(s) · ${clOn()?"sur cet appareil et dans le cloud":"enregistrés sur cet appareil"}</span></div>${cloudBox()}
     <div class="lib-l">${L.items.map(it=>{ const on=it.id===L.cur; return `<div class="lib-i${on?" on":""}"><button type="button" class="lib-o" data-lib="open" data-id="${it.id}"><b>${esc(it.nom||"Projet")}</b><small>${it.pieces||0} pièce(s) · ${it.murs||0} mur(s) · ${d(it.t||Date.now())}${on?" · ouvert":""}</small></button>
       <button type="button" class="lib-m" data-lib="ren" data-id="${it.id}" aria-label="Renommer">✎</button><button type="button" class="lib-m" data-lib="dup" data-id="${it.id}" aria-label="Dupliquer">⧉</button>${on?"":`<button type="button" class="lib-m" data-lib="del" data-id="${it.id}" aria-label="Supprimer">🗑</button>`}</div>`; }).join("")}</div>
     <div class="lib-b"><button type="button" class="pri" data-lib="new">＋ Nouveau projet</button></div></div>`; }
