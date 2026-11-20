@@ -4250,8 +4250,8 @@ function v3AO(scene,s,a,b,o,h){ // ombre douce dans les angles (sol, plafond, co
 function v3Realify(scene){ if(!V3.r) return; const V=S.v3; scene.environment=V.nuit?null:v3EnvTex(); let nSh=0;
   let ctr=[0,0], ext=6, win=null; try{ const {c,g}=v3Fit(), P=g.inner.flatMap(e=>[e.a,e.b]); ctr=c; ext=Math.max(4,Math.max(...P.map(p=>Math.hypot(p[0]-c[0],p[1]-c[1])))/1000+1.5);
     g.segs.forEach(sg=>sg.w.openings.filter(o=>o.type==="Fenêtre"||o.type==="Autre").forEach(o=>{ const A=o.w*o.h; if(!win||A>win.A){ const xm=o.x+o.w/2; win={A,x:sg.x0+sg.dx*xm,y:sg.y0+sg.dy*xm,nx:sg.nx,ny:sg.ny,z:o.y+o.h/2}; } })); }catch(e){}
-  scene.traverse(o=>{ if(o.isHemisphereLight) o.intensity=V.nuit?.08:.1;
-    if(o.isDirectionalLight){ o.intensity=V.nuit?0.02:2.1; o.color.set("#fff1dc"); if(win){ const tx=(win.x+win.nx*1800)/1000, ty=-(win.y+win.ny*1800)/1000; o.position.set(tx-win.nx*9,win.z/1000+5.5,ty+win.ny*9); o.target.position.set(tx,0,ty); ext=Math.max(ext,12); }
+  scene.traverse(o=>{ if(o.isHemisphereLight){ o.intensity=V.nuit?.08:REAL_HEMI; if(!V.nuit){ o.color.set("#ffffff"); o.groundColor.set("#d8d6d0"); } }
+    if(o.isDirectionalLight){ o.intensity=V.nuit?0.02:2.1; o.color.set(V.nuit?"#fff1dc":"#fff9f0"); if(win){ const tx=(win.x+win.nx*1800)/1000, ty=-(win.y+win.ny*1800)/1000; o.position.set(tx-win.nx*9,win.z/1000+5.5,ty+win.ny*9); o.target.position.set(tx,0,ty); ext=Math.max(ext,12); }
       else { o.position.set(ctr[0]/1000+ext*.7,ext*1.4,-ctr[1]/1000+ext*.5); o.target.position.set(ctr[0]/1000,0,-ctr[1]/1000); } scene.add(o.target);
       o.castShadow=true; o.shadow.mapSize.set(2048,2048); const sc=o.shadow.camera; sc.left=sc.bottom=-ext; sc.right=sc.top=ext; sc.near=.5; sc.far=ext*5; sc.updateProjectionMatrix(); o.shadow.bias=-.0004; o.shadow.normalBias=.02; }
     if(o.isPointLight&&!o.userData.hdFill){ if(V.nuit){ o.intensity*=1.1; if(nSh<4&&o.intensity>.5){ o.castShadow=true; o.shadow.mapSize.set(512,512); o.shadow.bias=-.002; o.shadow.radius=6; o.shadow.camera.near=.05; o.shadow.camera.far=12; nSh++; } else o.castShadow=false; } else { o.castShadow=false; o.intensity*=1.6; } }
@@ -4260,7 +4260,7 @@ function v3Realify(scene){ if(!V3.r) return; const V=S.v3; scene.environment=V.n
   { let bx=[ctr[0]-1500,ctr[0]+1500,ctr[1]-1500,ctr[1]+1500]; try{ const {g}=v3Fit(), P=g.inner.flatMap(e=>[e.a,e.b]), xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys), mx=(x1-x0)*.25, my=(y1-y0)*.25; bx=[x0+mx,x1-mx,y0+my,y1-my]; }catch(e){}
     const rm=(S.walls[S.cur]||{}).room||"", hs=S.walls.filter(w=>(w.room||"")===rm).map(w=>+w.H||2500), top=Math.max(1.2,(hs.length?Math.min(...hs):2500)/1000-.2);
     let fx=(bx[0]+bx[1])/2, fy=(bx[2]+bx[3])/2; if(!insideAny(fx,fy)){ const q=[ctr[0],ctr[1]]; if(insideAny(q[0],q[1])){ fx=q[0]; fy=q[1]; } else if(V3.fp&&insideAny(V3.fp.x,V3.fp.y)){ fx=V3.fp.x; fy=V3.fp.y; } }
-    const fill=new THREE.PointLight("#fff3e2",V.nuit?.06:.55,0,1); fill.position.set(fx/1000,Math.min(1.5,top),-fy/1000); fill.userData.top=top; fill.castShadow=true; fill.shadow.mapSize.set(512,512); fill.shadow.bias=-.003; fill.shadow.radius=4; fill.shadow.camera.near=.05; fill.shadow.camera.far=30; fill.userData.hdFill=1; scene.add(fill);
+    const fill=new THREE.PointLight(V.nuit?"#fff3e2":"#ffffff",V.nuit?.06:REAL_FILL,0,1); fill.position.set(fx/1000,Math.min(1.5,top),-fy/1000); fill.userData.top=top; fill.castShadow=true; fill.shadow.mapSize.set(512,512); fill.shadow.bias=-.003; fill.shadow.radius=4; fill.shadow.camera.near=.05; fill.shadow.camera.far=30; fill.userData.hdFill=1; scene.add(fill);
     V3.hdL={sun,fill,box:bx}; }
   scene.background=V.nuit?new THREE.Color("#10141c"):v3Sky(); v3Lin(scene); }
 /* Couleurs en espace linéaire (éclairage physiquement juste) : on convertit une fois chaque matière, et on revient en arrière hors mode Réaliste */
@@ -4360,7 +4360,7 @@ function v3CeilSol(scene,room,g,X,V,R){ const T3=THREE, H=g.H, c=R.c, P=pt=>X.p(
   if(lay.pla!==false||!cut){ const pm=v3Mat("#fbfbf9",{transparent:V.mode!=="visite"||V.res,opacity:V.res?0.14:V.mode!=="visite"?0.25:1,depthWrite:!V.res});
     flat(cut?half(.5):PL.map(R.BW),R.Hf,pm); }
 }
-let FAC_EMI=0.45; /* v178 : façades NCS S 2500-N fidèles en rendu Réaliste de jour (compense l'éclairage chaud et le tone mapping) */
+let REAL_HEMI=.45, REAL_FILL=.7; let FAC_EMI=0; /* v178 : façades NCS S 2500-N fidèles en rendu Réaliste de jour (compense l'éclairage chaud et le tone mapping) */
 function v3Mat(color,o){ return new THREE.MeshStandardMaterial(Object.assign({color:new THREE.Color(color),roughness:.85,metalness:0,side:THREE.DoubleSide},o||{})); }
 function wallMatrix(s,o0){ const m=new THREE.Matrix4(); m.set(s.dx,0,s.nx,(s.x0+s.nx*o0)/1000, 0,1,0,0, -s.dy,0,-s.ny,-(s.y0+s.ny*o0)/1000, 0,0,0,1); return m; }
 const LAYSHORT={pierre:"Pierre",fibre:"Fibre de bois",mem:"Membrane Vario",oss:"Ossature",pla:"Plaque",end:"Enduit",peint:"Peinture"};
@@ -6437,7 +6437,7 @@ function libSwitch(id,fresh){ const L=libCur(); if(id===L.cur&&!fresh) return;
   L.cur=id; libMeta(L.items.find(i=>i.id===id),S); L.items.sort((a,b)=>(b.id===id)-(a.id===id)||b.t-a.t); libSet(L);
   S.cur=Math.min(S.cur||0,S.walls.length-1); migrate(); if(!fresh){ try{ runMig(); }catch(e){} } save(); renderAll(); renderHome(); }
 function libPanel(){ const L=libCur(), d=t=>new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
-  return `<div class="libbox"><div class="lib-h"><b>Mes projets</b><span class="cap">Appli v2.155 · ${L.items.length} projet(s) · ${clOn()?"sur cet appareil et dans le cloud":"enregistrés sur cet appareil"}</span></div>${cloudBox()}
+  return `<div class="libbox"><div class="lib-h"><b>Mes projets</b><span class="cap">Appli v2.156 · ${L.items.length} projet(s) · ${clOn()?"sur cet appareil et dans le cloud":"enregistrés sur cet appareil"}</span></div>${cloudBox()}
     <div class="lib-l">${L.items.map(it=>{ const on=it.id===L.cur; return `<div class="lib-i${on?" on":""}"><button type="button" class="lib-o" data-lib="open" data-id="${it.id}"><b>${esc(it.nom||"Projet")}</b><small>${it.pieces||0} pièce(s) · ${it.murs||0} mur(s) · ${d(it.t||Date.now())}${on?" · ouvert":""}</small></button>
       <button type="button" class="lib-m" data-lib="ren" data-id="${it.id}" aria-label="Renommer">✎</button><button type="button" class="lib-m" data-lib="dup" data-id="${it.id}" aria-label="Dupliquer">⧉</button>${on?"":`<button type="button" class="lib-m" data-lib="del" data-id="${it.id}" aria-label="Supprimer">🗑</button>`}</div>`; }).join("")}</div>
     <div class="lib-b"><button type="button" class="pri" data-lib="new">＋ Nouveau projet</button></div></div>`; }
