@@ -51,3 +51,15 @@ jobs:
             Calepinage.apk
             Calepinage-2-${{ github.run_number }}.apk
           make_latest: true
+      - name: Publier une pré-version (branche de travail)
+        if: github.ref != 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.${{ github.run_number }}-essai
+          name: Calepinage 2.${{ github.run_number }} (essai, branche ${{ github.ref_name }})
+          body: |
+            Version d'essai construite depuis la branche ${{ github.ref_name }}. S'installe par-dessus l'appli (même clé).
+          files: |
+            Calepinage-2-${{ github.run_number }}.apk
+          prerelease: true
+          make_latest: false

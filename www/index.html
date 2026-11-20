@@ -3130,7 +3130,7 @@ function renderRoom3D(){
         if(c.t==="niche") box(x,x+P.w,T,T+3,P.y,P.y+P.h,"#b9b2a4");
         if(c.t==="rideau"){ box(x,x+P.L,T+P.pf,T+P.pf+60,hh-P.h,hh,pc); box(x+10,x+10+P.L*.3,T+P.pf*.3,T+P.pf*.7,15,hh-40,P.col||"#e9e2d4"); box(x+P.L*.7-10,x+P.L-10,T+P.pf*.3,T+P.pf*.7,15,hh-40,P.col||"#e9e2d4"); }
         if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; box(x,x+40,T,T+P.pf,y0,y0+P.h,pc); box(x+P.L-40,x+P.L,T,T+P.pf,y0,y0+P.h,pc); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; box(x,x+P.L,T,T+P.pf,Math.max(0,yy-20),Math.max(20,yy+20),pc); } }
-        if(c.t==="chaud"){ const G=chaudGeo(c,room), o=sp.a; if(G.cl) box(o+G.cl.x0,o+G.cl.x1,T+G.cl.d0,T+G.cl.d1,0,G.hh,pc); if(G.cg&&G.mode<2) box(o+G.cg.x0,o+G.cg.x1,T+G.cg.d0,T+G.cg.d1,0,G.cg.z1,"#eef1f3"); if(G.mode<2) box(o+G.bo.x0,o+G.bo.x1,T,T+G.bo.d1,G.bo.z0,G.bo.z1,"#f4f3ef"); G.sl.forEach(q=>box(o+q.x0,o+q.x1,T+q.d0,T+q.d1,G.z0,G.zt,"#fbfbf9","#00000022")); }
+        if(c.t==="chaud"){ const G=chaudGeo(c,room), o=sp.a; if(G.cl) box(o+G.cl.x0,o+G.cl.x1,T+G.cl.d0,T+G.cl.d1,0,G.hh,pc); if(G.cg&&G.mode<2) box(o+G.cg.x0,o+G.cg.x1,T+G.cg.d0,T+G.cg.d1,0,G.cg.z1,"#eef1f3"); if(G.mode<2) box(o+G.bo.x0,o+G.bo.x1,T,T+G.bo.d1,G.bo.z0,G.bo.z1,"#f4f3ef"); G.sl.forEach(q=>box(o+q.x0,o+q.x1,T+q.d0,T+q.d1,G.z0,G.zt,"#fbfbf9","#00000022")); if(G.mdf) G.mdf.leaves.forEach(L=>box(o+L.x0,o+L.x1,T+G.mdf.d0,T+G.mdf.d1,L.z0,L.z1,G.mdf.col,"#00000033")); }
         if(c.t==="led"){ const gl=P.k<=2700?"#ffe0b0":P.k>=4000?"#f7fbff":"#fff0d6";
           if(+P.pos===1) ledSegs(w,P,x,hh).forEach(([a,b])=>box(x,x+50,T,T+3,a,b,gl,"#9aa0a6"));
           else if(+P.pos===2) box(x,x+P.L,T+P.y,T+P.y+40,hh-3,hh,gl,"#9aa0a6");
@@ -3548,6 +3548,7 @@ const KIT=(()=>{ const K=[];
   K.push({id:"hmicro",g:"Éléments muraux",n:"METOD élément mural 60×37×60 + micro-ondes",t:"haut",w:600,h:600,f:"micro"});
   K.push({id:"etag",g:"Éléments muraux",n:"Étagère murale 80 cm (rangement ouvert)",t:"haut",w:800,h:40,f:"etag",d:250});
   [[400,1400],[600,1400],[400,2000],[600,2000],[600,2200]].forEach(([w,h])=>K.push({id:`c${w}x${h}`,g:"Armoires",n:`METOD élément armoire ${w/10}×60×${h/10}`,t:"col",w,h,f:h>1400?"col2":"1p"}));
+  K.push({id:"c800x2000",g:"Armoires",n:"METOD élément armoire 80×60×200, 2 portes",t:"col",w:800,h:2000,f:"2p"});
   K.push({id:"cfour",g:"Armoires",n:"METOD armoire 60×60×220 four + micro-ondes encastrés",t:"col",w:600,h:2200,f:"colfour"});
   K.push({id:"clvh",g:"Armoires",n:"METOD armoire 60×60×200 lave-vaisselle intégré en hauteur",t:"col",w:600,h:2000,f:"collv"});
   K.push({id:"clvh220",g:"Armoires",n:"METOD armoire 60×60×220 lave-vaisselle intégré en hauteur",t:"col",w:600,h:2200,f:"collv"});
@@ -3565,6 +3566,9 @@ const KIT=(()=>{ const K=[];
   K.push({id:"custom",g:"Sur mesure",n:"Meuble sur mesure (dimensions libres)",t:"bas",w:600,f:"1p"});
   K.push({id:"ilot",g:"Sur mesure",n:"Îlot / meuble libre (dimensions libres)",t:"app",w:1200,d:900,h:900,f:"2p",c:""});
   return K; })();
+/* réfrigérateurs posés dans une colonne (it.frigo) : dimensions de la fiche du magasin, mm */
+const FRIGOS={vcs262:{n:"Réfrigérateur combiné VALBERG CS 262 D S625C (Electro Dépôt)",w:547,d:568,h:1773,c:"#c3c7cb",v:"262 L (197 L frigo + 65 L congélateur en bas), froid statique, silver"}};
+function kitFrigo(it){ return it&&it.frigo?FRIGOS[it.frigo]||null:null; }
 function kitCfg(room){ if(!S.kit) S.kit={}; if(!S.kit[room]) S.kit[room]={on:false,facade:FACADES[0].n,plan:PLANS[1].n,top:2280,items:[]}; return S.kit[room]; }
 function kitItem(it){ const k=KIT.find(q=>q.id===it.k); if(!k) return null;
   const o={...k}, num=v=>v!==undefined&&v!==null&&v!==""&&+v>0;
@@ -3599,7 +3603,10 @@ function kitChecks(room){
     its.forEach(o=>{ if(o.it.x<a0-1||o.it.x+o.b.k.w>a1+1) ck.push({ok:false,t:`${w.name} : « ${o.b.k.n} » dépasse la longueur utile du mur (${cm(a0)} à ${cm(a1)} cm depuis le début du mur).`}); });
     for(let i=0;i<its.length;i++) for(let j=i+1;j<its.length;j++){ const A=its[i],B=its[j];
       if(A.it.x<B.it.x+B.b.k.w-1 && B.it.x<A.it.x+A.b.k.w-1 && A.b.z0<B.b.z1-1 && B.b.z0<A.b.z1-1) ck.push({ok:false,t:`${w.name} : « ${A.b.k.n} » et « ${B.b.k.n} » se chevauchent.`}); }
-    its.forEach(o=>w.openings.forEach(op=>{ if(o.it.x<op.x+op.w && op.x<o.it.x+o.b.k.w && o.b.z0<op.y+op.h && op.y<o.b.z1) ck.push({ok:false,t:`${w.name} : « ${o.b.k.n} » passe devant ${op.type==="Porte"?"la porte":"la fenêtre"} ${opName(op,w.openings.indexOf(op))}.`}); }));
+    its.forEach(o=>w.openings.forEach(op=>{ const ap=op.type!=="Porte"&&op.y>0?30:0, xa=o.it.x-(o.it.jg?19:0), xb=o.it.x+o.b.k.w+(o.it.jd?19:0); if(xa<op.x+op.w+ap && op.x-ap<xb && o.b.z0<op.y+op.h && op.y-20<o.b.z1) ck.push({ok:false,t:`${w.name} : « ${o.b.k.n} » passe devant ${op.type==="Porte"?"la porte":"la fenêtre"} ${opName(op,w.openings.indexOf(op))}.`}); }));
+    its.forEach(o=>{ const FR=kitFrigo(o.it); if(!FR) return; const iw=o.b.k.w-36, ih=o.b.z1-80-36, id=o.b.d-20, okW=iw-FR.w>=40, okH=ih-FR.h>=50;
+      ck.push({ok:okW&&okH,t:`${w.name} : ${FR.n} (${cm(FR.w)} × ${cm(FR.d)} × ${cm(FR.h)} cm) centré dans la colonne de ${cm(o.b.k.w)} cm : ${cm((iw-FR.w)/2)} cm de jeu de chaque côté, ${cm(ih-FR.h)} cm au-dessus${okW&&okH?"":" : trop juste"}. Les portes du meuble s'ouvrent d'abord, puis celle du frigo.`});
+      ck.push({ok:false,t:`${w.name} : réfrigérateur pose libre à froid statique enfermé dans un meuble : retirer le fond du caisson (il reste ${cm(id-FR.d)} cm derrière l'appareil), percer le dessus et la rehausse (grille d'aération) et ajourer la plinthe pour que l'air chaud du condenseur s'évacue. Vérifier les dégagements de la notice VALBERG.`,ref:"Notice fabricant"}); });
     const hauts=its.filter(o=>o.b.k.t==="haut");
     if(hauts.length) ck.push({ok:true,t:`${w.name} : meubles hauts sur plaque de plâtre, poser des renforts (bois ou métal) dans l'ossature à hauteur du rail de suspension (${cm(hauts[0].b.z1-60)} cm), avant les plaques.`,ref:"DTU 25.41 / Placo"});
     const hob=its.find(o=>o.b.k.hob), hood=its.find(o=>/hotte/.test(o.b.k.f)||/hotte/.test(o.b.k.id||""));
@@ -3608,6 +3615,7 @@ function kitChecks(room){
     if(its.some(o=>o.b.k.t==="bas")){ const n=(w.points||[]).filter(p=>/Prise/.test(p.type)&&p.y>900).length;
       ck.push({ok:n>0,t:n?`${w.name} : ${n} prise(s) au-dessus du plan de travail.`:`${w.name} : aucune prise au-dessus du plan de travail (placer les prises vers 110 cm).`,ref:"NF C 15-100"}); }
   });
+  if(S.mahdiV5log&&S.mahdiV5log.length&&/cuisine/i.test(room)) ck.push({ok:true,t:`Mise à jour du 18/11 : ${S.mahdiV5log.join(" ; ")}. La table se déplace dans la Visite 3D (mode Maquette : touchez-la puis faites-la glisser).`});
   if(K.items.some(it=>/^(collv|lvf)$/.test((kitItem(it)||{}).f||""))) ck.push({ok:true,t:"Lave-vaisselle en hauteur : choisir un modèle tout intégrable compatible pose surélevée, vérifier la longueur des tuyaux (arrivée et vidange) et garder la vidange au-dessus du siphon ; prise et vanne accessibles dans le meuble voisin.",ref:"Notice fabricant"});
   if(K.items.length){ const nP=rw.reduce((a,w)=>a+(w.points||[]).filter(p=>/Prise/.test(p.type)&&p.y>900).length,0);
     ck.push({ok:nP>=4,t:nP>=4?`Cuisine : ${nP} prises au-dessus du plan de travail (4 mini sur 6).`:`Cuisine : ${nP} prise(s) au-dessus du plan de travail, il en faut au moins 4 (6 prises 16 A dans la cuisine), plus les circuits spécialisés plaque 32 A, four, lave-vaisselle.`,ref:"NF C 15-100"}); }
@@ -3616,9 +3624,18 @@ function kitChecks(room){
 function kitUse(w){ const rw=roomWalls(w), i=rw.indexOf(w), a=roomAdjust(w), nx=rw.length>1&&(i<rw.length-1||w.angle!=="libre")?rw[(i+1)%rw.length]:null;
   return [Math.max(0,-a.dx), w.L-(a.end==="rentrant"&&nx?wT(nx):0)]; }
 /* ---------- Plan de travail (Wedi 2 cm) + crédence (Wedi 1 cm) + évier carrelé en carrelage 120×120 : calepinage, coupes, carreaux ---------- */
-const ONX={T:1200,J:2,K:3,th:8.5,wedi:10,wp:20,sinkD:200,colle:5,cab:880,P:600,box:2,boxM2:2.88,ref:"Piemme Majestic Onyx Iron Grey levigato 120×120 rectifié (réf. 05536)"};
+const TCARR={top:77,pied:290,piedWedi:20}; // table carrelée : plateau 8,5 + 0,5 + Wedi 50 + 0,5 + 8,5 mm ; pied 29×29 cm (4 faces dans un seul carreau)
+const ONX={T:1200,J:2,K:3,th:8.5,wedi:10,wp:20,sinkD:200,colle:5,cab:880,P:600,box:2,boxM2:2.88,ref:"Piemme Majestic Onyx Iron Grey levigato 120×120 rectifié (réf. 05536)",
+  joint:"Mapei Kerapoxy CQ 111 Gris argent (époxy, kit 3 kg)",jc:"#b3b4b1",sil:"Mapei Mapesil AC 111 Gris argent (silicone, 310 ml)"}; // joint choisi pour se fondre dans le fond gris clair de l'onyx
 ONX.top=ONX.cab+ONX.wp+ONX.colle+ONX.th; ONX.nez=ONX.wp+ONX.colle+ONX.th; ONX.cred=ONX.wedi+ONX.colle+ONX.th; ONX.front=ONX.wedi+ONX.J+ONX.P;
-function onyxSeg(L,a,avoid){ const T=ONX.T, J=ONX.J, n0=Math.max(1,Math.ceil((L+J)/(T+J))), cands=[];
+/* v158 : joints du plan calés sur les séparations des meubles (bords de caissons), le moins de morceaux possible, aucun dans l'évier ni la plaque */
+function onyxSegB(L,a,avoid,bounds){ const T=ONX.T, J=ONX.J, b=a+L, P=[a,...[...new Set((bounds||[]).map(x=>Math.round(x*10)/10))].filter(x=>x>a+150&&x<b-150&&!avoid.some(([u,v])=>x>u+1&&x<v-1)).sort((p,q)=>p-q),b];
+  const best=P.map(()=>null); best[0]={n:0,sc:0,prev:-1};
+  for(let j=1;j<P.length;j++) for(let i=0;i<j;i++){ if(!best[i]) continue; const l=P[j]-P[i]-(i>0?J/2:0)-(j<P.length-1?J/2:0); if(l>T+0.1||l<1) continue;
+    const sc=best[i].sc+1000+(l<250?300:0)+Math.abs(T-l)*0.01; if(!best[j]||sc<best[j].sc) best[j]={n:best[i].n+1,sc,prev:i}; }
+  if(!best[P.length-1]) return null; const xs=[]; for(let k=P.length-1;k>0;k=best[k].prev) xs.unshift(P[k]); xs.unshift(a);
+  const sg=[]; for(let k=0;k<xs.length-1;k++){ const s0=xs[k]+(k>0?J/2:0), s1=xs[k+1]-(k<xs.length-2?J/2:0); sg.push({a:Math.round(s0*10)/10,b:Math.round(s1*10)/10}); } return sg; }
+function onyxSeg(L,a,avoid,bounds){ if(bounds&&bounds.length){ const sb=onyxSegB(L,a,avoid,bounds); if(sb) return sb; } const T=ONX.T, J=ONX.J, n0=Math.max(1,Math.ceil((L+J)/(T+J))), cands=[];
   const mk=lens=>{ let x=a; const segs=lens.map(l=>{ const s0={a:x,b:x+l}; x+=l+J; return s0; }); return segs; };
   if(n0===1) cands.push([L]); else {
     const full=n0-1, rest=L-full*(T+J); cands.push([...Array(full).fill(T),rest]); cands.push([rest,...Array(full).fill(T)]);
@@ -3633,7 +3650,7 @@ function onyxGeo(room){ const K=kitCfg(room); if(!K.on) return null; const PL=pl
     const i=rw.indexOf(w), pw=rw[(i+rw.length-1)%rw.length], pr=runs.find(q=>q.w===pw&&q.b>=kitUse(pw)[1]-5);
     const cornerA=rn.a<=u0+5&&pr&&pw!==w, a=cornerA?rn.a+ONX.front:rn.a, b=rn.b, L=b-a; if(L<50) return;
     const avoid=its.filter(o=>o.k.sink||o.k.hob).map(o=>[o.it.x,o.it.x+o.k.w]);
-    const segs=onyxSeg(L,a,avoid);
+    const bnd=S.joMeub===false?null:its.filter(o=>o.k.t==="bas"||(o.k.t==="col"&&o.b.z0<10)).flatMap(o=>[o.it.x,o.it.x+o.k.w]), segs=onyxSeg(L,a,avoid,bnd);
     const high=its.filter(o=>o.k.t==="haut"&&o.it.x<rn.b&&o.it.x+o.k.w>rn.a).map(o=>o.b.z0), zc1=high.length?Math.min(...high):ONX.top+600, Hc=Math.max(0,Math.round((zc1-ONX.top-ONX.J)*10)/10);
     const tall=x=>its.some(o=>(o.k.t==="col"||o.k.t==="app")&&o.b.z1>1200&&(Math.abs(o.it.x+o.k.w-x)<15||Math.abs(o.it.x-x)<15));
     const endA=!cornerA&&!(rn.a<=u0+5)&&!tall(rn.a), endB=!(rn.b>=u1-5)&&!tall(rn.b)&&!runs.some(q=>q!==rn&&rw.indexOf(q.w)===(i+1)%rw.length&&q.a<=kitUse(q.w)[0]+5&&rn.b>=u1-5);
@@ -3676,10 +3693,10 @@ function onyxGeo(room){ const K=kitCfg(room); if(!K.on) return null; const PL=pl
     if(!ok) for(const t of tiles){ if(t.used+ONX.K+p.h<=ONX.T+0.1){ t.rows.push({h:p.h,used:p.l,p:[p]}); t.used+=ONX.K+p.h; ok=true; break; } }
     if(!ok) tiles.push({used:p.h,rows:[{h:p.h,used:p.l,p:[p]}]}); });
   tiles.forEach((t,i)=>{ t.i=i+1; t.rows.forEach(r=>r.p.forEach(p=>p.tile=i+1)); });
-  const m2p=pieces.filter(p=>p.t==="plan").reduce((x,p)=>x+p.h*p.l,0)/1e6, m2c=pieces.filter(p=>p.t==="cred").reduce((x,p)=>x+p.h*p.l,0)/1e6, m2n=pieces.filter(p=>p.t==="nez").reduce((x,p)=>x+p.h*p.l,0)/1e6;
+  const m2t=pieces.filter(p=>p.t==="table").reduce((x,p)=>x+p.h*p.l,0)/1e6, m2p=pieces.filter(p=>p.t==="plan").reduce((x,p)=>x+p.h*p.l,0)/1e6, m2c=pieces.filter(p=>p.t==="cred").reduce((x,p)=>x+p.h*p.l,0)/1e6, m2n=pieces.filter(p=>p.t==="nez").reduce((x,p)=>x+p.h*p.l,0)/1e6;
   const lenP=out.reduce((x,r)=>x+r.L,0), lenC=out.reduce((x,r)=>x+(r.Hc>20?r.b-(r.cornerA?r.a-ONX.front:r.a):0),0), m2wc=out.reduce((x,r)=>x+(r.Hc>20?(r.b-(r.cornerA?r.a-ONX.front:r.a))*Math.min(600,r.zc1-ONX.cab):0),0)/1e6;
-  return {runs:out,pieces,tiles,m2p,m2c,m2n,lenP,lenC,m2wc}; }
-function onyxSvg(G){ const sc=0.13, T=ONX.T*sc, col={plan:"#b3b5b6",cred:"#cfd1d2",nez:"#e4e5e6"};
+  return {runs:out,pieces,tiles,m2p,m2c,m2n,m2t,lenP,lenC,m2wc}; }
+function onyxSvg(G){ const sc=0.13, T=ONX.T*sc, col={plan:"#b3b5b6",cred:"#cfd1d2",nez:"#e4e5e6",table:"#c9d9e6"};
   return `<div style="display:flex;flex-wrap:wrap;gap:8px">${G.tiles.map(t=>{ let y=0, g="";
     t.rows.forEach(r=>{ let x=0; r.p.forEach(p=>{ g+=`<rect x="${x*sc}" y="${y*sc}" width="${p.l*sc}" height="${p.h*sc}" fill="${col[p.t]}" stroke="#222" stroke-width=".6"/>`; if(r.h*sc>9) g+=`<text x="${(x+p.l/2)*sc}" y="${(y+r.h/2)*sc+3}" text-anchor="middle" font-size="${Math.min(8,r.h*sc*.5)}" fill="#111">${esc(p.n.replace(/ \(onglet 45°\)/,"").replace(/^Chant avant /,"Chant ").slice(0,24))}</text>`; x+=p.l+ONX.K; }); y+=r.h+ONX.K; });
     return `<figure style="margin:0;text-align:center"><svg viewBox="-1 -1 ${T+2} ${T+2}" width="${T+2}" height="${T+2}" style="background:#f4f4f2"><rect x="0" y="0" width="${T}" height="${T}" fill="none" stroke="#555" stroke-dasharray="3 2"/>${g}</svg><figcaption class="cap">Carreau ${t.i}</figcaption></figure>`; }).join("")}</div>`; }
@@ -3690,7 +3707,7 @@ function onyxPanel(room){ const G=onyxGeo(room); if(!G||!G.runs.length) return "
     <div class="tbl-wrap"><table class="cutl"><thead><tr><th>Mur</th><th style="text-align:right">Plan</th><th style="text-align:right">Crédence (h)</th><th>Joints du plan (depuis le début du mur)</th></tr></thead><tbody>${G.runs.map(r=>`<tr><td>${esc(r.nm)}${r.cornerA?" (après l'angle)":""}</td><td class="n">${cm(r.L)}</td><td class="n">${r.Hc>20?cm(r.Hc):"—"}</td><td>${r.segs.slice(1).map(q=>cm(q.a)).join(" · ")||"aucun"}${r.cuts.map(c=>`<br><span class="cap">${c.n} : pièce n°${c.seg}, axe à ${cm(c.dx)} cm du bord gauche de la pièce</span>`).join("")}</td></tr>`).join("")}</tbody></table></div>
     <div class="tbl-wrap"><table class="cutl"><thead><tr><th>Pièce</th><th style="text-align:right">Longueur × largeur</th><th style="text-align:right">Carreau</th></tr></thead><tbody>${G.pieces.map(p=>`<tr><td>${esc(p.n)}</td><td class="n"><b>${cm(p.l)} × ${cm(p.h)}</b></td><td class="n">${p.tile}</td></tr>`).join("")}</tbody></table></div>
     ${onyxSvg(G)}
-    <p class="cap" style="margin:6px 0"><b>${nT} carreaux</b> (${nB} carton${nB>1?"s":""} de 2) : chaque carreau donne une bande de plan (${cm(ONX.P)} cm) et, avec la chute, la crédence de la même longueur ; les chants sortent d'un carreau à part. Joints alignés entre plan, crédence et chant, jamais dans l'évier ni la plaque. Numérotez les carreaux au dos dans l'ordre de pose pour suivre le veinage, et gardez 1 carreau de réserve si possible.</p></details>`; }
+    <p class="cap" style="margin:6px 0"><b>${nT} carreaux</b> (${nB} carton${nB>1?"s":""} de 2) : chaque carreau donne une bande de plan (${cm(ONX.P)} cm) et, avec la chute, la crédence de la même longueur ; les chants sortent d'un carreau à part. Joints alignés entre plan, crédence et chant, calés sur les séparations des meubles (bords de caissons), jamais dans l'évier ni la plaque. Joint : <b>${esc(ONX.joint)}</b>, teinte gris clair qui se fond dans le carreau ; silicone ${esc(ONX.sil)} dans les angles. Quand un joint tombe juste à côté de la plaque de cuisson, la bande de carreau entre la découpe et le joint est étroite : découpez la plaque avant de poser, au disque sur rail, et manipulez la pièce à plat. Numérotez les carreaux au dos dans l'ordre de pose pour suivre le veinage, et gardez 1 carreau de réserve si possible.</p></details>`; }
 function kitFc(it,K,k){ return it.c||k.c||(FACADES.find(f=>f.n===(it.fac||K.facade))||FACADES[0]).c; }
 function kitPlanTh(PL){ return PL.wedi?ONX.top-880:/3,8 cm/.test(PL.n)?38:/2,8 cm/.test(PL.n)?28:PL.tile?30:20; }
 function kitElevSvg(w){
@@ -3768,6 +3785,8 @@ function kitMaterials(room){
       add(`Rehausse jusqu'au plafond : panneau de finition ${K.facade} 62×240 recoupé en bandes de ${fr(rh/10,1)} cm`,`${fr(Lr/1000,2)} m de bandes au-dessus des colonnes et des meubles hauts, collées-vissées sur tasseaux`,Math.ceil(Lr/per),"u"); add("Tasseau 27×27 pour fixer la rehausse","en haut des caissons",Math.ceil(Lr/1000*2/2.4),"u (2,40 m)"); } }catch(e){} } add("Tiroir intérieur MAXIMERA","à l'intérieur d'un élément à porte",ti,"u"); add("Tablette METOD / UTRUSTA","étagères choisies",et,"u");
     add("Éclairage LED sous meuble mural","réglette + alimentation",led.length,"u");
     const HD=handleOf(null,room), nh=K.items.reduce((a,it)=>{ const k=kitItem(it); return a+(k&&k.t!=="app"&&!/ouvert|etag|hotteinox|fil|pieds/.test(it.f||k.f)?frontPanels(it.f||k.f,0,k.w,0,700).filter(p=>p[4]!=="four"&&p[4]!=="lv").length:0); },0);
+    K.items.forEach(it=>{ const FR=kitFrigo(it); if(FR) add(`${FR.n} · ${cm(FR.h)} × ${cm(FR.w)} × ${cm(FR.d)} cm`,`${FR.v} ; posé au centre de la colonne de ${cm((kitItem(it)||{}).w||800)} cm, sans fond, dessus et plinthe ajourés`,1,"u"); });
+    if(K.items.some(it=>kitFrigo(it))) add("Grille d'aération alu 40 × 10 cm","dessus de la colonne / rehausse et plinthe devant le frigo",2,"u");
     { const nlv=K.items.filter(it=>(kitItem(it)||{}).f==="lvf").length; if(nlv) add("Lave-vaisselle tout intégrable 60 cm (pose surélevée)","façade 60×80 fixée sur la porte de l'appareil, caisson 60×60×80",nlv,"u"); }
     if(HD.m==="retro"){ const fn=(HFIN.find(h=>h[0]===HD.f)||[])[1], cnt={t:0,c:0,b:0};
       K.items.forEach(it=>{ const k=kitItem(it), w=S.walls.find(q=>wid(q)===it.wall), b=k&&w&&kitBox(it,K,w.H); if(!b||k.t==="app"||/ouvert|etag|hotteinox|fil|pieds/.test(it.f||k.f)) return;
@@ -3780,7 +3799,7 @@ function kitMaterials(room){
   const PL=planOf(K,room);
   const OG=PL.wedi?onyxGeo(room):null;
   if(OG){ const C="Plan et crédence carrelés", A=(d,t,q,u)=>{ if(q>0) rows.push({cat:C,des:d,det:t,q,u}); }, ILT=K.items.filter(i=>i.k==="ilot").map(i=>kitItem(i)).filter(Boolean), TBO=meubles(room).filter(m=>m.cat==="tableonyx"), nT=OG.tiles.length+ILT.length*4+TBO.length*2, m2=OG.m2p+OG.m2c+OG.m2n, pw=OG.runs.reduce((x,r)=>x+Math.ceil(r.L/2500),0), cw=OG.runs.reduce((x,r)=>x+(r.Hc>20?Math.ceil((r.b-(r.cornerA?r.a-ONX.front:r.a))/2500):0),0);
-    A(`${ONX.ref}`,`${nT} carreaux 120×120 d'après le calepinage (plan ${fr(OG.m2p,2)} m², crédence ${fr(OG.m2c,2)} m², chants ${fr(OG.m2n,2)} m²)`,Math.ceil(nT/ONX.box),"carton(s) de 2");
+    A(`${ONX.ref}`,`${nT} carreaux 120×120 d'après le calepinage (plan ${fr(OG.m2p,2)} m², crédence ${fr(OG.m2c,2)} m², chants ${fr(OG.m2n,2)} m²${OG.m2t?`, table ${fr(OG.m2t,2)} m²`:""})`,Math.ceil(nT/ONX.box),"carton(s) de 2");
     TBO.forEach(m=>{ A("Table carrée tout Onyx sur pied central carré et socle",`2 carreaux 120×120 : n°1 = plateau ${cm(Math.min(m.w,1200))}×${cm(Math.min(m.d,1200))} d'un seul tenant (sans joint) + chants de 6 cm dans la chute ; n°2 = pied carré ${cm(Math.round(Math.min(320,m.w*.32)))}×${cm(Math.round(Math.min(320,m.w*.32)))} (4 faces en onglet 45°, h. ${cm(m.h-90)}) + socle ${cm(Math.round(Math.min(600,m.w*.6)))}×${cm(Math.round(Math.min(600,m.w*.6)))}×3 ; plateau sur Wedi 20 mm + platine acier`,2,"u");
       A("Panneau wedi Bauplatte 20 mm (support du plateau et du pied)","plateau + caisson du pied, collés et armés",2,"u"); });
     ILT.forEach(k=>{ A("Table péninsule tout en Onyx (dessus + 2 côtés + face)",`4 carreaux 120×120 : dessus ${cm(Math.min(k.w,1200))}×${cm(Math.min(k.d,1200))} d'un seul tenant, 2 côtés ${cm(Math.min(k.d,1200))}×94, face ${cm(k.w)}×88 ; angles en onglet 45°, sans joint visible`,4,"u");
@@ -3793,8 +3812,8 @@ function kitMaterials(room){
     A("Bande d'armature wedi (joints des panneaux et angle plan / crédence)","rouleau de 50 m",1,"u");
     A("Colle carrelage C2S1 déformable grand format (sac 25 kg)",`double encollage ≈ 6 kg/m² sur ${fr(m2,2)} m²`,Math.max(1,Math.ceil(m2*6/25)),"sac(s)");
     A("Table de cuisson induction pose à fleur (sans cadre) : feuillure de 6 mm détourée dans le carrelage, joint silicone noir 2 mm","encastrement affleurant, la vitre au niveau du plan",1,"u");
-    A("Joint époxy teinté gris clair assorti au carreau (aspect sans joint) · 2 kg","joints fins de 2 mm, couleur du fond du carreau",1,"u");
-    A("Silicone sanitaire gris assorti","angle plan / crédence, évier",2,"u");
+    A(ONX.joint,"joints de 2 mm, teinte assortie au fond gris clair de l'onyx (le joint disparaît) ; anti-taches, lavable, convient aux plans de travail de cuisine",1,"kit");
+    A(ONX.sil,"angle plan / crédence, tour de l'évier et de la plaque, même teinte que le joint",2,"u");
     A("Croisillons autonivelants 1,5 mm + cales","grands formats",1,"lot");
     rows.push({cat:"Outillage",des:"Ventouses de manutention double (carreaux 120×120)",det:"2 paires (Vevor)",q:2,u:"u"},{cat:"Outillage",des:"Disque diamant grès cérame Ø 125 + guide pour onglet 45°",det:"coupes d'évier, de plaque et chants",q:1,u:"u"}); }
   else if(PL.tile){ const m2=lenT*650/1e6, nez=lenT/1000;
@@ -4044,7 +4063,7 @@ function solPanel(w){
 
 /* ---------- Visite 3D immersive (three.js) ---------- */
 const NUANCIER=[["Flügger White FL 8001","#f3f4f1"],["Blanc pur","#f7f6f2"],["Blanc cassé","#efeadf"],["Lin","#e6dcc8"],["Greige","#cfc6b8"],["Gris perle","#c9cac6"],["Gris anthracite","#4b4e52"],["Vert sauge","#b3bca4"],["Vert olive","#7d7f5a"],["Bleu gris","#8e9aa6"],["Bleu nuit","#2f3d55"],["Terracotta","#b9674a"],["Ocre","#c99a4a"],["Rose poudré","#e3c7bf"],["Noir","#232323"]];
-function paintColor(w){ if(w&&w.teinte) return w.teinte; const prod=(w&&w.peintN)||S.fin.peint.n; return /teint/i.test(prod)?(S.fin.peint.teinte||"#efe9df"):"#f7f6f2"; }
+function paintColor(w){ if(w&&w.teinte) return w.teinte; const prod=(w&&w.peintN)||S.fin.peint.n; return /teint/i.test(prod)?(S.fin.peint.teinte||"#efe9df"):"#f4f4f1"; } // blanc standard Flügger (base blanche non teintée, LRV ≈ 90 %)
 const LUM=[
   {id:"plaf",n:"Plafonnier (point DCL)",c:"lum"},{id:"susp",n:"Suspension (point DCL)",c:"lum"},{id:"spot",n:"Spot LED encastré Ø 8 cm",c:"lum"},
   {id:"regl",n:"Réglette / ruban LED",c:"lum"},{id:"vmc",n:"Bouche d'extraction VMC hygro",c:"vmc"},{id:"vmcins",n:"Bouche d'insufflation VMC double flux",c:"vmc"},
@@ -4234,7 +4253,8 @@ function texBeton(col,fin){ const key="bc|"+col+"|"+fin; V3.tex=V3.tex||{}; if(V
   const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.anisotropy=8; t.encoding=THREE.sRGBEncoding; t.repeat.set(1/1.5,1/1.5); V3.tex[key]=t; return t; }
 function bcMat(B,rep){ const t=texBeton(B.col||"#c9c6c0",B.fin||"satin"); let m=t; if(rep){ m=t.clone(); m.needsUpdate=true; m.repeat.set(rep[0],rep[1]); }
   return v3Mat("#ffffff",{map:m,bumpMap:m,bumpScale:.0015,roughness:B.fin==="brillant"?.18:B.fin==="satin"?.38:.72,envMapIntensity:B.fin==="mat"?.5:1}); }
-function finMat(w,pc){ return bcOnWall(w)?bcMat(bcCfg(w.room||"")):v3Mat(pc,{roughness:.92}); }
+function paintRough(w){ const n=(w&&w.peintN)||S.fin.peint.n||"", g=+((n.match(/(?:Dekso|Flutex|Iso)\s*(?:Air\s*)?(\d+)/i)||[])[1]||5); return g<=2?.97:g<=5?.92:g<=7?.86:g<=10?.78:.6; } // brillance (Flutex 7 = mat velouté) → rugosité
+function finMat(w,pc){ return bcOnWall(w)?bcMat(bcCfg(w.room||"")):v3Mat(pc,{roughness:paintRough(w)}); }
 /* Rendu réaliste : éclairage d'ambiance (reflets), soleil avec ombres, rendu cinéma (ACES) */
 function v3EnvTex(){ if(V3.env&&V3.envR===V3.r) return V3.env; const c=document.createElement("canvas"); c.width=512; c.height=256; const x=c.getContext("2d");
   const g=x.createLinearGradient(0,0,0,256); g.addColorStop(0,"#fdfbf6"); g.addColorStop(.45,"#e9e4da"); g.addColorStop(.55,"#bdb3a3"); g.addColorStop(1,"#7d7364"); x.fillStyle=g; x.fillRect(0,0,512,256);
@@ -4248,6 +4268,9 @@ function v3AO(scene,s,a,b,o,h){ // ombre douce dans les angles (sol, plafond, co
   const PL=(xa,xb,za,zb,m)=>{ const g=new THREE.PlaneGeometry((xb-xa)/1000,(zb-za)/1000); g.translate((xa+xb)/2000,(za+zb)/2000,(o+1.5)/1000); g.applyMatrix4(wallMatrix(s,0)); return new THREE.Mesh(g,m); };
   q.push(PL(a,b,0,240,M("b")), PL(a,b,h-200,h,M("t")), PL(a,a+200,0,h,M("l")), PL(b-200,b,0,h,M("r")));
   q.forEach(m=>{ m.userData.ao=1; m.renderOrder=2; scene.add(m); }); }
+/* lumière du ciel qui entre par les fenêtres (jour) : un projecteur doux par fenêtre, bleuté, proportionnel à la surface vitrée */
+function v3WinLights(scene,V){ if(V.nuit) return; try{ const {g}=v3Fit(), W=[]; g.segs.forEach(sg=>sg.w.openings.filter(o=>o.type==="Fenêtre"||o.type==="Autre").forEach(o=>{ const xm=o.x+o.w/2; W.push({A:o.w*o.h/1e6,x:sg.x0+sg.dx*xm,y:sg.y0+sg.dy*xm,nx:sg.nx,ny:sg.ny,z:(o.y+o.h/2)/1000,w:o.w/1000}); }));
+  W.sort((a,b)=>b.A-a.A).slice(0,4).forEach(q=>{ const sl=new THREE.SpotLight("#dfe9ff",Math.min(1.6,0.45+q.A*0.55),9,1.25,1,1.3); sl.position.set((q.x-q.nx*250)/1000,q.z+0.15,-(q.y-q.ny*250)/1000); sl.target.position.set((q.x+q.nx*2500)/1000,0.2,-(q.y+q.ny*2500)/1000); sl.userData.sky=1; scene.add(sl); scene.add(sl.target); }); }catch(e){} }
 function v3Realify(scene){ if(!V3.r) return; const V=S.v3; scene.environment=V.nuit?null:v3EnvTex(); let nSh=0;
   let ctr=[0,0], ext=6, win=null; try{ const {c,g}=v3Fit(), P=g.inner.flatMap(e=>[e.a,e.b]); ctr=c; ext=Math.max(4,Math.max(...P.map(p=>Math.hypot(p[0]-c[0],p[1]-c[1])))/1000+1.5);
     g.segs.forEach(sg=>sg.w.openings.filter(o=>o.type==="Fenêtre"||o.type==="Autre").forEach(o=>{ const A=o.w*o.h; if(!win||A>win.A){ const xm=o.x+o.w/2; win={A,x:sg.x0+sg.dx*xm,y:sg.y0+sg.dy*xm,nx:sg.nx,ny:sg.ny,z:o.y+o.h/2}; } })); }catch(e){}
@@ -4263,7 +4286,8 @@ function v3Realify(scene){ if(!V3.r) return; const V=S.v3; scene.environment=V.n
     let fx=(bx[0]+bx[1])/2, fy=(bx[2]+bx[3])/2; if(!insideAny(fx,fy)){ const q=[ctr[0],ctr[1]]; if(insideAny(q[0],q[1])){ fx=q[0]; fy=q[1]; } else if(V3.fp&&insideAny(V3.fp.x,V3.fp.y)){ fx=V3.fp.x; fy=V3.fp.y; } }
     const fill=new THREE.PointLight(V.nuit?"#fff3e2":"#ffffff",V.nuit?.06:REAL_FILL,0,1); fill.position.set(fx/1000,Math.min(1.5,top),-fy/1000); fill.userData.top=top; fill.castShadow=true; fill.shadow.mapSize.set(512,512); fill.shadow.bias=-.003; fill.shadow.radius=4; fill.shadow.camera.near=.05; fill.shadow.camera.far=30; fill.userData.hdFill=1; scene.add(fill);
     V3.hdL={sun,fill,box:bx}; }
-  scene.background=V.nuit?new THREE.Color("#10141c"):v3Sky(); v3Lin(scene); }
+  scene.background=V.nuit?new THREE.Color("#10141c"):v3Sky(); v3Lin(scene);
+  scene.traverse(o=>{ if(o.material) [].concat(o.material).forEach(m=>{ if(m&&m.envMapIntensity!==undefined){ if(m.userData.__ei===undefined) m.userData.__ei=m.envMapIntensity; m.envMapIntensity=m.userData.__ei*(V.nuit?.06:1); } }); }); }
 /* Couleurs en espace linéaire (éclairage physiquement juste) : on convertit une fois chaque matière, et on revient en arrière hors mode Réaliste */
 function v3Lin(scene){ const seen=new Set(), tx=t=>{ if(t&&t.encoding!==THREE.sRGBEncoding){ if(t.__enc0===undefined) t.__enc0=t.encoding; t.encoding=THREE.sRGBEncoding; t.needsUpdate=true; } };
   scene.traverse(o=>{ [].concat(o.material||[]).forEach(m=>{ if(!m||seen.has(m)) return; seen.add(m); tx(m.map); tx(m.emissiveMap); if(m.userData.lin) return; m.userData.lin=1; if(m.color) m.color.convertSRGBToLinear(); if(m.emissive) m.emissive.convertSRGBToLinear(); m.needsUpdate=true; }); });
@@ -4279,7 +4303,7 @@ function v3Sky(){ if(V3.sky) return V3.sky; const W=1024, H=512, c=document.crea
   for(let i=0;i<140;i++){ const cx=R()*W, h=6+R()*22, w=8+R()*30; x.fillStyle=`rgba(${60+R()*40|0},${80+R()*40|0},${50+R()*30|0},.55)`; x.beginPath(); x.ellipse(cx,H/2+2-h/2,w,h,0,0,6.283); x.fill(); }
   const t=new THREE.CanvasTexture(c); t.mapping=THREE.EquirectangularReflectionMapping; t.encoding=THREE.sRGBEncoding; V3.sky=t; return t; }
 /* Photo HD : caméra immobile en mode Réaliste → on additionne des dizaines d'images (anti-crénelage, ombres douces du soleil, lumière de rebond qui se déplace = ombres de contact) */
-const HD={n:0,max:96,t:0,rt:null,a:null,b:null,snap:false,txt:""};
+const HD={n:0,max:128,t:0,rt:null,a:null,b:null,snap:false,txt:""};
 function hdHal(i,b){ let f=1,r=0; while(i>0){ f/=b; r+=f*(i%b); i=Math.floor(i/b); } return r; }
 function hdOk(){ return S.view==="visite"&&S.v3.real&&S.v3.hd!==false&&!VR.on&&V3.r&&V3.r.capabilities.isWebGL2&&!HD.ko; }
 function hdReset(){ HD.n=0; HD.snap=false; HD.t=performance.now(); hdBadge(); }
@@ -4289,7 +4313,7 @@ function hdBadge(){ const wrap=V3.wrap; if(!wrap) return; let el=wrap.querySelec
   const p=Math.round(100*HD.n/HD.max), t=HD.n>=HD.max?"📸 Photo HD prête · Enregistrer":HD.snap?`📸 Photo… ${p} %`:HD.n?`✨ Affinage ${p} %`:"📸 Photo HD"; if(t!==HD.txt){ el.textContent=t; HD.txt=t; } }
 function hdQuad(){ if(HD.sc) return; const vs="varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}";
   HD.mix=new THREE.ShaderMaterial({uniforms:{tA:{value:null},tF:{value:null},k:{value:1}},vertexShader:vs,fragmentShader:"uniform sampler2D tA,tF;uniform float k;varying vec2 vUv;void main(){gl_FragColor=mix(texture2D(tA,vUv),texture2D(tF,vUv),k);}",depthTest:false,depthWrite:false});
-  HD.out=new THREE.ShaderMaterial({uniforms:{tA:{value:null}},vertexShader:vs,fragmentShader:"uniform sampler2D tA;varying vec2 vUv;void main(){vec3 c=clamp(texture2D(tA,vUv).rgb,0.,1.);gl_FragColor=vec4(mix(c*12.92,1.055*pow(c,vec3(1./2.4))-.055,step(vec3(.0031308),c)),1.);}",depthTest:false,depthWrite:false});
+  HD.out=new THREE.ShaderMaterial({uniforms:{tA:{value:null}},vertexShader:vs,fragmentShader:"uniform sampler2D tA;varying vec2 vUv;void main(){vec3 c=clamp(texture2D(tA,vUv).rgb,0.,1.);float l=dot(c,vec3(.2126,.7152,.0722));c=mix(vec3(l),c,1.06);c=c*c*(3.-2.*c)*.18+c*.82;vec2 d=vUv-.5;c*=1.-.24*dot(d,d);gl_FragColor=vec4(mix(c*12.92,1.055*pow(c,vec3(1./2.4))-.055,step(vec3(.0031308),c)),1.);}",depthTest:false,depthWrite:false});
   HD.q=new THREE.Mesh(new THREE.PlaneGeometry(2,2),HD.mix); HD.q.frustumCulled=false; HD.sc=new THREE.Scene(); HD.sc.add(HD.q); HD.oc=new THREE.OrthographicCamera(-1,1,1,-1,0,1); }
 function hdTargets(w,h){ if(HD.rt&&HD.rt.width===w&&HD.rt.height===h) return; HD.n=0; [HD.rt,HD.a,HD.b].forEach(t=>t&&t.dispose());
   const o={type:THREE.HalfFloatType,minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter,depthBuffer:false};
@@ -4564,9 +4588,10 @@ function netMaterials(room){
 
 function buildScene(){
   const T3=THREE, scene=new T3.Scene(), V=S.v3, cw=S.walls[S.cur], curRoom=cw.room||"";
-  scene.background=new T3.Color(V.nuit?"#1b2230":"#dfe6ee");
-  scene.add(new T3.HemisphereLight("#ffffff","#b9a88e",V.nuit?0.18:0.75));
-  const sun=new T3.DirectionalLight("#fff6e8",V.nuit?0.05:0.55); sun.position.set(4,8,3); scene.add(sun);
+  scene.background=new T3.Color(V.nuit?"#0d1119":"#dfe6ee");
+  // v159 : jour = ciel bleuté + rebond chaud du sol + soleil ; nuit = clair de lune très faible, ce sont les luminaires qui éclairent
+  scene.add(new T3.HemisphereLight(V.nuit?"#3a4766":"#e3ecf8",V.nuit?"#15130f":"#dcd9d2",V.nuit?0.07:0.62));
+  const sun=new T3.DirectionalLight(V.nuit?"#9fb4dc":"#fff1dc",V.nuit?0.03:0.62); sun.position.set(4,8,3); scene.add(sun);
   const pick=[], rooms=V.all?roomNames().filter(n=>!(S.r3.hide||{})[n]):[curRoom], LAY=wallLayers(), cut=V.cut, lay=S.r3.lay||{};
   const M={stone:v3Mat("#ffffff",{map:texStone()}), fibre:v3Mat("#ffffff",{map:texFibre()}), mem:v3Mat("#ffffff",{map:texMem(),emissive:new THREE.Color("#808080"),emissiveMap:texMem(),roughness:.55,transparent:true,opacity:.93}),
     pla:v3Mat("#e8e7e2"), end:v3Mat("#f3f1ea"), metal:v3Mat("#a9b1b8",{metalness:.6,roughness:.4}), white:v3Mat("#fbfbf8"), glass:v3Mat("#a9d3ef",{transparent:true,opacity:.35,roughness:.1}),
@@ -4687,11 +4712,14 @@ function buildScene(){
           [[x0,x0+OT],[x1-OT,x1]].forEach(([a,c])=>add(v3Box(s,a,c,D1-ov,D1,0,ONX.top,tx(ov,ONX.top,.6,0)))); return; }
         if(base) add(v3Box(s,x0+5,x1-5,d0,d1-50,0,80,v3Mat(shade(fc,0.6))));
         const op=!!it.open&&kk.t!=="app"||(!!it.open&&kk.t==="app"&&(kk.f==="frigo"||kk.f==="us")), cz0=base?80:b.z0;
+        const FR=kitFrigo(it); if(FR&&op){ const xm=(x0+x1)/2, fw=FR.w/2, fz=cz0+18, fd1=d1-6, fd0=fd1-FR.d, sm=v3Mat(FR.c,{metalness:.55,roughness:.32}), hm2=v3Mat("#9aa0a6",{metalness:.6,roughness:.3}), zf=fz+Math.round(FR.h*0.36);
+          add(v3Box(s,xm-fw,xm+fw,fd0,fd1-20,fz,fz+FR.h,sm)); add(v3Box(s,xm-fw,xm+fw,fd1-20,fd1,fz,zf-3,sm)); add(v3Box(s,xm-fw,xm+fw,fd1-20,fd1,zf+3,fz+FR.h,sm));
+          add(v3Box(s,xm+fw-45,xm+fw-30,fd1,fd1+25,zf+60,zf+560,hm2)); add(v3Box(s,xm+fw-45,xm+fw-30,fd1,fd1+25,zf-320,zf-60,hm2)); add(v3Box(s,xm-fw+20,xm+fw-20,fd1-20,fd1+0.5,fz+FR.h-80,fz+FR.h-30,v3Mat("#2b2e33",{roughness:.4}))); }
         const skW=kk.sink&&planOf(K,room).wedi, zSk=ONX.top-ONX.sinkD-ONX.wp-ONX.colle-ONX.th-2;
         if(!op&&skW){ add(v3Box(s,x0+1,x1-1,d0,d1,cz0,Math.min(b.z1,zSk),carc)); if(b.z1>zSk) add(v3Box(s,x0+1,x1-1,d1-19,d1,zSk,b.z1,carc)); } // caisson évier : laisse la place à la cuve carrelée
         else if(!op) add(v3Box(s,x0+1,x1-1,d0,d1,cz0,b.z1,carc));
         else { const ci=v3Mat("#f7f5f0"); add(v3Box(s,x0+1,x0+19,d0,d1,cz0,b.z1,carc)); add(v3Box(s,x1-19,x1-1,d0,d1,cz0,b.z1,carc)); add(v3Box(s,x0+19,x1-19,d0,d1,cz0,cz0+18,ci)); add(v3Box(s,x0+19,x1-19,d0,d1,b.z1-18,b.z1,ci)); add(v3Box(s,x0+19,x1-19,d0,d0+8,cz0,b.z1,ci));
-          const nEt=it.et!==undefined&&it.et!==""?+it.et:(!/[234]t/.test(kk.f)&&b.z1-cz0>500?Math.floor((b.z1-cz0)/400):0), nTi=+it.ti||0, tz=cz0+18+nTi*150;
+          const nEt=FR?0:it.et!==undefined&&it.et!==""?+it.et:(!/[234]t/.test(kk.f)&&b.z1-cz0>500?Math.floor((b.z1-cz0)/400):0), nTi=+it.ti||0, tz=cz0+18+nTi*150;
           for(let q=0;q<nTi;q++){ const z=cz0+20+q*150, sh=200; add(v3Box(s,x0+30,x1-30,d0+40+sh,d1-30+sh,z,z+12,ci)); add(v3Box(s,x0+30,x1-30,d1-42+sh,d1-30+sh,z,z+120,ci)); add(v3Box(s,x0+30,x0+42,d0+40+sh,d1-30+sh,z,z+110,ci)); add(v3Box(s,x1-42,x1-30,d0+40+sh,d1-30+sh,z,z+110,ci)); }
           for(let q=1;q<=nEt;q++){ const z=tz+(b.z1-tz)*q/(nEt+1); add(v3Box(s,x0+19,x1-19,d0+8,d1-20,z,z+16,ci)); } }
         { const jz=kk.t==="haut"?b.z0:0; if(it.jg) add(v3Box(s,x0-19,x0,d0,d1+19,jz,b.z1,fm)); if(it.jd) add(v3Box(s,x1,x1+19,d0,d1+19,jz,b.z1,fm)); }
@@ -4707,7 +4735,7 @@ function buildScene(){
           else { add(v3Box(s,p[0]+1.5,p[1]-1.5,d1,d1+19,p[2]+1.5,p[3]-1.5,pm));
             // façades à cadre (ASPUDDEN, STENSUND…) : cadre étroit en relief + rainure autour du panneau
             const fn=it.fac||K.facade||"", a=p[0]+1.5, bb=p[1]-1.5, c=p[2]+1.5, d=p[3]-1.5;
-            if(/ASPUDDEN|STENSUND|BODBYN|SANNIDAL|HAVSTORP|AXSTAD|ENKÖPING/i.test(fn)&&(!p[4]||p[4]==="lvf")&&kk.f!=="fil"&&bb-a>140&&d-c>140){ const fw=Math.min(20,(bb-a)*0.08,(d-c)*0.08), gm=v3Mat(shade(fc,0.82),{roughness:.7});
+            if(/ASPUDDEN|STENSUND|BODBYN|SANNIDAL|HAVSTORP|AXSTAD|ENKÖPING/i.test(fn)&&(!p[4]||p[4]==="lvf")&&kk.f!=="fil"&&bb-a>140&&d-c>140){ const fw=Math.min(15,(bb-a)*0.08,(d-c)*0.08), gm=v3Mat(shade(fc,0.88),{roughness:.7}), pm=v3Mat(shade(fc,1.03),{roughness:.55}); // ASPUDDEN (photo IKEA) : cadre fin un peu plus clair que le panneau, rainure grise
               [[a,a+fw,c,d],[bb-fw,bb,c,d],[a+fw,bb-fw,c,c+fw],[a+fw,bb-fw,d-fw,d]].forEach(q=>add(v3Box(s,q[0],q[1],d1+19,d1+21,q[2],q[3],pm)));
               [[a+fw,a+fw+2,c+fw,d-fw],[bb-fw-2,bb-fw,c+fw,d-fw],[a+fw,bb-fw,c+fw,c+fw+2],[a+fw,bb-fw,d-fw-2,d-fw]].forEach(q=>add(v3Box(s,q[0],q[1],d1+19,d1+19.6,q[2],q[3],gm))); } }
           if(p[4]==="four") add(v3Box(s,p[0]+60,p[1]-60,d1+19,d1+21,p[2]+80,p[3]-120,v3Mat("#3d4248",{roughness:.2})));
@@ -4721,6 +4749,7 @@ function buildScene(){
         if(PL.tile||PL.marb){ const t=marbleTex(PL).clone(); t.needsUpdate=true; t.repeat.set((rn.b-rn.a)/1200,1); wt=v3Mat("#ffffff",{map:t,roughness:.18}); }
         else if(PL.bc) wt=bcMat({...bcCfg(room),col:pc},[(rn.b-rn.a)/1500,635/1500]);
         if(PL.wedi){ const OG=onyxGeo(room), R=OG&&OG.runs.find(q=>q.w===w&&q.b===rn.b), a0=R?R.a:rn.a, tm=wt;
+          const jm=v3Mat(ONX.jc,{roughness:.7});
           const y0=g.T+ONX.wedi, y1=g.T+ONX.front+ONX.th, OT=ONX.wp+ONX.colle+ONX.th, SK=K.items.filter(it=>it.wall===wid(w)&&(kitItem(it)||{}).sink).map(it=>{ const k=kitItem(it), mx=it.x+k.w/2, bw=Math.min(k.w-120,Math.max(380,k.w*0.7)); return {x0:mx-bw/2,x1:mx+bw/2,y0:y0+90,y1:Math.min(y1-80,y0+90+420)}; }).filter(h=>h.x0>=a0&&h.x1<=rn.b).sort((p,q)=>p.x0-q.x0);
           { let xa=a0; const pl=(xA,xB,yA,yB)=>{ if(xB-xA<1||yB-yA<1) return; const mm=v3Box(s,xA,xB,yA,yB,ONX.cab,ONX.top,tm); mm.userData={kind:"plan",room}; scene.add(mm); };
             SK.forEach(h=>{ pl(xa,h.x0,y0,y1); pl(h.x0,h.x1,y0,h.y0); pl(h.x0,h.x1,h.y1,y1);
@@ -4730,10 +4759,10 @@ function buildScene(){
               const cx=(h.x0+h.x1)/2, cy=(h.y0+h.y1)/2; scene.add(v3Box(s,cx-45,cx+45,cy-45,cy+45,zb,zb+1.5,v3Mat("#c9ced3",{metalness:.6,roughness:.3}))); scene.add(v3Box(s,cx-30,cx+30,cy-30,cy+30,zb+1.5,zb+2,v3Mat("#55595e",{roughness:.5})));
               xa=h.x1; });
             pl(xa,rn.b,y0,y1); }
-          if(R) R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.wedi,g.T+ONX.front+ONX.th+0.5,ONX.top-1,ONX.top+0.3,v3Mat("#c9cbcc",{roughness:.4}))));
+          if(R) R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.wedi,g.T+ONX.front+ONX.th+0.5,ONX.top-1,ONX.top+0.3,jm)));
           if(R&&R.Hc>20){ const ca=R.cornerA?R.a-ONX.front:R.a, ct=marbleTex(PL).clone(); ct.needsUpdate=true; ct.repeat.set((rn.b-ca)/1200,R.Hc/1200);
-            const cm=v3Mat("#ffffff",{map:ct,roughness:.18}); (R.credParts&&R.credParts.length?R.credParts:[{a:ca,b:rn.b,h:R.Hc}]).filter(p=>p.h>20).forEach(p=>{ const t2=ct.clone(); t2.needsUpdate=true; t2.repeat.set((p.b-p.a)/1200,p.h/1200); t2.offset.set((p.a-ca)/1200,0); scene.add(v3Box(s,p.a,p.b,g.T,g.T+ONX.cred,ONX.top,ONX.top+p.h,v3Mat("#ffffff",{map:t2,roughness:.18}))); });
-            R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.cred,g.T+ONX.cred+0.5,ONX.top,ONX.top+R.Hc,v3Mat("#c9cbcc",{roughness:.4}))));
+            const cm=v3Mat("#ffffff",{map:ct,roughness:.18}); (R.credParts&&R.credParts.length?R.credParts:[{a:ca,b:rn.b,h:R.Hc}]).filter(p=>p.h>20).forEach(p=>{ const t2=ct.clone(), sq=R.segs[p.si||0]||{a:ca}; t2.needsUpdate=true; t2.repeat.set((p.b-p.a)/1200,p.h/1200); t2.offset.set(Math.max(0,p.a-sq.a)/1200,0.5); scene.add(v3Box(s,p.a,p.b,g.T,g.T+ONX.cred,ONX.top,ONX.top+p.h,v3Mat("#ffffff",{map:t2,roughness:.18}))); });
+            R.segs.slice(1).forEach(q=>scene.add(v3Box(s,q.a-ONX.J,q.a,g.T+ONX.cred-0.3,g.T+ONX.cred+0.3,ONX.top,ONX.top+R.Hc,jm)));
             (R.sideUp||[]).forEach(q=>{ const x0=q.end==="début"?R.a:R.b-ONX.cred, t3=marbleTex(PL).clone(); t3.needsUpdate=true; t3.repeat.set(q.l/1200,q.h/1200); scene.add(v3Box(s,x0,x0+ONX.cred,g.T+q.d0,g.T+q.d0+q.l,q.z0,q.z0+q.h,v3Mat("#ffffff",{map:t3,roughness:.18}))); });
             [[R.sideA,R.a,R.a+ONX.cred],[R.sideB,R.b-ONX.cred,R.b]].forEach(([h,x0,x1])=>{ if(!(h>20)) return; const t3=marbleTex(PL).clone(); t3.needsUpdate=true; t3.repeat.set(R.sideL/1200,h/1200); scene.add(v3Box(s,x0,x1,g.T+ONX.cred,g.T+ONX.front+ONX.th,ONX.top,ONX.top+h,v3Mat("#ffffff",{map:t3,roughness:.18}))); }); } }
         else { const m=v3Box(s,rn.a,rn.b,g.T,g.T+635,880,918,wt); m.userData={kind:"plan",room}; scene.add(m); }
@@ -4758,7 +4787,7 @@ function buildScene(){
       // luminaires / VMC (coordonnées locales à la pièce)
       lumList(room).forEach((L,li)=>{ const [px,py]=X.p(L.x,L.y), H0=ceilFinH(room,g)/1000, pos=new T3.Vector3(px/1000,H0,-py/1000), t=L.t, tg={kind:"lum",room,idx:li};
         const mk=(geo,mat,dy)=>{ const m=new T3.Mesh(geo,mat); m.position.copy(pos); m.position.y-=dy; m.userData=tg; scene.add(m); pick.push(m); return m; };
-        const emis=v3Mat("#fff7e0",{emissive:new T3.Color(V.nuit?"#ffe9b0":"#fff3d8"),emissiveIntensity:V.nuit?1:0.35});
+        const emis=v3Mat("#fff7e0",{emissive:new T3.Color(V.nuit?"#fff4e8":"#fff3d8"),emissiveIntensity:V.nuit?1:0.35});
         const lm=(t==="susp"||t==="plaf")&&lusOf(L); let lowY=t==="susp"?1.0:0.15;
         if(t==="spot") mk(new T3.CylinderGeometry(0.045,0.045,0.01,20),emis,0.006);
         if(t==="plaf"&&!lm) mk(new T3.SphereGeometry(0.2,24,12,0,Math.PI*2,0,Math.PI/2).scale(1,0.35,1).rotateX(Math.PI),emis,0.0);
@@ -4766,7 +4795,10 @@ function buildScene(){
         else if(t==="susp"){ mk(new T3.CylinderGeometry(0.004,0.004,0.8,6),M.dark,0.4); mk(new T3.ConeGeometry(0.18,0.2,24,1,true),v3Mat("#3a3a3a"),0.88); mk(new T3.SphereGeometry(0.05,12,8),emis,0.92); }
         if(t==="regl") mk(new T3.BoxGeometry(1.2,0.03,0.06),emis,0.02);
         if(t==="vmc"||t==="vmcins"){ mk(new T3.CylinderGeometry(0.075,0.075,0.02,24),M.white,0.01); mk(new T3.TorusGeometry(0.05,0.006,6,24).rotateX(Math.PI/2),v3Mat("#c9c9c9"),0.022); }
-        if((t==="spot"||t==="plaf"||t==="susp"||t==="regl") && lights.length<8){ const pl=new T3.PointLight("#ffe7b8",V.nuit?(t==="spot"?0.55:0.9):0.18,6,1.6); pl.position.copy(pos); pl.position.y-=lm?lowY*0.9:t==="susp"?1.0:0.15; scene.add(pl); lights.push(pl); } });
+        if(t==="spot"||t==="plaf"||t==="susp"||t==="regl"||t==="lustre"){ const nL=lumList(room).filter(q=>/^(spot|plaf|susp|regl|lustre)$/.test(q.t)).length, kk=Math.max(1,nL/Math.min(nL,10)), y0=pos.y-(lm?lowY*0.9:t==="susp"?1.0:0.15), wc=V.nuit?"#fff1e2":"#fff4e6"; // 4000 K blanc neutre le soir
+          if(lights.length<10){ const ia=V.nuit?(t==="spot"?1.0:t==="regl"?0.9:1.5)*kk:0.12;
+            if(t==="spot"){ const sl=new T3.SpotLight(wc,ia*1.6,7,0.75,0.6,1.2); sl.position.set(pos.x,pos.y-0.02,pos.z); sl.target.position.set(pos.x,0,pos.z); scene.add(sl); scene.add(sl.target); sl.userData.lamp=1; lights.push(sl); }
+            else { const pl=new T3.PointLight(wc,ia,9,1.25); pl.position.set(pos.x,y0,pos.z); pl.userData.lamp=1; scene.add(pl); lights.push(pl); } } } });
       // créations en placo
       creas(room).forEach(c=>{ const sg=g.segs.find(q=>wid(q.w)===c.wall)||g.segs[0]; if(!sg) return; const ww=sg.w, sp=creaSpan(ww), T0=g.Ts?g.Ts[g.segs.indexOf(sg)]:g.T, hh=Math.min(ww.H,ceilFinH(room,g)), pm=v3Mat("#efebe3",{roughness:.8}), P=creaFit(c,room), x=sp.a+(P.x||0); if(c.t==="led"&&+c.pos===1){ P.y=Math.max(0,Math.min(P.y||0,hh-20)); P.L=Math.max(20,Math.min(P.L,hh-P.y)); }
         const add=m=>{ if(m){ scene.add(m); } };
@@ -4799,7 +4831,12 @@ function buildScene(){
           if(G.cg){ const f=G.cg, fm=v3Mat("#eef0f2",{roughness:.3}); add(v3Box(sg,o+f.x0,o+f.x1,T0+f.d0,T0+f.d1,0,f.z1,fm)); if(f.coffre){ add(v3Box(sg,o+f.x0-3,o+f.x1+3,T0+f.d0-3,T0+f.d1+3,f.z1-70,f.z1-62,v3Mat("#b9bec3",{roughness:.4}))); const hm=v3Mat("#9aa0a6",{metalness:.5,roughness:.3}); if(f.rot){ const xh=f.side>0?o+f.x1:o+f.x0-20, dm=(f.d0+f.d1)/2; add(v3Box(sg,xh,xh+20,T0+dm-80,T0+dm+80,f.z1-110,f.z1-80,hm)); } else add(v3Box(sg,(o+f.x0+o+f.x1)/2-80,(o+f.x0+o+f.x1)/2+80,T0+f.d1,T0+f.d1+20,f.z1-110,f.z1-80,hm)); }
             else add(v3Box(sg,o+f.x1-60,o+f.x1-45,T0+f.d1,T0+f.d1+25,f.z1-350,f.z1-80,v3Mat("#9aa0a6",{metalness:.5,roughness:.3}))); }
           if(G.cl) add(v3Box(sg,o+G.cl.x0,o+G.cl.x1,T0+G.cl.d0,T0+G.cl.d1,0,hh,pm));
-          G.sl.forEach(q=>add(v3Box(sg,o+q.x0,o+q.x1,T0+q.d0,T0+q.d1,G.z0,G.zt,wm))); }
+          G.sl.forEach(q=>add(v3Box(sg,o+q.x0,o+q.x1,T0+q.d0,T0+q.d1,G.z0,G.zt,wm)));
+          if(G.mdf){ const F=G.mdf, mm=v3Mat(F.col,{roughness:.5}), dk=v3Mat("#141516",{roughness:1}); F.leaves.forEach(L=>{ const za=L.z0+F.rb, zb=L.z1-F.rb, s0=L.slots[0][0], s1=L.slots[L.slots.length-1][1], m=x=>x/1000, ch=2;
+            const sh=new THREE.Shape(); sh.moveTo(m(o+L.x0+ch),m(L.z0+ch)); sh.lineTo(m(o+L.x1-ch),m(L.z0+ch)); sh.lineTo(m(o+L.x1-ch),m(L.z1-ch)); sh.lineTo(m(o+L.x0+ch),m(L.z1-ch)); sh.closePath();
+            L.slots.forEach(([u0,u1])=>{ const r=(u1-u0)/2+ch, cx=o+(u0+u1)/2, h=new THREE.Path(); h.moveTo(m(cx-r),m(za+r-ch)); h.absarc(m(cx),m(za+r-ch),m(r),Math.PI,0,false); h.lineTo(m(cx+r),m(zb-r+ch)); h.absarc(m(cx),m(zb-r+ch),m(r),0,Math.PI,false); h.closePath(); sh.holes.push(h); });
+            const g=new THREE.ExtrudeGeometry(sh,{depth:m(F.e-2*ch),bevelEnabled:true,bevelThickness:m(ch),bevelSize:m(ch),bevelSegments:2,curveSegments:10}); g.translate(0,0,m(T0+F.d0+ch)); g.applyMatrix4(wallMatrix(sg,0)); add(new THREE.Mesh(g,mm));
+            add(v3Box(sg,o+s0-10,o+s1+10,T0+F.d0-3,T0+F.d0-1,za-10,zb+10,dk)); }); } }
         if(c.t==="etag"){ const n=Math.max(1,P.n||1), y0=P.y||0; add(v3Box(sg,x,x+40,T0,T0+P.pf,y0,y0+P.h,pm)); add(v3Box(sg,x+P.L-40,x+P.L,T0,T0+P.pf,y0,y0+P.h,pm)); for(let i=0;i<=n;i++){ const yy=y0+P.h*i/n; add(v3Box(sg,x,x+P.L,T0,T0+P.pf,Math.max(0,yy-35),Math.max(35,yy+35),pm)); } }
       });
       // meubles libres
@@ -4822,7 +4859,9 @@ function buildScene(){
     const NN=V.res?v3Net(scene,pick,room,g,X,wallSets):netRoom(room,g,X); if(V.ceil||V.res) v3Traps(scene,pick,room,NN.traps,ceilFinH(room,g));
   });
   if(V.res) v3Vmc(scene,pick,rooms);
-  if(V.nuit && !lights.length){ const a=new T3.AmbientLight("#ffffff",0.25); scene.add(a); }
+  if(V.nuit && !lights.length){ const a=new T3.AmbientLight("#fff0e2",0.3); scene.add(a); }
+  if(V.nuit&&lights.length){ const a=new T3.AmbientLight("#ffeedd",0.08); a.userData.bounce=1; scene.add(a); } // lumière renvoyée par les murs clairs
+  v3WinLights(scene,V);
   if(V.real) v3Realify(scene); else { v3Unlin(scene); V3.hdL=null; } return {scene,pick,wallSets}; }
 function v3Fit(){ // point de départ de la visite
   const cw=S.walls[S.cur], room=cw.room||"", g=S.v3.all?geomXf(roomGeom(room),room):roomGeom(room), P=g.poly||g.inner.flatMap(e=>[e.a,e.b]);
@@ -5187,7 +5226,7 @@ const MOB=[
   ["chaise","Chaises · Sklum","Sklum OLEA chaise chêne avec accoudoirs (≈)",560,560,800,"#d9ccb8"],
   ["chaise","Chaises · Sklum","Sklum BIANCA chaise bouclé et chêne (≈)",500,560,800,"#efe9dd"],
   ["chaise","Chaises · Sklum","Sklum TENTO chaise rotin (≈)",450,520,800,"#c8a878"],
-  ["chaise","Chaises · Sklum","Sklum UISH Edition chaise orme (≈)",450,500,780,"#b78d60"]
+  ["chaise","Chaises · Sklum","Sklum UISH Edition chaise orme (≈)",450,500,780,"#b78d60"],
 ].map(([t,g,n,w,d,h,c],i)=>({id:"m"+i,t,g,n,w,d,h,c}));
 /* Vignettes 3D des articles (rendu hors écran, mises en cache) */
 const THUMBS={}; let THR=null;
@@ -5234,6 +5273,17 @@ function mobDraw(T3,grp,m,mat,tg,pick){ const W=m.w/1000,D=m.d/1000,H=m.h/1000, 
   else if(t==="tableonyx"){ const P=PLANS.find(p=>p.onyx)||{c:"#e9e7e3",v:"#bbb",onyx:1}, om=()=>{ const x=marbleTex(P).clone(); x.needsUpdate=true; return v3Mat("#ffffff",{map:x,roughness:.15}); }; const tp=.06, sb=.03, pc=Math.min(.32,W*.32,D*.32), so=Math.min(.6,W*.6,D*.6); bx(W,tp,D,0,H-tp/2,0,om()); bx(pc,H-tp-sb,pc,0,sb+(H-tp-sb)/2,0,om()); bx(so,sb,so,0,sb/2,0,om()); }
   else if(t==="poufcan"){ const r=W/2, nR=40; cyl(r-.012,H-.02,0,(H-.02)/2,0); for(let i=0;i<nR;i++){ const a=i/nR*Math.PI*2, b=new T3.Mesh(new T3.CylinderGeometry(.011,.011,H-.02,8),fab); b.position.set(Math.cos(a)*(r-.011),(H-.02)/2,Math.sin(a)*(r-.011)); b.userData=tg; grp.add(b); pick.push(b); } cyl(r-.004,.02,0,H-.01,0,dk); }
   else if(t==="table"||t==="bureau"||t==="basse"){ bx(W,.035,D,0,H-.0175,0,v3Mat(c,{roughness:.55})); legs(W,D,H-.035); }
+  else if(t==="tcarr"){ // table carrelée Onyx : plateau Wedi 50 carrelé dessus, dessous et chants (onglets 45°), pied central carrelé
+    const PL=PLANS.find(p=>p.onyx)||PLANS[0], tx=(rw,rh,ox,oy)=>{ const q=marbleTex(PL).clone(); q.needsUpdate=true; q.repeat.set(rw,rh); q.offset.set(ox||0,oy||0); return v3Mat("#ffffff",{map:q,roughness:.18}); };
+    const tt=TCARR.top/1000, pw=TCARR.pied/1000, ph=H-tt, side=tx(W/1.2,tt/1.2,0,.3), sideD=tx(D/1.2,tt/1.2,0,.6);
+    const top=new T3.Mesh(new T3.BoxGeometry(W,tt,D),[sideD,sideD,tx(W/1.2,D/1.2,.05,.1),tx(W/1.2,D/1.2,.4,.55),side,side]); top.position.set(0,H-tt/2,0); top.userData=tg; grp.add(top); pick.push(top);
+    const pf=tx(pw/1.2,ph/1.2,.2,.1), pied=new T3.Mesh(new T3.BoxGeometry(pw,ph,pw),[pf,tx(pw/1.2,ph/1.2,.45,.1),pf,pf,tx(pw/1.2,ph/1.2,.7,.1),tx(pw/1.2,ph/1.2,.1,.4)]); pied.position.set(0,ph/2,0); pied.userData=tg; grp.add(pied); pick.push(pied);
+    const jm=v3Mat(ONX.jc,{roughness:.7}); [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([a,b])=>bx(.0015,ph,.0015,a*pw/2,ph/2,b*pw/2,jm)); }
+  else if(t==="leon"){ // Stooly Léon : corps cylindrique plissé (papier kraft plié en accordéon) + coussin rond
+    const R=W/2, ch=.025, hb=H-ch, gm=new T3.CylinderGeometry(R,R,hb,144,1,false), pa=gm.attributes.position;
+    for(let i=0;i<pa.count;i++){ const x=pa.getX(i), z=pa.getZ(i), r=Math.hypot(x,z); if(r<1e-4) continue; const a=Math.atan2(z,x), f=1-.06*Math.abs(Math.sin(a*18)); pa.setX(i,x*f); pa.setZ(i,z*f); }
+    gm.computeVertexNormals(); const bd=new T3.Mesh(gm,v3Mat(c,{roughness:.8})); bd.position.set(0,hb/2,0); bd.userData=tg; grp.add(bd); pick.push(bd);
+    cyl(R*.93,ch,0,hb+ch/2,0,v3Mat(new T3.Color(c).multiplyScalar(1.12).getStyle(),{roughness:.65})); }
   else if(t==="ronde"){ cyl(W/2,.035,0,H-.0175,0,v3Mat(c,{roughness:.55})); cyl(.05,H-.035,0,(H-.035)/2,0,lg); cyl(.28,.03,0,.015,0,lg); }
   else if(t==="chaise"||t==="tabouret"){ const sh=t==="tabouret"?.65:.46; legs(W,D,sh-.03); bx(W,.04,D,0,sh-.02,0); if(t==="chaise") bx(W,H-sh,.04,0,sh+(H-sh)/2,-D/2+.02); else bx(W*.8,.02,.02,0,.3,D/2-.04,lg); }
   else if(t==="lit"){ legs(W,D,.12); bx(W,.2,D,0,.22,0,v3Mat(c,{roughness:.7})); bx(W-.08,.2,D-.12,0,.42,.04,v3Mat("#f6f4ef",{roughness:.95})); bx(W-.1,.06,.55,0,.55,D/2-.35,v3Mat("#e9e3d6",{roughness:.95}));
@@ -5245,7 +5295,7 @@ function mobDraw(T3,grp,m,mat,tg,pick){ const W=m.w/1000,D=m.d/1000,H=m.h/1000, 
   else if(t==="tv"){ bx(W,H,.04,0,.75+H/2,0,v3Mat("#111214",{roughness:.2,metalness:.3})); bx(W-.02,H-.02,.002,0,.75+H/2,.021,v3Mat("#0b0c10",{roughness:.08,metalness:.1})); }
   else if(t==="tapis") bx(W,.01,D,0,.005,0,v3Mat(c,{roughness:1}));
   else if(t==="plante"){ cyl(W*.32,.4,0,.2,0,v3Mat("#c9b8a0",{roughness:.8})); for(let i=0;i<9;i++){ const s0=new T3.Mesh(new T3.SphereGeometry(.18+Math.random()*.1,10,8),v3Mat(shade(c,.85+Math.random()*.3),{roughness:.9})); s0.position.set((Math.random()-.5)*W*.7,.6+Math.random()*(H-.8),(Math.random()-.5)*W*.7); s0.userData=tg; grp.add(s0); pick.push(s0); } }
-  else if(t==="lampe"){ cyl(.15,.02,0,.01,0,lg); cyl(.012,H-.3,0,(H-.3)/2,0,lg); const sh=new T3.Mesh(new T3.CylinderGeometry(.16,.22,.3,24,1,true),v3Mat("#f2ead9",{emissive:new T3.Color(S.v3.nuit?"#ffd9a0":"#000"),emissiveIntensity:.8,roughness:.9})); sh.position.set(0,H-.15,0); sh.userData=tg; grp.add(sh); pick.push(sh); }
+  else if(t==="lampe"){ cyl(.15,.02,0,.01,0,lg); cyl(.012,H-.3,0,(H-.3)/2,0,lg); const sh=new T3.Mesh(new T3.CylinderGeometry(.16,.22,.3,24,1,true),v3Mat("#f2ead9",{emissive:new T3.Color(S.v3.nuit?"#fff2e4":"#000"),emissiveIntensity:.8,roughness:.9})); sh.position.set(0,H-.15,0); sh.userData=tg; grp.add(sh); pick.push(sh); }
   else if(t==="frigo"){ bx(W,H,D,0,H/2,0,v3Mat(c,{roughness:.3,metalness:.5})); bx(.004,H-.05,.004,0,H/2,D/2+.002,lg); }
   else bx(W,H,D,0,H/2,0); }
 function mobPanel(w){ const room=w.room||"", M=meubles(room), L=M.map((m,i)=>[m,i]).filter(([m])=>m.cat), groups=[...new Set(MOB.map(o=>o.g))];
@@ -5961,10 +6011,11 @@ const CREA={
   rideau:{n:"Gorge à rideau (rail caché au plafond)",p:[["L","Longueur",3000],["pf","Largeur de la gorge",160],["h","Retombée de la joue",150],["x","Depuis la gauche",0],["rails","Rails",1,[[1,"1 rail (voilage ou rideau)"],[2,"2 rails (voilage + rideau occultant)"]]],["led","LED dans la gorge",0,[[0,"Non"],[1,"Oui, ruban LED indirect"]]],["col","Couleur du rideau","#e9e2d4"]]},
   chaud:{n:"Chaudière murale cachée par des tasseaux blancs",p:[["w","Largeur de la chaudière",440],["h","Hauteur de la chaudière",720],["pf","Profondeur de la chaudière",350],["x","Depuis la gauche",300],["y","Hauteur du bas de la chaudière",1300],["tas","Habillage en tasseaux",2,[[3,"Placard : cloison placo côté porte + façade de tasseaux aimantés, du sol au plafond"],[2,"Caisson qui cache la chaudière, jusqu'au plafond"],[1,"Seulement au-dessus (cache les conduits), jusqu'au plafond"],[0,"Aucun (chaudière visible)"]]],["tg","Espace entre tasseaux",10],["tl","Largeur d'un tasseau",40],["te","Épaisseur d'un tasseau",20],["jeu","Jeu autour de la chaudière",50],["deb","Le caisson descend sous la chaudière de",100],
     ["pd","Profondeur du placard (cloison)",1000],["cep","Épaisseur de la cloison placo",72],["cdec","Décalage de la cloison depuis le chambranle de la porte",0],["ht","Hauteur des tasseaux (0 = du sol au plafond fini)",0],
+    ["fac","Façade",0,[[0,"Tasseaux"],[1,"Porte MDF sur mesure : bandes évidées à la défonceuse, de haut en bas"]]],["rg","Largeur des bandes évidées",20],["rl","Largeur des lamelles pleines entre les bandes",30],["rb","Cadre plein autour des bandes (haut, bas et côtés)",80],["mc","Couleur de la porte",0,[[0,"Gris clair, comme les façades ASPUDDEN"],[1,"Blanc, comme les murs"],[2,"Anthracite"]]],
     ["cg","Congélateur sous la chaudière",0,[[1,"Oui"],[0,"Non"]]],["cgt","Type de congélateur",1,[[1,"Coffre (couvercle sur le dessus)"],[0,"Armoire (porte devant)"]]],["cgr","Sens du coffre",0,[[0,"De face (sa largeur le long du mur)"],[1,"Tourné d'un quart de tour (sa profondeur le long du mur)"]]],["cgw","Largeur du congélateur",550],["cgd","Profondeur du congélateur",580],["cgh","Hauteur du congélateur",850]]},
   led:{n:"Ruban LED encastré dans le placo",p:[["L","Longueur",2000],["pos","Emplacement",0,[[0,"Horizontal sur le mur"],[1,"Vertical sur le mur"],[2,"Au plafond, parallèle au mur"]]],["x","Depuis la gauche",0],["y","Hauteur (ou distance du mur au plafond)",1000],["k","Couleur de lumière",3000,[[2700,"2700 K blanc très chaud"],[3000,"3000 K blanc chaud"],[4000,"4000 K blanc neutre"]]]]}
 };
-const CREA_INT=["n","joues","rails","led","pos","k","tas","cg","cgt","cgr"];
+const CREA_INT=["n","joues","rails","led","pos","k","tas","cg","cgt","cgr","fac"];
 function creas(room){ if(!S.crea) S.crea={}; if(!S.crea[room]) S.crea[room]=[]; const C=S.crea[room]; C.forEach(c=>{ ["pos","k","n","rails","led","joues","tas","cg","cgt","cgr"].forEach(k=>{ if(typeof c[k]==="string"&&c[k]!=="") c[k]=+c[k]; }); }); return C; }
 function creaSpan(w){ const g=roomGeom(w.room||""), k=g.segs.findIndex(q=>q.w===w); if(k<0) return {a:0,len:w.L};
   const s=g.segs[k], e=g.inner[k], pr=p=>(p[0]-s.x0)*s.dx+(p[1]-s.y0)*s.dy, a=pr(e.a), b=pr(e.b); return {a, len:Math.max(0,b-a)}; }
@@ -5993,7 +6044,7 @@ function ceilLed(c,room,noSnap){ const w=creaWall(c,room); if(!w) return null; c
 function creaFit(c,room){ const w=creaWall(c,room); if(!w) return c; if(c.t==="led"&&+c.pos===2){ const Z=ceilLed(c,room); if(Z) return {...c,x:Z.x,L:Z.L,snap:Z.snap.length}; } const sp=creaSpan(w), k=c.t==="coffv"?"l":c.t==="niche"||c.t==="chaud"?"w":"L", x=Math.max(0,Math.min(c.x||0,sp.len-20)); if(c.t==="chaud"){ const hh=creaHH(w,room); let cw=Math.max(20,+c.w||440), m=chaudM({...c,w:cw}); for(let i=0;i<200&&cw+2*m>sp.len&&cw>20;i++){ cw=Math.max(20,Math.min(cw-10,Math.round(sp.len-2*m))); m=chaudM({...c,w:cw}); } const cx=Math.max(m,Math.min(+c.x||0,sp.len-cw-m)); return {...c,x:Math.round(cx),y:Math.max(0,Math.min(+c.y||0,hh-(+c.h||0)-20)),w:cw}; } if(c.t==="led"&&+c.pos===1){ const y=Math.max(0,Math.min(c.y||0,w.H-20)); return {...c,x,y,L:Math.max(20,Math.min(c.L,Math.round(w.H-y)))}; } return {...c,x,[k]:Math.max(20,Math.min(c[k],Math.round(sp.len-x)))}; }
 function creaLen(c){ return c.t==="coffv"?c.l:c.t==="niche"||c.t==="chaud"?c.w:c.L; }
 /* hauteur sous le plafond fini au droit d'un mur (les tasseaux de la chaudière s'y ajustent tout seuls) */
-function chaudShow(c,k){ const m=+(c.tas??2); if(["jeu"].includes(k)) return m===1||m===2; if(k==="deb") return m===2; if(["pd","cep","cdec","ht"].includes(k)) return m===3; if(["tg","tl","te"].includes(k)) return m>0; if(k==="cgr") return +c.cg===1&&+(c.cgt??1)===1; if(["cgw","cgd","cgh","cgt"].includes(k)) return +c.cg===1; return true; }
+function chaudShow(c,k){ const m=+(c.tas??2), mdf=m>=2&&+c.fac===1; if(k==="fac") return m>=2; if(["rg","rl","rb","mc"].includes(k)) return mdf; if(mdf&&m===3&&["tg","tl","te","ht"].includes(k)) return false; if(["jeu"].includes(k)) return m===1||m===2; if(k==="deb") return m===2; if(["pd","cep","cdec","ht"].includes(k)) return m===3; if(["tg","tl","te"].includes(k)) return m>0; if(k==="cgr") return +c.cg===1&&+(c.cgt??1)===1; if(["cgw","cgd","cgh","cgt"].includes(k)) return +c.cg===1; return true; }
 /* placard (mode 3) : bord de la cloison côté porte, en repère du mur fini */
 function doorFrameW(o){ return o&&o.frame==="fronton"?95:50; } // largeur du montant du chambranle (vue 3D)
 /* une cloison de placard chaudière touche-t-elle le chambranle droit de cette porte ? (alors la frise et la corniche s'arrêtent au montant) */
@@ -6012,7 +6063,8 @@ function chaudGeo(c,room){ const w=creaWall(c,room)||{H:2500}, P=creaFit(c,room)
     const n=Math.max(1,Math.floor((W+tg)/(tl+tg))), used=n*tl+(n-1)*tg, mg=(W-used)/2, sl=[]; for(let i=0;i<n;i++){ const u=p1+mg+i*(tl+tg); sl.push({s:"f",x0:u,x1:u+tl,d0:pd-te,d1:pd}); }
     // la chaudière et le congélateur restent dans le placard
     const hw=Math.max(P.w,cg?cg.x1-cg.x0:0)/2, av=sp.len-p1, mc=2*hw+100>av?p1+av/2:Math.max(p1+50+hw,Math.min(x+P.w/2,sp.len-50-hw)), dx=mc-(x+P.w/2); bo.x0+=dx; bo.x1+=dx; const cg2=cg&&{...cg,x0:cg.x0+dx,x1:cg.x1+dx};
-    const G3={P,hh,mode,bo,cg:cg2,sl,tl,te,tg,gF:tg,jeu,Lt,nF:n,nS:0,W,D:pd,Ds:0,x0:p0,x1:sp.len,z0,zt,cl:{x0:p0,x1:p1,d0:0,d1:pd},door:dr,mg,over:+P.ht>0&&+P.ht>hh-2?+P.ht:0}; lidFit(G3); return G3; }
+    const G3={P,hh,mode,bo,cg:cg2,sl,tl,te,tg,gF:tg,jeu,Lt,nF:n,nS:0,W,D:pd,Ds:0,x0:p0,x1:sp.len,z0,zt,cl:{x0:p0,x1:p1,d0:0,d1:pd},door:dr,mg,over:+P.ht>0&&+P.ht>hh-2?+P.ht:0};
+    if(+P.fac===1){ G3.mdf=mdfFront(P,p1,sp.len,pd,5,hh-5); G3.sl=[]; G3.nF=0; } lidFit(G3); return G3; }
   // l'espace entre tasseaux est respecté au millimètre : c'est la largeur du caisson qui s'ajuste (au tasseau près), centrée sur la chaudière
   const nF=Math.max(2,Math.ceil((P.w+2*(jeu+te)+tg)/(tl+tg))), W=nF*tl+(nF-1)*tg, nS=Math.max(1,Math.ceil((P.pf+jeu+tg)/(tl+tg))), Ds=nS*tl+(nS-1)*tg, D=Ds+te;
   const x0=x+P.w/2-W/2, x1=x0+W, z0=mode===2?Math.max(0,P.y-Math.max(0,P.deb||0)):P.y+P.h, zt=hh-5, Lt=Math.max(0,zt-z0);
@@ -6020,7 +6072,12 @@ function chaudGeo(c,room){ const w=creaWall(c,room)||{H:2500}, P=creaFit(c,room)
   even(W,nF).forEach(u=>sl.push({s:"f",x0:x0+u,x1:x0+u+tl,d0:D-te,d1:D}));
   even(Ds,nS).forEach(u=>{ sl.push({s:"g",x0:x0,x1:x0+te,d0:u,d1:u+tl}); sl.push({s:"d",x0:x1-te,x1:x1,d0:u,d1:u+tl}); });
   const gF=nF>1?(W-nF*tl)/(nF-1):0;
-  const G2={P,hh,mode,bo,cg,sl,tl,te,tg,gF,jeu,Lt,nF,nS,W,D,Ds,x0,x1,z0,zt}; lidFit(G2); return G2; }
+  const G2={P,hh,mode,bo,cg,sl,tl,te,tg,gF,jeu,Lt,nF,nS,W,D,Ds,x0,x1,z0,zt}; if(mode===2&&+P.fac===1){ G2.mdf=mdfFront(P,x0,x1,D,z0,zt); G2.sl=sl.filter(q=>q.s!=="f"); G2.nF=0; } lidFit(G2); return G2; }
+/* porte MDF sur mesure : bandes évidées de haut en bas (défonceuse), bord plein en haut et en bas, 1 à 3 vantaux selon la largeur */
+function mdfFront(P,a,b,dd,z0,zt){ const e=19, rg=Math.max(5,+P.rg||20), rl=Math.max(10,+P.rl||30), rb=Math.max(30,+P.rb||80), W=b-a, n=W>1400?3:W>700?2:1, gap=3, Lw=(W-4-(n-1)*gap)/n, H=zt-z0-4;
+  const ns=Math.max(1,Math.floor((Lw-2*rb+rl)/(rg+rl))), used=ns*rg+(ns-1)*rl, side=(Lw-used)/2, leaves=[];
+  for(let i=0;i<n;i++){ const x0=a+2+i*(Lw+gap), slots=[]; for(let k=0;k<ns;k++){ const u=x0+side+k*(rg+rl); slots.push([u,u+rg]); } leaves.push({x0,x1:x0+Lw,z0:z0+2,z1:z0+2+H,slots,hinge:n===1?"g":i<n/2?"g":"d"}); }
+  return {e,rg,rl,rb,n,Lw,H,ns,side,col:["#d6d7d2","#f4f4f1","#3a3c3e"][+P.mc||0]||"#d6d7d2",d0:dd-e,d1:dd,leaves,open:n*ns*rg*(H-2*rb)/1e6}; }
 /* couvercle du coffre : angle maxi avant de toucher la chaudière (pas de 1°), charnière au fond (de face) ou sur un côté (tourné) */
 function lidMax(f,b,side){ if(!f||!f.coffre) return 90; const R=f.rot?f.x1-f.x0:f.d1-f.d0;
   if(f.rot?!(f.d0<b.d1&&f.d1>b.d0):!(f.x0<b.x1&&f.x1>b.x0)) return 90;
@@ -6066,10 +6123,21 @@ function creaCalc(c,room){
     if(G.mode===3){ const cl=G.cl, hp=G.hh, pd=cl.d1-cl.d0, cep=cl.x1-cl.x0; face("Cloison du placard (2 faces)",pd,hp-10,2); face("Bout de la cloison (côté façade)",cep+25,hp-10);
       R.push({n:"Rail au sol et au plafond (cloison)",len:pd,q:2}); Mo.push({n:"Montant de cloison",len:hp-10,q:Math.ceil(pd/600)+1},{n:"Montant de bout (doublé, reçoit les aimants)",len:hp-10,q:1}); ang=2*(hp-10); }
     if(G.mode){ const nT=G.nF+2*G.nS, opt=[2000,2400,2700,3000].filter(b=>b>=G.Lt+5).map(b=>{ const per=Math.floor(b/(G.Lt+5)); return {b,per,n:Math.ceil(nT/per)}; }).sort((p,q)=>p.n*p.b-q.n*q.b||p.b-q.b)[0]||{b:Math.ceil((G.Lt+5)/100)*100,per:1,n:nT}, BL=opt.b, per=opt.per, bars=opt.n, trL=G.mode===3?2*G.W:3*(G.W+2*G.Ds);
-      if(G.mode===3){ T.push({n:"Tasseau de façade (du sol au plafond)",q:G.nF,len:G.Lt},{n:"Liteau d'accroche au plafond (plaques acier des aimants)",q:1,len:G.W},{n:"Liteau d'accroche au sol",q:1,len:G.W}); }
-      else T.push({n:"Tasseau de façade",q:G.nF,len:G.Lt},{n:"Tasseau de côté (gauche + droite)",q:2*G.nS,len:G.Lt},{n:"Traverse du cadre, façade (haut, milieu, bas)",q:3,len:G.W-2*G.te},{n:"Traverse du cadre, côtés",q:6,len:G.Ds});
+      if(G.mdf){ const F=G.mdf, nb=Math.ceil(F.n*F.Lw/2070)||1, ar=(F.n*F.Lw*F.H*2-F.n*F.ns*F.rg*(F.H-2*F.rb)*2+F.n*F.ns*2*(F.H-2*F.rb)*F.e)/1e6, nh=F.H>2000?4:3;
+        T.push({n:`Porte MDF ${F.e} mm, ${cm(F.Lw)} cm de large${F.n>1?` (${F.n} vantaux)`:""}`,q:F.n,len:F.H},{n:`Bande évidée de ${cm(F.rg)} cm, à ${cm(F.side)} cm du bord puis tous les ${cm(F.rg+F.rl)} cm (${F.ns} par porte, cadre plein de ${cm(F.rb)} cm tout autour, bouts arrondis laissés par la fraise)`,q:F.n*F.ns,len:F.H-2*F.rb});
+        X.push({cat:CH,des:`Panneau MDF hydrofuge ${F.e} mm · 280×207 cm`,det:`${F.n} porte(s) de ${cm(F.Lw)} × ${cm(F.H)} cm${F.H>2790?" : plus haut qu'un panneau, à faire en 2 hauteurs avec une traverse":""}`,q:nb,u:"panneau(x)"},
+          {cat:CH,des:`Fraise droite carbure Ø ${F.rg} mm, queue 8 ou 12 mm (défonceuse)`,det:`${F.n*F.ns} bandes de ${cm(F.H-2*F.rb)} cm, traversantes en 3 passes, sur une planche martyre`,q:1,u:"u"},
+          {cat:CH,des:"Règle de guidage alu 150 cm + 2 serre-joints (ou rail de défonceuse)",det:"cale d'écart de "+cm(F.rl)+" cm pour espacer les bandes à l'identique",q:1,u:"lot"},
+          {cat:CH,des:"Fraise à chanfreiner 45° (chanfrein 2 mm)",det:"sur les bords de la porte et le tour de chaque bande : ligne d'ombre nette, peinture plus solide",q:1,u:"u"},
+          {cat:CH,des:"Feutre ou tissu acoustique noir mat, agrafé au dos",det:"derrière les bandes : on voit des lignes noires nettes au lieu de la chaudière, l'air passe",q:Math.ceil(F.n*(F.ns*(F.rg+F.rl)+20)*(F.H-2*F.rb+20)/1e5)/10,u:"m²"},
+          {cat:CH,des:"Charnière invisible Ø 35 mm porte en applique 110° + embase",det:`${nh} par vantail${F.n>1?", vantaux extérieurs ferrés sur le montant de bout de cloison et sur un tasseau 45×45 chevillé au mur":", ferrée sur le montant de bout de la cloison"}`,q:nh*F.n,u:"u"},
+          {cat:CH,des:"Poussoir magnétique (ouverture sans poignée)",det:"en haut et en bas de chaque vantail ; les bandes évidées servent aussi de prise",q:2*F.n,u:"u"},
+          {cat:CH,des:"Redresseur de porte (tirant anti-voilement) vissé au dos",det:"grande porte en MDF évidée : évite qu'elle se voile",q:F.n,u:"u"},
+          {cat:CH,des:`Impression MDF + laque satinée PU ${["teintée gris clair (référence ASPUDDEN, à faire teinter)","blanc","anthracite"][+P.mc||0]}`,det:`${fr(ar,1)} m² (2 faces + intérieur des bandes), 1 impression + 2 couches`,q:Math.max(0.5,Math.ceil(ar*3/10*10)/10),u:"L"}); }
+      if(G.mode===3&&!G.mdf){ T.push({n:"Tasseau de façade (du sol au plafond)",q:G.nF,len:G.Lt},{n:"Liteau d'accroche au plafond (plaques acier des aimants)",q:1,len:G.W},{n:"Liteau d'accroche au sol",q:1,len:G.W}); }
+      else if(G.mode!==3) T.push(...(G.mdf?[]:[{n:"Tasseau de façade",q:G.nF,len:G.Lt}]),{n:"Tasseau de côté (gauche + droite)",q:2*G.nS,len:G.Lt},{n:"Traverse du cadre, façade (haut, milieu, bas)",q:3,len:G.W-2*G.te},{n:"Traverse du cadre, côtés",q:6,len:G.Ds});
       const area=nT*G.Lt*(2*G.tl+2*G.te)/1e6;
-      X.push({cat:CH,des:`Tasseau pin raboté ${G.te}×${G.tl} mm · ${BL/10} cm (ou tasseau déjà peint blanc)`,det:`${nT} tasseaux coupés à ${cm(G.Lt)} cm, ${per} par barre`,q:bars,u:"barre(s)"},
+      if(nT) X.push({cat:CH,des:`Tasseau pin raboté ${G.te}×${G.tl} mm · ${BL/10} cm (ou tasseau déjà peint blanc)`,det:`${nT} tasseaux coupés à ${cm(G.Lt)} cm, ${per} par barre`,q:bars,u:"barre(s)"},
         {cat:CH,des:"Liteau 27×40 mm · 240 cm (cadre caché derrière les tasseaux)",det:`${G.mode===3?"accroches sol + plafond":"traverses"} : ${fr(trL/1000,1)} m`,q:Math.ceil(trL*1.1/2400),u:"barre(s)"},
         {cat:CH,des:"Mildecor MIL'54 laque satinée PU ultra résistante blanc",det:`tasseaux : ${fr(area,1)} m², 2 couches (inutile si tasseaux déjà peints)`,q:Math.max(0.5,Math.ceil(area*2/10*10)/10),u:"L"},
         ...(G.mode===3?[{cat:CH,des:"Aimant néodyme à visser Ø 20 mm + contre-plaque acier",det:`2 par tasseau (haut et bas), aucun tasseau vissé : chacun s'enlève à la main`,q:nT*2,u:"u"},
@@ -6124,9 +6192,10 @@ function creaSvg(c,room){ const k=creaCalc(c,room), w=creaWall(c,room)||{L:3000,
     g+=`<rect x="${X(x)}" y="${Y(P.y+P.h)}" width="${P.w*sc}" height="${P.h*sc}" fill="#f4f3ef" stroke="#555" stroke-width="1" ${G.mode>=2?'stroke-dasharray="3 2"':''}/><text x="${X(x+P.w/2)}" y="${Y(P.y+P.h/2)+3}" text-anchor="middle" font-size="9" fill="#555">chaudière</text>`;
     if(G.cg) g+=`<rect x="${X(G.cg.x0)}" y="${Y(G.cg.z1)}" width="${(G.cg.x1-G.cg.x0)*sc}" height="${G.cg.z1*sc}" fill="#eef1f3" stroke="#555" stroke-dasharray="3 2"/><text x="${X((G.cg.x0+G.cg.x1)/2)}" y="${Y(G.cg.z1/2)+3}" text-anchor="middle" font-size="9" fill="#555">${G.cg.coffre?(G.cg.rot?"coffre tourné":"congélo coffre"):"congélo"}</text>`;
     if(G.cl){ g+=`<rect x="${X(G.cl.x0)}" y="${Y(G.hh)}" width="${(G.cl.x1-G.cl.x0)*sc}" height="${G.hh*sc}" fill="#ece8df" stroke="#1d63c4" stroke-width="1.5"/><text x="${X(G.cl.x0)-3}" y="${Y(G.hh/2)}" text-anchor="end" font-size="9" fill="#1d63c4">cloison ${cm(G.D)} cm</text>`; }
+    if(G.mdf) G.mdf.leaves.forEach(L=>{ g+=`<rect x="${X(L.x0)}" y="${Y(L.z1)}" width="${(L.x1-L.x0)*sc}" height="${(L.z1-L.z0)*sc}" fill="${G.mdf.col}" fill-opacity=".9" stroke="#8a9096" stroke-width=".6"/>`; L.slots.forEach(([u0,u1])=>{ g+=`<rect rx="${(u1-u0)*sc/2}" x="${X(u0)}" y="${Y(L.z1-G.mdf.rb)}" width="${Math.max(.6,(u1-u0)*sc)}" height="${(L.z1-L.z0-2*G.mdf.rb)*sc}" fill="#3a3d42"/>`; }); });
     G.sl.filter(q=>q.s==="f").forEach(q=>{ g+=`<rect x="${X(q.x0)}" y="${Y(G.zt)}" width="${Math.max(.6,(q.x1-q.x0)*sc)}" height="${G.Lt*sc}" fill="#ffffff" fill-opacity="${G.mode>=2?.85:1}" stroke="#8a9096" stroke-width=".5"/>`; });
     dim(x,P.y,P.w,P.h); g+=`<line x1="${X(x+P.w+60)}" x2="${X(x+P.w+60)}" y1="${Y(0)}" y2="${Y(P.y)}" stroke="#1d63c4" stroke-dasharray="3 2"/><text x="${X(x+P.w+70)}" y="${Y(P.y/2)}" font-size="10" fill="#1d63c4">${cm(P.y)}</text>`;
-    g+=`<text x="${X(0)}" y="${Y(0)+24}" font-size="10" fill="var(--muted)">${G.mode===3?`façade ${cm(G.W)} cm : ${G.nF} tasseaux de ${cm(G.Lt)} cm, écart ${cm(G.tg)} cm, aimantés`:G.mode?`${G.nF+2*G.nS} tasseaux de ${cm(G.Lt)} cm (plafond fini à ${cm(G.hh)} cm), écart ${cm(G.gF)} cm`:`bas de la chaudière à ${cm(P.y)} cm du sol`}</text>`; }
+    g+=`<text x="${X(0)}" y="${Y(0)+24}" font-size="10" fill="var(--muted)">${G.mdf?`porte MDF ${cm(G.mdf.n*G.mdf.Lw)} cm (${G.mdf.n} vantail${G.mdf.n>1?"x":""}) : ${G.mdf.ns} bandes de ${cm(G.mdf.rg)} cm évidées par vantail`:G.mode===3?`façade ${cm(G.W)} cm : ${G.nF} tasseaux de ${cm(G.Lt)} cm, écart ${cm(G.tg)} cm, aimantés`:G.mode?`${G.nF+2*G.nS} tasseaux de ${cm(G.Lt)} cm (plafond fini à ${cm(G.hh)} cm), écart ${cm(G.gF)} cm`:`bas de la chaudière à ${cm(P.y)} cm du sol`}</text>`; }
   if(c.t==="etag"){ box(x,P.y||0,P.L,P.h,"none"); const n=Math.max(1,P.n||1); for(let i=0;i<=n;i++){ const yy=(P.y||0)+P.h*i/n; g+=`<line x1="${X(x)}" x2="${X(x+P.L)}" y1="${Y(yy)}" y2="${Y(yy)}" stroke="#1d63c4" stroke-width="3"/>`; } dim(x,P.y||0,P.L,P.h); }
   const xs=c.t==="chaud"?chaudGeo(c,room).bo.x0:x; g+=`<text x="${X(xs)}" y="${Y(H)-2}" font-size="10" fill="var(--muted)">à ${cm(xs)} cm de l'angle gauche · mur fini ${cm(L)} cm</text>`;
   const over=c.t==="chaud"?Math.max(chaudM(c)-(c.x||0),(c.x||0)+c.w+chaudM(c)-L):c.t==="led"&&+c.pos===1?(c.y||0)+c.L-H:(c.x||0)+creaLen(c)-L; if(over>1) g+=`<text x="${X(0)}" y="${Y(0)+38}" font-size="10" font-weight="700" fill="#c0392b">⚠ ${c.t==="chaud"?`Le caisson dépassait l'angle de ${cm(over)} cm : chaudière recalée à ${cm(P.x)} cm de la gauche`:`Trop long de ${cm(over)} cm : ramené à ${cm(creaLen(P))} cm`}</text>`;
@@ -6134,9 +6203,9 @@ function creaSvg(c,room){ const k=creaCalc(c,room), w=creaWall(c,room)||{L:3000,
 function creaTable(c,room){ const k=creaCalc(c,room);
   return `${k.F.length?"":"<!--"}<div class="tbl-wrap"><table class="cutl"><thead><tr><th>Pièce de plaque</th><th style="text-align:right">Qté</th><th style="text-align:right">Largeur × hauteur</th></tr></thead><tbody>${k.F.map(f=>`<tr><td>${esc(f.n)}</td><td class="n">${f.q}</td><td class="n"><b>${cm(f.w)} × ${cm(f.h)}</b></td></tr>`).join("")}</tbody></table></div>
     <div class="tbl-wrap"><table class="cutl"><thead><tr><th>Ossature (${S.oss.g} mm)</th><th style="text-align:right">Qté</th><th style="text-align:right">Longueur à couper</th></tr></thead><tbody>${[...k.R.map(r=>({...r,t:"Rail"})),...k.Mo.map(r=>({...r,t:"Montant"}))].map(r=>`<tr><td>${r.t} — ${esc(r.n)}</td><td class="n">${r.q}</td><td class="n"><b>${cm(r.len)}</b></td></tr>`).join("")}</tbody></table></div>${k.F.length?"":"-->"}
-    ${k.T&&k.T.length?`<div class="tbl-wrap"><table class="cutl"><thead><tr><th>Tasseaux et cadre (coupes)</th><th style="text-align:right">Qté</th><th style="text-align:right">Longueur à couper</th></tr></thead><tbody>${k.T.map(r=>`<tr><td>${esc(r.n)}</td><td class="n">${r.q}</td><td class="n"><b>${cm(r.len)}</b></td></tr>`).join("")}</tbody></table></div>`:""}
+    ${k.T&&k.T.length?`<div class="tbl-wrap"><table class="cutl"><thead><tr><th>${c.t==="chaud"&&+c.fac===1&&+(c.tas??2)>=2?"Porte MDF, tasseaux et cadre (coupes)":"Tasseaux et cadre (coupes)"}</th><th style="text-align:right">Qté</th><th style="text-align:right">Longueur à couper</th></tr></thead><tbody>${k.T.map(r=>`<tr><td>${esc(r.n)}</td><td class="n">${r.q}</td><td class="n"><b>${cm(r.len)}</b></td></tr>`).join("")}</tbody></table></div>`:""}
     ${k.X.length?`<div class="tbl-wrap"><table class="cutl"><thead><tr><th>${c.t==="chaud"?"Chaudière et tasseaux":"Rideau, rail et LED"}</th><th style="text-align:right">Qté</th></tr></thead><tbody>${k.X.map(x=>`<tr><td>${esc(x.des)}<br><span class="cap">${esc(x.det)}</span></td><td class="n"><b>${fr(x.q,x.q%1?1:0)}</b> ${esc(x.u)}</td></tr>`).join("")}</tbody></table></div>`:""}
-    <p class="cap" style="margin:4px 0 0">${c.t==="chaud"&&+c.tas===3?`Placard fermé par une cloison placo (côté porte, contre le montant du chambranle, sans toucher la porte) et une façade de tasseaux du sol au plafond. Les tasseaux ne sont pas vissés : chacun tient par 2 aimants (haut et bas) sur des liteaux fixés au sol et au plafond, et s'enlève à la main pour accéder au congélateur et à la chaudière. Si la hauteur du plafond change, leur longueur suit. Laisser l'air circuler (congélateur et chaudière) : ne pas boucher les espaces entre tasseaux.`:c.t==="chaud"?`Les tasseaux se coupent à la hauteur réelle sous le plafond fini, moins 5 mm : si la hauteur du plafond change, leur longueur suit toute seule. Ils sont vissés sur un cadre en liteaux (3 traverses), fixé au mur dans le renfort et au plafond dans les fourrures.${+(c.tas??2)===2?" La façade s'enlève d'un bloc (loqueteaux aimantés) pour l'entretien annuel.":""} Respecter les dégagements de la notice de la chaudière, et ne jamais fermer la ventouse ou le conduit : les espaces entre tasseaux laissent l'air circuler.`:c.t==="led"?"Rainurer la plaque à la défonceuse (ou poser le profilé avant les plaques), coller le profilé, enduire les ailes comme une bande. Ruban posé après la peinture.":`${k.plates} plaque(s) à prévoir · ${fr(k.ang/1000,1)} m de cornière d'angle · ≈ ${k.vis} vis TTPC.`}${c.t==="rideau"?" Le rail se fixe au plafond dans la gorge, avant la pose des plaques de la joue ; une joue de 15 cm cache le rail et les crochets.":""}</p>`; }
+    <p class="cap" style="margin:4px 0 0">${c.t==="chaud"&&+c.tas>=2&&+c.fac===1?(()=>{ const F=chaudGeo(c,room).mdf; return F?`Façade en porte MDF faite sur mesure : ${F.n} vantail${F.n>1?"x":""} de ${cm(F.Lw)} × ${cm(F.H)} cm en MDF hydrofuge ${F.e} mm. À la défonceuse avec une fraise droite de ${cm(F.rg)} cm, évidez ${F.ns} bandes par vantail sur toute la hauteur, en gardant ${cm(F.rb)} cm pleins en haut et en bas et ${cm(F.rl)} cm de lamelle entre deux bandes (même rythme que les tasseaux). Tracez toutes les bandes depuis le même bord avec une cale d'écart, défoncez en 3 passes sur une planche martyre, poncez, cassez les arêtes, imprimez puis laquez. Les bandes laissent ${fr(F.open,2)} m² d'air pour la chaudière et le congélateur : ne pas les boucher. ${+c.tas===3?"Les vantaux sont ferrés en charnières invisibles sur le montant de bout de la cloison":"La porte est ferrée sur le côté du caisson"} et s'ouvrent par poussoirs magnétiques pour l'entretien annuel.`:""; })():c.t==="chaud"&&+c.tas===3?`Placard fermé par une cloison placo (côté porte, contre le montant du chambranle, sans toucher la porte) et une façade de tasseaux du sol au plafond. Les tasseaux ne sont pas vissés : chacun tient par 2 aimants (haut et bas) sur des liteaux fixés au sol et au plafond, et s'enlève à la main pour accéder au congélateur et à la chaudière. Si la hauteur du plafond change, leur longueur suit. Laisser l'air circuler (congélateur et chaudière) : ne pas boucher les espaces entre tasseaux.`:c.t==="chaud"?`Les tasseaux se coupent à la hauteur réelle sous le plafond fini, moins 5 mm : si la hauteur du plafond change, leur longueur suit toute seule. Ils sont vissés sur un cadre en liteaux (3 traverses), fixé au mur dans le renfort et au plafond dans les fourrures.${+(c.tas??2)===2?" La façade s'enlève d'un bloc (loqueteaux aimantés) pour l'entretien annuel.":""} Respecter les dégagements de la notice de la chaudière, et ne jamais fermer la ventouse ou le conduit : les espaces entre tasseaux laissent l'air circuler.`:c.t==="led"?"Rainurer la plaque à la défonceuse (ou poser le profilé avant les plaques), coller le profilé, enduire les ailes comme une bande. Ruban posé après la peinture.":`${k.plates} plaque(s) à prévoir · ${fr(k.ang/1000,1)} m de cornière d'angle · ≈ ${k.vis} vis TTPC.`}${c.t==="rideau"?" Le rail se fixe au plafond dans la gorge, avant la pose des plaques de la joue ; une joue de 15 cm cache le rail et les crochets.":""}</p>`; }
 function creaPanel(w){ const room=w.room||"", C=creas(room), rw=S.walls.filter(x=>(x.room||"")===room);
   return `<section class="box"><h2><span class="sw" style="background:#ece8df"></span>Créations en placo : ${esc(room)}</h2>
     ${C.map((c,i)=>{ const d=CREA[c.t]; return `<div style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px">
@@ -6614,7 +6683,74 @@ function chaudV2(){ if(S.chaudV2) return; S.chaudV2=1; try{ const room=roomNames
 function chaudV3(){ if(S.chaudV3) return; S.chaudV3=1; try{ const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return; const c=creas(room).find(q=>q.t==="chaud"&&+q.cg===1&&+(q.cgt??1)===1); if(!c) return; c.cgr=1; save(); }catch(e){ console.warn("chaudV3",e); } }
 function mahdiV4(){ if(S.mahdiV4) return; S.mahdiV4=1; try{ const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return; const c=creas(room).find(q=>q.t==="chaud"); if(c) c.y=1500;
   save(); }catch(e){ console.warn("mahdiV4",e); } }
-chaudInit(); chaudV2(); chaudV3(); mahdiV4(); renderAll(); // une seule fois, au démarrage, sur le projet ouvert (la cuisine de mahdi)
+/* v158 (demandes de mahdi du 18/11/2026) : colonne 80 cm du mur fenêtre collée au mur avec le frigo VALBERG dedans, table carrelée 100×100, porte MDF rainurée du placard chaudière */
+function mahdiV5(){ if(S.mahdiV5) return false; const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return false; const K=kitCfg(room); if(!K.on||!K.items.length) return false; S.mahdiV5=1; const log=[];
+  try{ const c=creas(room).find(q=>q.t==="chaud"); if(c&&+(c.tas??2)>=2){ c.fac=1; if(c.rg===undefined) c.rg=20; if(c.rl===undefined) c.rl=40; if(c.rb===undefined) c.rb=100; log.push("porte MDF rainurée sur le placard chaudière"); } }catch(e){ console.warn("mahdiV5 chaudière",e); }
+  S.mahdiV5log=log.filter(Boolean); save(); return true; }
+/* colonnes du mur fenêtre : la rangée part de l'angle (collée au mur), les 2 colonnes de 40 côté fenêtre deviennent une colonne 80 cm à 2 portes avec le frigo dedans */
+function mahdiCols(room,noMerge){ const K=kitCfg(room), rw=S.walls.filter(w=>(w.room||"")===room), w=rw.find(x=>/fen/i.test(x.name||"")&&K.items.some(it=>it.wall===wid(x)&&/^c\d/.test(it.k))); if(!w) return "";
+  const its=K.items.filter(it=>it.wall===wid(w)), [u0,u1]=kitUse(w), win=(w.openings||[]).filter(o=>o.type!=="Porte").sort((a,b)=>a.x-b.x);
+  const cols=its.filter(it=>it.k==="c400x2000").sort((a,b)=>a.x-b.x); if(cols.length<2) return "";
+  const x0=Math.min(...its.map(it=>it.x-(it.jg?19:0))), x1=Math.max(...its.map(it=>{ const k=kitItem(it); return it.x+(k?k.w:0)+(it.jd?19:0); })), mid=(x0+x1)/2;
+  const wn=win.length?win.reduce((p,o)=>Math.abs(o.x+o.w/2-mid)<Math.abs(p.x+p.w/2-mid)?o:p):null, wc=wn?wn.x+wn.w/2:u1, toEnd=wc>mid;
+  // place libre dans l'angle de départ : profondeur de ce qui est posé au bout du mur précédent (meubles, placard chaudière)
+  const i=rw.indexOf(w), pw=rw.length>1&&(i>0||rw[rw.length-1].angle!=="libre")?rw[(i+rw.length-1)%rw.length]:null; let occ=0;
+  if(pw&&pw!==w){ const [,p1]=kitUse(pw); K.items.filter(it=>it.wall===wid(pw)).forEach(it=>{ const b=kitBox(it,K,pw.H); if(b&&it.x+b.k.w+(it.jd?19:0)>=p1-5) occ=Math.max(occ,b.d+(b.k.t==="bas"?ONX.front+ONX.th-600:0)); });
+    creas(room).filter(c=>c.t==="chaud"&&c.wall===wid(pw)).forEach(c=>{ const G=chaudGeo(c,room), sp=creaSpan(pw); if(G.mode&&G.x1>=sp.len-5) occ=Math.max(occ,(G.D||0)+5); }); }
+  const start=u0+occ, dx=toEnd?start-x0:0; if(Math.abs(dx)>0.5) its.forEach(it=>{ it.x=Math.round((it.x+dx)*10)/10; });
+  if(noMerge) return dx?`colonnes du mur fenêtre collées à l'angle (décalées de ${cm(Math.abs(dx))} cm)`:""; // 20/11 : la colonne frigo est celle de la version principale
+  // fusion des 2 colonnes (et de leurs surmeubles) les plus proches de la fenêtre
+  const A=toEnd?cols[cols.length-2]:cols[0], B=toEnd?cols[cols.length-1]:cols[1]; if(Math.abs(B.x-A.x-400)>2) return dx?`colonnes décalées de ${cm(-dx)} cm vers l'angle`:"";
+  const keep={wall:A.wall,x:A.x,no:A.no,jg:A.jg||B.jg,jd:A.jd||B.jd};
+  Object.assign(A,{k:"c800x2000",n:"Colonne 80×60×200, 2 portes, réfrigérateur VALBERG CS 262 D S625C dedans",frigo:"vcs262",et:0,open:1},keep); delete A.f; delete A.hg; delete A.w;
+  K.items.splice(K.items.indexOf(B),1);
+  const hs=K.items.filter(it=>it.wall===wid(w)&&it.k==="h400x400"), ha=hs.find(it=>Math.abs(it.x-A.x)<2), hb=hs.find(it=>Math.abs(it.x-A.x-400)<2);
+  if(ha&&hb){ Object.assign(ha,{k:"h800x400",n:"Surmeuble 80×60×40, 2 portes",jg:ha.jg||hb.jg,jd:ha.jd||hb.jd}); delete ha.hg; delete ha.f; K.items.splice(K.items.indexOf(hb),1); }
+  const end=Math.max(...K.items.filter(it=>it.wall===wid(w)).map(it=>{ const k=kitItem(it); return it.x+(k?k.w:0)+(it.jd?19:0); })), wo=win.find(o=>o.x+o.w>start), gap=wo?wo.x-30-end:null;
+  return `colonnes collées à l'angle (décalées de ${cm(Math.abs(dx))} cm), colonne 80 cm 2 portes avec le frigo${gap!==null?`, ${gap>=0?`${cm(gap)} cm libres avant l'appui de fenêtre`:`dépasse encore l'appui de fenêtre de ${cm(-gap)} cm`}`:""}`; }
+/* table carrelée : posée au plus grand espace libre de la cuisine (on la fait ensuite glisser dans la Visite 3D, mode Maquette) */
+function mahdiTable(room){ const M=meubles(room); if(M.some(m=>m.cat==="tcarr")) return ""; const o=MOB.find(q=>q.t==="tcarr"); if(!o) return ""; const c=freeSpot(room)||roomCenter(room);
+  M.push({n:o.n,cat:o.t,x:Math.round(c[0]),y:Math.round(c[1]),rot:0,w:o.w,d:o.d,h:o.h,c:o.c}); return `table carrelée 100×100 à ${cm(c[0])} / ${cm(c[1])} cm`; }
+function freeSpot(room){ const g=roomGeom(room); if(!g.poly) return null; const P=g.poly, K=kitCfg(room), R=[];
+  const rect=(sg,xa,xb,da,db)=>[[xa,da],[xb,da],[xb,db],[xa,db]].map(([x,d])=>[sg.x0+sg.dx*x+sg.nx*d,sg.y0+sg.dy*x+sg.ny*d]);
+  g.segs.forEach(sg=>{ const w=sg.w; if(K.on) K.items.filter(it=>it.wall===wid(w)).forEach(it=>{ const b=kitBox(it,K,w.H); if(!b||b.z0>1200) return; R.push(rect(sg,it.x-(it.jg?19:0),it.x+b.k.w+(it.jd?19:0),0,g.T+Math.max(b.d,b.k.t==="bas"?ONX.front+ONX.th:0)+20)); });
+    creas(room).filter(c=>c.wall===wid(w)).forEach(c=>{ try{ const sp=creaSpan(w); if(c.t==="chaud"){ const G=chaudGeo(c,room); if(G.mode) R.push(rect(sg,sp.a+(G.x0||0),sp.a+(G.x1||0),0,g.T+(G.D||0))); } else { const Pc=creaFit(c,room), d=+Pc.pf||+Pc.ep||0; if(d>0&&!/^(coffh|rideau|led)$/.test(c.t)) R.push(rect(sg,sp.a+(+Pc.x||0),sp.a+(+Pc.x||0)+(+creaLen(Pc)||0),0,g.T+d)); } }catch(e){} }); });
+  meubles(room).forEach(m=>{ if(!m.cat||m.cat==="tapis") return; const a=(m.rot||0)*Math.PI/180, cs=Math.cos(a), sn=Math.sin(a); R.push([[-1,-1],[1,-1],[1,1],[-1,1]].map(([u,v])=>[m.x+(u*m.w/2)*cs-(v*m.d/2)*sn,m.y+(u*m.w/2)*sn+(v*m.d/2)*cs])); });
+  const inP=(Q,x,y)=>{ let r=false; for(let i=0,j=Q.length-1;i<Q.length;j=i++){ const [xi,yi]=Q[i],[xj,yj]=Q[j]; if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi) r=!r; } return r; };
+  const dS=(x,y,[ax,ay],[bx,by])=>{ const vx=bx-ax, vy=by-ay, t=Math.max(0,Math.min(1,((x-ax)*vx+(y-ay)*vy)/(vx*vx+vy*vy||1))); return Math.hypot(x-ax-t*vx,y-ay-t*vy); };
+  const dQ=(Q,x,y)=>inP(Q,x,y)?0:Math.min(...Q.map((p,i)=>dS(x,y,p,Q[(i+1)%Q.length])));
+  const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]); let best=null;
+  for(let x=Math.min(...xs);x<=Math.max(...xs);x+=50) for(let y=Math.min(...ys);y<=Math.max(...ys);y+=50){ if(!inP(P,x,y)) continue; const d=Math.min(...P.map((p,i)=>dS(x,y,p,P[(i+1)%P.length])),...R.map(Q=>dQ(Q,x,y))); if(!best||d>best.d+1) best={x,y,d}; }
+  return best?[best.x,best.y]:null; }
+chaudInit(); chaudV2(); chaudV3(); mahdiV4(); renderAll();
+/* 18/11 : peinture réelle de mahdi = Flügger Flutex 7 Pro mat velouté, blanc standard (non teinté) sur tous les murs */
+function mahdiV7(){ if(S.mahdiV7) return false; if(!S.fin||!S.fin.peint) return false; S.mahdiV7=1; const P=PEINT.find(m=>m.n==="Flügger Flutex 7 Pro mat velouté"); if(!P){ save(); return false; }
+  S.fin.peint.n=P.n; S.fin.peint.r=P.r; let k=0; S.walls.forEach(w=>{ if(w.peintN&&!/H2O|eau/i.test(w.peintN)){ w.peintN=P.n; k++; } if(w.teinte){ delete w.teinte; k++; } });
+  (S.mahdiV5log=S.mahdiV5log||[]).push("peinture des murs : Flügger Flutex 7 Pro mat velouté, blanc standard"); save(); return true; }
+setTimeout(()=>{ try{ if(mahdiV7()){ renderAll(); if(typeof v3Rebuild==="function") v3Rebuild(); } }catch(e){ console.warn("mahdiV7",e); } },1000);
+/* 18/11 : porte MDF du placard chaudière, dessin plus fin (cadre régulier, lamelles 3 cm, gris clair de la cuisine) */
+function mahdiV8(){ if(S.mahdiV8) return false; S.mahdiV8=1; let ok=false; S.walls.map(w=>w.room||"").filter((v,i,a)=>a.indexOf(v)===i).forEach(r=>creas(r).filter(c=>c.t==="chaud"&&+c.fac===1).forEach(c=>{ if(+c.rl===40||c.rl===undefined) c.rl=30; if(+c.rb===100||c.rb===undefined) c.rb=80; if(c.mc===undefined) c.mc=0; ok=true; }));
+  if(ok) (S.mahdiV5log=S.mahdiV5log||[]).push("porte MDF redessinée : cadre de 8 cm tout autour, bandes de 2 cm à bouts arrondis tous les 5 cm, chanfrein 2 mm, feutre noir au dos, gris clair comme la cuisine"); save(); return ok; }
+setTimeout(()=>{ try{ if(mahdiV8()){ renderAll(); if(typeof v3Rebuild==="function") v3Rebuild(); } }catch(e){ console.warn("mahdiV8",e); } },1100);
+/* 20/11 : on garde la table carrée tout Onyx et la colonne frigo de la version principale : retrait de la table carrelée 100×100, des tabourets Léon et de la colonne 80 avec frigo des pré-versions */
+function mahdiV9(){ if(S.mahdiV9) return false; S.mahdiV9=1; let ch=false; const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined){ save(); return false; }
+  const M=meubles(room); for(let i=M.length-1;i>=0;i--) if(M[i].cat==="tcarr"||M[i].cat==="leon"){ M.splice(i,1); ch=true; }
+  const K=kitCfg(room); (K.items||[]).filter(it=>it.k==="c800x2000"&&it.frigo).forEach(A=>{ const base={wall:A.wall,f:"1p",et:2,n:"Colonne avec étagères 40×60×200"};
+    const B=Object.assign({},base,{k:"c400x2000",x:Math.round((A.x+400)*10)/10,hg:"d"}); if(A.jd) B.jd=A.jd; delete A.frigo; delete A.open; delete A.jd; Object.assign(A,base,{k:"c400x2000",hg:"g"}); K.items.splice(K.items.indexOf(A)+1,0,B);
+    const H=K.items.find(it=>it.wall===A.wall&&it.k==="h800x400"&&Math.abs(it.x-A.x)<2); if(H){ const H2=Object.assign({},H,{k:"h400x400",x:Math.round((H.x+400)*10)/10,n:"Surmeuble 40×60×40",hg:"d"}); delete H2.jg; Object.assign(H,{k:"h400x400",n:"Surmeuble 40×60×40",hg:"g"}); delete H.jd; K.items.splice(K.items.indexOf(H)+1,0,H2); }
+    ch=true; });
+  if(ch) (S.mahdiV5log=S.mahdiV5log||[]).push("table carrée tout Onyx et colonne frigo de la version principale gardées : table carrelée 100×100, tabourets Léon et colonne 80 avec frigo retirés");
+  save(); return ch; }
+setTimeout(()=>{ try{ if(mahdiV9()){ renderAll(); if(typeof v3Rebuild==="function") v3Rebuild(); } }catch(e){ console.warn("mahdiV9",e); } },650);
+/* 18/11 soir : 2 tabourets Stooly Léon autour de la table carrelée */
+function mahdiV6(){ if(S.mahdiV6) return false; const room=roomNames().find(n=>/cuisine/i.test(n)); if(room===undefined) return false; const M=meubles(room), T=M.find(m=>m.cat==="tcarr"); if(!T) return false; S.mahdiV6=1;
+  if(M.some(m=>m.cat==="leon")){ save(); return false; } const o=MOB.find(q=>q.t==="leon"); if(!o){ save(); return false; }
+  const g=roomGeom(room), P=g.poly||[], dS=(x,y,[ax,ay],[bx,by])=>{ const vx=bx-ax, vy=by-ay, t=Math.max(0,Math.min(1,((x-ax)*vx+(y-ay)*vy)/(vx*vx+vy*vy||1))); return Math.hypot(x-ax-t*vx,y-ay-t*vy); };
+  const clr=(x,y)=>P.length?Math.min(...P.map((p,i)=>dS(x,y,p,P[(i+1)%P.length]))):1e9, a=(T.rot||0)*Math.PI/180, off=T.w/2+50, pt=(u,v)=>[T.x+u*Math.cos(a)-v*Math.sin(a),T.y+u*Math.sin(a)+v*Math.cos(a)];
+  const pairs=[[pt(off,0),pt(-off,0)],[pt(0,off),pt(0,-off)]].map(q=>({q,d:Math.min(...q.map(p=>clr(p[0],p[1])))})).sort((x,y)=>y.d-x.d), q=pairs[0].q;
+  q.forEach(p=>M.push({n:o.n,cat:o.t,x:Math.round(p[0]),y:Math.round(p[1]),rot:0,w:o.w,d:o.d,h:o.h,c:o.c}));
+  (S.mahdiV5log=S.mahdiV5log||[]).push("2 tabourets Stooly Léon 42 cm Gris Eiffel de part et d'autre de la table"); save(); return true; }
+setTimeout(()=>{ try{ if(mahdiV5()){ renderAll(); if(S.view==="visite"&&typeof v3Rebuild==="function") v3Rebuild(); } }catch(e){ console.warn("mahdiV5",e); } },700); // une seule fois, au démarrage, sur le projet ouvert (la cuisine de mahdi)
 undoRec();
 setTimeout(()=>{ const sp=document.getElementById("splash"); if(sp){ sp.classList.add("out"); setTimeout(()=>sp.remove(),600); } },1100);
 
