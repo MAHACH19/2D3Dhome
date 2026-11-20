@@ -2716,18 +2716,23 @@ function roomGeom(room){
   rw.forEach(w=>{ const x1=px+dx*w.L, y1=py+dy*w.L;
     segs.push({w,i:S.walls.indexOf(w),x0:px,y0:py,x1,y1,dx,dy,nx:dy,ny:-dx}); px=x1; py=y1;
     [dx,dy]=turnDir(dx,dy,w); });
-  const n=segs.length, closed=n>2 && rw[n-1].angle!=="libre", gap=Math.hypot(px,py);
-  const Ts=rw.map(w=>isCol(w)?COLLE_T:w.dbl==="contre"?contreT(w):doublageT(w)-WGAP), Ks=rw.map(w=>{ const l=w.id&&(S.links||[]).find(l=>l.wa===w.id||l.wb===w.id); return l?Math.max(10,(+l.e||0)/2):STN; }), of=(sg,off)=>off<0?(off===-STN?-Ks[segs.indexOf(sg)]:off):Math.min(off,Ts[segs.indexOf(sg)]); // mur commun : chaque pièce dessine la moitié de son épaisseur, les deux moitiés se rejoignent
+  const n=segs.length, closed=n>1 && rw[n-1].angle!=="libre" && (n>2||Math.hypot(px,py)>500), gap=Math.hypot(px,py);
+  /* v175 : pièce pas refermée (mur manquant) → murs virtuels de fermeture pour la surface, au lieu d'une diagonale (qui donnait la moitié de la surface) */
+  const VS=[]; if(closed&&gap>300){ const pushV=(x0,y0,x1,y1)=>{ const L=Math.hypot(x1-x0,y1-y0); if(L<1) return; const ux=(x1-x0)/L, uy=(y1-y0)/L; VS.push({virt:true,x0,y0,x1,y1,dx:ux,dy:uy,nx:uy,ny:-ux}); };
+    const d0=segs[0], vx=-px, vy=-py, pr=vx*d0.dx+vy*d0.dy, cr=Math.abs(vx*d0.dy-vy*d0.dx), last=segs[n-1], pl=Math.abs(vx*last.dx+vy*last.dy);
+    if(cr<50||Math.abs(pr)<50||pl>Math.hypot(vx,vy)-50) pushV(px,py,0,0); else { const mx=px+d0.dx*pr, my=py+d0.dy*pr; pushV(px,py,mx,my); pushV(mx,my,0,0); } }
+  const SG=segs.concat(VS);
+  const Ts=rw.map(w=>isCol(w)?COLLE_T:w.dbl==="contre"?contreT(w):doublageT(w)-WGAP), Ks=rw.map(w=>{ const l=w.id&&(S.links||[]).find(l=>l.wa===w.id||l.wb===w.id); return l?Math.max(10,(+l.e||0)/2):STN; }), of=(sg,off)=>{ const k=segs.indexOf(sg); if(k<0) return off<0?(off===-STN?-STN:off):Math.min(off,Ts[0]||T); return off<0?(off===-STN?-Ks[k]:off):Math.min(off,Ts[k]); }; // mur commun : chaque pièce dessine la moitié de son épaisseur, les deux moitiés se rejoignent
   const corner=(a,b,off)=>{ const oa=of(a,off), ob=of(b,off);
     const A=[a.x0+a.nx*oa,a.y0+a.ny*oa], B=[b.x0+b.nx*ob,b.y0+b.ny*ob], den=a.dx*b.dy-a.dy*b.dx;
     if(Math.abs(den)<1e-9) return [a.x1+a.nx*oa,a.y1+a.ny*oa];
     const t=((B[0]-A[0])*b.dy-(B[1]-A[1])*b.dx)/den; return [A[0]+a.dx*t,A[1]+a.dy*t]; };
-  const ends=off=>segs.map((s,k)=>{ const o=of(s,off);
-    const prev=k>0?segs[k-1]:(closed?segs[n-1]:null), next=k<n-1?segs[k+1]:(closed?segs[0]:null);
+  const N=SG.length, endsAll=off=>SG.map((s,k)=>{ const o=of(s,off);
+    const prev=k>0?SG[k-1]:(closed?SG[N-1]:null), next=k<N-1?SG[k+1]:(closed?SG[0]:null);
     return {a:prev?corner(prev,s,off):[s.x0+s.nx*o,s.y0+s.ny*o], b:next?corner(s,next,off):[s.x1+s.nx*o,s.y1+s.ny*o]}; });
-  const inner=ends(Math.max(T,...Ts)), mid=ends(0), outer=ends(-STN);
+  const ends=off=>endsAll(off).slice(0,n), innerAll=endsAll(Math.max(T,...Ts)), inner=innerAll.slice(0,n), mid=ends(0), outer=ends(-STN);
   const H=n?Math.min(...rw.map(w=>w.H)):2500;
-  return {rw,segs,inner,mid,outer,closed,gap,T,Ts,STN,H,poly:closed?inner.map(e=>e.a):null,endsAt:ends};
+  return {rw,segs,inner,mid,outer,closed,gap,T,Ts,STN,H,poly:closed?innerAll.map(e=>e.a):null,polyBrut:closed?endsAll(0).map(e=>e.a):null,endsAt:ends,virt:VS};
 }
 const polyArea=P=>P.reduce((a,p,i)=>{ const q=P[(i+1)%P.length]; return a+p[0]*q[1]-q[0]*p[1]; },0)/2;
 function clipRect(P,x0,y0,x1,y1){
@@ -3318,7 +3323,7 @@ function makeXf(room){ const L=roomLayout(room), a=L.rot*Math.PI/180, c=Math.cos
 function geomXf(g,room){
   const X=makeXf(room), P=p=>X.p(p[0],p[1]), E=e=>({a:P(e.a),b:P(e.b)});
   return {...g, segs:g.segs.map(s=>{ const [x0,y0]=X.p(s.x0,s.y0), [x1,y1]=X.p(s.x1,s.y1), [dx,dy]=X.v(s.dx,s.dy), [nx,ny]=X.v(s.nx,s.ny); return {...s,x0,y0,x1,y1,dx,dy,nx,ny}; }),
-    inner:g.inner.map(E), mid:g.mid.map(E), outer:g.outer.map(E), poly:g.poly?g.poly.map(P):null, xf:X, endsAt:off=>g.endsAt(off).map(E)};
+    inner:g.inner.map(E), mid:g.mid.map(E), outer:g.outer.map(E), poly:g.poly?g.poly.map(P):null, polyBrut:g.polyBrut?g.polyBrut.map(P):null, virt:(g.virt||[]).map(v=>{ const [x0,y0]=X.p(v.x0,v.y0), [x1,y1]=X.p(v.x1,v.y1); return {...v,x0,y0,x1,y1}; }), xf:X, endsAt:off=>g.endsAt(off).map(E)};
 }
 function reorderRoom(room,fn){
   const idx=[], rw=[]; S.walls.forEach((w,i)=>{ if((w.room||"")===room){ idx.push(i); rw.push(w); } });
@@ -3353,7 +3358,8 @@ function renderLogement(){
     });
     const P=g.poly||g.inner.flatMap(e=>[e.a,e.b]), cx=P.reduce((a,p)=>a+p[0],0)/P.length, cy=P.reduce((a,p)=>a+p[1],0)/P.length;
     const area=g.poly?Math.abs(polyArea(g.poly))/1e6:0;
-    labels.push(`<text x="${cx.toFixed(0)}" y="${Yf(cy).toFixed(0)}" text-anchor="middle" font-size="260" font-weight="700" style="fill:${sel?"var(--chalk)":"var(--ink)"};pointer-events:none">${esc(room)}</text>${area?`<text x="${cx.toFixed(0)}" y="${(Yf(cy)+300).toFixed(0)}" text-anchor="middle" font-size="200" style="fill:var(--muted);pointer-events:none">${fr(area,2)} m²</text>`:""}`);
+    labels.push(`<text x="${cx.toFixed(0)}" y="${Yf(cy).toFixed(0)}" text-anchor="middle" font-size="260" font-weight="700" style="fill:${sel?"var(--chalk)":"var(--ink)"};pointer-events:none">${esc(room)}</text>${area?`<text x="${cx.toFixed(0)}" y="${(Yf(cy)+300).toFixed(0)}" text-anchor="middle" font-size="200" style="fill:var(--muted);pointer-events:none">${fr(area,2)} m² fini${g.polyBrut?` · ${fr(Math.abs(polyArea(g.polyBrut))/1e6,2)} m² brut`:""}</text>${g.virt&&g.virt.length?`<text x="${cx.toFixed(0)}" y="${(Yf(cy)+560).toFixed(0)}" text-anchor="middle" font-size="170" style="fill:#d6452b;pointer-events:none">mur manquant : pièce refermée en pointillé</text>`:""}`:""}`);
+    (g.virt||[]).forEach(v=>parts.push(`<polyline points="${pp([[v.x0,v.y0],[v.x1,v.y1]])}" fill="none" stroke="#d6452b" stroke-width="40" stroke-dasharray="160 100"/>`));
     parts.push(`</g>`);
   });
   const xs=B.map(p=>p[0]), ys=B.map(p=>Yf(p[1])), pad=800;
@@ -5256,7 +5262,8 @@ function renderOut(){
   { const mg=document.getElementById("marge"); if(mg) mg.value=String(S.marge??8); }
   renderPlan(r);
   document.getElementById("stats").innerHTML=[
-    [fr(r.netArea,2)+" m²","Surface nette"],
+    ...(()=>{ try{ const g=roomGeom(w.room||""); if(!g.polyBrut) return []; const ab=Math.abs(polyArea(g.polyBrut))/1e6, af=Math.abs(polyArea(g.poly))/1e6; return [[fr(ab,2)+" m²",`Sol ${w.room||"pièce"} (fini ${fr(af,1)} m²)`]]; }catch(e){ return []; } })(),
+    [fr(r.netArea,2)+" m²","Ce mur : surface nette"],
     [r.studBins.length,"Montants"],
     [r.isoOn?r.insPanels:"—","Panneaux isolant"],
     [r.plateCount,"Plaques"],
@@ -6412,7 +6419,7 @@ function libSwitch(id,fresh){ const L=libCur(); if(id===L.cur&&!fresh) return;
   L.cur=id; libMeta(L.items.find(i=>i.id===id),S); L.items.sort((a,b)=>(b.id===id)-(a.id===id)||b.t-a.t); libSet(L);
   S.cur=Math.min(S.cur||0,S.walls.length-1); migrate(); if(!fresh){ try{ runMig(); }catch(e){} } save(); renderAll(); renderHome(); }
 function libPanel(){ const L=libCur(), d=t=>new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
-  return `<div class="libbox"><div class="lib-h"><b>Mes projets</b><span class="cap">Appli v2.150 · ${L.items.length} projet(s) · ${clOn()?"sur cet appareil et dans le cloud":"enregistrés sur cet appareil"}</span></div>${cloudBox()}
+  return `<div class="libbox"><div class="lib-h"><b>Mes projets</b><span class="cap">Appli v2.151 · ${L.items.length} projet(s) · ${clOn()?"sur cet appareil et dans le cloud":"enregistrés sur cet appareil"}</span></div>${cloudBox()}
     <div class="lib-l">${L.items.map(it=>{ const on=it.id===L.cur; return `<div class="lib-i${on?" on":""}"><button type="button" class="lib-o" data-lib="open" data-id="${it.id}"><b>${esc(it.nom||"Projet")}</b><small>${it.pieces||0} pièce(s) · ${it.murs||0} mur(s) · ${d(it.t||Date.now())}${on?" · ouvert":""}</small></button>
       <button type="button" class="lib-m" data-lib="ren" data-id="${it.id}" aria-label="Renommer">✎</button><button type="button" class="lib-m" data-lib="dup" data-id="${it.id}" aria-label="Dupliquer">⧉</button>${on?"":`<button type="button" class="lib-m" data-lib="del" data-id="${it.id}" aria-label="Supprimer">🗑</button>`}</div>`; }).join("")}</div>
     <div class="lib-b"><button type="button" class="pri" data-lib="new">＋ Nouveau projet</button></div></div>`; }
