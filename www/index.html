@@ -4401,12 +4401,17 @@ function v3Label(scene,s,x,o,z,txt){ const T3=THREE, c=document.createElement("c
 function v3MemLes(scene,pick,s,w,a,b,o0,o1,hl,holes,mat,cap,tag){ // un lé = une bande, motif calé sur le lé comme sur le plan
   const r=compute(w), dxs=r.adj.dx||0, rw=S.mem.rollW||1500;
   r.les.forEach((l,k)=>{ const dz=(k%2)*0.6, v=!!l.v, x0=v?Math.max(a,l.x0-dxs):a, x1=v?Math.min(b,l.x1-dxs):b, z0=v?0:l.y0, z1=v?hl:Math.min(hl,l.y1); if(x1-x0<2||z1-z0<2) return;
-    const m=v3Slab(s,x0,x1,o0+dz,o1+dz,z0,z1,holes,[mat,cap]); if(!m) return;
+    // lé découpé en rectangles autour des baies : sinon ses bords traversent la fenêtre (traits pointillés dans l'ébrasement)
+    const HS=(holes||[]).filter(H=>H.a<x1&&H.b>x0&&H.c<z1&&H.d>z0), xs=[...new Set([x0,x1,...HS.flatMap(H=>[H.a,H.b]).filter(x=>x>x0&&x<x1)])].sort((p,q)=>p-q), rects=[];
+    for(let i=0;i<xs.length-1;i++){ const xa=xs[i], xb=xs[i+1], xm=(xa+xb)/2; let segs=[[z0,z1]]; HS.filter(H=>H.a<xm&&H.b>xm).forEach(H=>{ segs=segs.flatMap(([u,w2])=>H.d<=u||H.c>=w2?[[u,w2]]:[[u,Math.min(w2,H.c)],[Math.max(u,H.d),w2]].filter(q=>q[1]-q[0]>1)); }); segs.forEach(([u,w2])=>rects.push([xa,xb,u,w2])); }
+    rects.forEach(([ra,rb,rc,rd])=>{ const m=v3Slab(s,ra,rb,o0+dz,o1+dz,rc,rd,[],[mat,cap]); if(!m) return;
     const uv=m.geometry.attributes.uv, U0=v?l.x0-dxs:0, Z0=v?0:l.y0;
     for(let i=0;i<uv.count;i++){ const X=uv.getX(i)*1000, Z=uv.getY(i)*1000; if(v) uv.setXY(i,(X-U0)/rw,Z/rw); else uv.setXY(i,(Z-Z0)/rw,X/rw); }
-    uv.needsUpdate=true; m.userData=tag; scene.add(m); pick.push(m); }); }
-function v3Tapes(scene,s,w,o,hl,mat,xmin){ xmin=xmin||-1e9; if(!S.mem.on) return; const r=compute(w), rec=S.mem.recouv||100, dxs=r.adj.dx||0;
-  r.les.slice(1).forEach(l=>{ if(l.v){ const c=l.x0+Math.min(rec,l.x1-l.x0)/2-dxs; if(c-30>=xmin) scene.add(v3Box(s,c-30,c+30,o+1,o+3,0,hl,mat)); } else { const c=l.y0+Math.min(rec,l.y1-l.y0)/2; if(c<hl&&w.L>xmin) scene.add(v3Box(s,Math.max(0,xmin),w.L,o+1,o+3,c-30,c+30,mat)); } }); }
+    uv.needsUpdate=true; m.userData=tag; scene.add(m); pick.push(m); }); }); }
+function v3Tapes(scene,s,w,o,hl,mat,xmin,holes){ xmin=xmin||-1e9; if(!S.mem.on) return; const r=compute(w), rec=S.mem.recouv||100, dxs=r.adj.dx||0, HS=holes||[];
+  const cutI=(lo,hi,ivs)=>{ let segs=[[lo,hi]]; ivs.forEach(([a,b])=>{ segs=segs.flatMap(([u,v])=>b<=u||a>=v?[[u,v]]:[[u,Math.min(v,a)],[Math.max(u,b),v]].filter(q=>q[1]-q[0]>5)); }); return segs; }; // le ruban s'arrête aux baies
+  r.les.slice(1).forEach(l=>{ if(l.v){ const c=l.x0+Math.min(rec,l.x1-l.x0)/2-dxs; if(c-30>=xmin) cutI(0,hl,HS.filter(H=>H.a<c+30&&H.b>c-30).map(H=>[H.c,H.d])).forEach(([z0,z1])=>scene.add(v3Box(s,c-30,c+30,o+1,o+3,z0,z1,mat))); }
+    else { const c=l.y0+Math.min(rec,l.y1-l.y0)/2; if(c<hl&&w.L>xmin) cutI(Math.max(0,xmin),w.L,HS.filter(H=>H.c<c+30&&H.d>c-30).map(H=>[H.a,H.b])).forEach(([x0,x1])=>scene.add(v3Box(s,x0,x1,o+1,o+3,c-30,c+30,mat))); } }); }
 function v3Joints(scene,s,w,o,hl,xmin,xmax,holes){ // jonctions des plaques de placo, mêmes positions que la vue « Plaques »
   if(S.v3.joints===false||S.v3.real) return; const r=compute(w), dxs=r.adj.dx||0, top=r.plates.reduce((m,p)=>Math.max(m,p.layer),1), JW=14;
   const mat=v3Mat("#8d877b",{roughness:.8}), lo=Math.max(0,xmin), hi=Math.min(w.L,xmax);
@@ -4619,7 +4624,7 @@ function buildScene(){
         [v3Slab(s,a1,b1,-supT(w),0,0,h,holes,[Msup(w),M.cap]), lay.pla===false?null:cut==="ecorche"?v3Slab(s,a2+(b2-a2)*0.45,b2,g.T-12.5,g.T,0,h,holes,[M.pla,M.pla]):V.couches&&lay.peint===false?v3Slab(s,a2,b2,g.T-12.5,g.T,0,h,holes,[M.pla,M.pla]):v3Slab(s,a2,b2,g.T-12.5,g.T,0,h,holes,V.res?[v3Mat(pc,RS),v3Mat("#fbfbf8",RS)]:[finMat(w,pc),M.white])].forEach(m=>{ if(m){ m.userData=tag; scene.add(m); pick.push(m); } }); }
       else if(!layered){
         const [a1,b1]=ext2(-g.STN,0); let [a2,b2]=ext2(0,g.T); if(RA.colStart) a2=Math.max(a2,0); const pc=paintColor(w);
-        if(V.res){ const pl=12.5*S.pla.couches, oM=Math.max(2,g.T-pl-S.oss.g), [a3,b3]=ext(oM/2), mm=S.mem.on?null:v3Slab(s,a3,b3,0,oM,0,h,holes,[M.fibre,M.cap]); if(mm){ mm.userData=tag; scene.add(mm); } if(S.mem.on){ const f=v3Slab(s,a3,b3,0,oM-3,0,h,holes,[M.fibre,M.cap]); if(f) scene.add(f); v3MemLes(scene,pick,s,w,a3,b3,oM-3,oM,h,holes,M.memO,M.cap,tag); } v3Tapes(scene,s,w,oM,h,M.tape);
+        if(V.res){ const pl=12.5*S.pla.couches, oM=Math.max(2,g.T-pl-S.oss.g), [a3,b3]=ext(oM/2), mm=S.mem.on?null:v3Slab(s,a3,b3,0,oM,0,h,holes,[M.fibre,M.cap]); if(mm){ mm.userData=tag; scene.add(mm); } if(S.mem.on){ const f=v3Slab(s,a3,b3,0,oM-3,0,h,holes,[M.fibre,M.cap]); if(f) scene.add(f); v3MemLes(scene,pick,s,w,a3,b3,oM-3,oM,h,holes,M.memO,M.cap,tag); } v3Tapes(scene,s,w,oM,h,M.tape,undefined,holes);
           const r=compute(w), dxs=r.adj.dx||0; r.studs.forEach(st=>{ const xa=st.x-dxs; if(st.y1>st.y0) scene.add(v3Box(s,xa,xa+FL,oM,g.T-pl,st.y0,st.y1,M.metal)); });
           r.rails.forEach(rl=>{ scene.add(v3Box(s,Math.max(a2,rl.x0-dxs),Math.min(b2,rl.x1-dxs),oM,g.T-pl,rl.y0,rl.y1,M.metal)); }); }
         { const [fa,fb]=ext(g.T); if(!(w.tile&&w.tile.on)&&!(typeof bcOnWall==="function"&&bcOnWall(w))) v3Joints(scene,s,w,g.T,h,fa,fb,holes); if(V.real&&!V.res) v3AO(scene,s,fa,fb,g.T,h); }
@@ -4638,7 +4643,7 @@ function buildScene(){
           r.rails.forEach(rl=>{ if(rl.y0<hl){ const m=v3Box(s,Math.max(a,rl.x0-dxs),Math.min(b,rl.x1-dxs),l.o0,l.o1,rl.y0,Math.min(rl.y1,hl),M.metal); m.userData=tag; scene.add(m); } });
           return; }
         const mat = l.k==="pierre"?Msup(w) : l.k==="fibre"?M.fibre : l.k==="mem"?M.mem : l.k==="pla"?M.pla : l.k==="end"?M.end : finMat(w,paintColor(w));
-        if(l.k==="mem"){ v3Tapes(scene,s,w,Math.max(l.o1,l.o0+3),hl,M.tape,a); v3MemLes(scene,pick,s,w,a,b,l.o0,Math.max(l.o1,l.o0+3),hl,holes,M.mem,M.cap,tag); return; }
+        if(l.k==="mem"){ v3Tapes(scene,s,w,Math.max(l.o1,l.o0+3),hl,M.tape,a,holes); v3MemLes(scene,pick,s,w,a,b,l.o0,Math.max(l.o1,l.o0+3),hl,holes,M.mem,M.cap,tag); return; }
         if(l.k==="pla"&&j===n-1||(l.k==="pla"&&ec)) v3Joints(scene,s,w,l.o1,hl,a,ec?Math.min(b,a0+(b-a0)*(j+1)/n):b,holes);
         const m=v3Slab(s,a,b,l.o0,Math.max(l.o1,l.o0+(l.k==="mem"?3:1)),0,hl,holes,V.res&&!["pierre","fibre","mem"].includes(l.k)?[v3Mat(l.k==="pla"?"#e8e7e2":l.k==="end"?"#f3f1ea":paintColor(w),RS),v3Mat("#fbfbf8",RS)]:[mat,l.k==="pierre"?M.cap:mat]); if(m){ m.userData=tag; scene.add(m); pick.push(m); }
         if(l.k==="fibre"&&!(S.mem.on&&lay.mem!==false&&Ls.some(q=>q.k==="mem"))){ const r=compute(w), dxs=r.adj.dx||0; if(r.murMode) r.chevs.forEach(c=>{ const x=c.x-dxs; if(c.y>hl-50||x<a||x>b) return;
@@ -4653,12 +4658,12 @@ function buildScene(){
           const nv=o.wtype==="fixe"||o.wtype==="1v"?1:o.wtype==="3v"?3:(b-a>900?2:1); for(let i=1;i<nv;i++){ const xm=a+(b-a)*i/nv; scene.add(v3Box(s,xm-ft/2,xm+ft/2,off-35,off+35,c,d,fm)); }
           scene.add(v3Box(s,a+ft,b-ft,off-4,off+4,c+ft,d-ft,M.glass));
           const onyxT=o.tab==="onyx", tabT=onyxT?ONX.wp+ONX.colle+ONX.th:20;
-          if(o.y>0){ if(onyxT){ const P=PLANS.find(p=>p.onyx)||PLANS[0], L=b-a+60, Dp=prof+g.T+20, om=(ru,rv)=>{ const tx=marbleTex(P).clone(); tx.needsUpdate=true; tx.wrapS=tx.wrapT=THREE.MirroredRepeatWrapping; tx.repeat.set(ru,rv); return v3Mat("#ffffff",{map:tx,roughness:.15}); }, yN=g.T+20-ONX.th, zN=c-ONX.th;
+          if(o.y>0){ if(onyxT){ const P=PLANS.find(p=>p.onyx)||PLANS[0], L=b-a+60, Dp=prof+g.T+20, om=(ru,rv)=>{ const tx=marbleTex(P).clone(); tx.needsUpdate=true; tx.wrapS=tx.wrapT=THREE.MirroredRepeatWrapping; tx.repeat.set(ru,rv); return v3Mat("#ffffff",{map:tx,roughness:.15}); }, yN=g.T+20-ONX.th, c=H.c+3, zN=c-ONX.th;
               scene.add(v3Box(s,a-30,b+30,-prof,g.T+20,zN,c,om(L/1200,Dp/1200))); // dessus Onyx d'un seul tenant
               scene.add(v3Box(s,a-30,b+30,-prof,yN,c-tabT,zN,om(L/1200,Dp/1200))); // âme Wedi + colle (cachée)
               scene.add(v3Box(s,a-30,b+30,yN,g.T+20,c-tabT,zN,om(L/1200,Math.max(.02,(tabT-ONX.th)/1200)))); // nez Onyx en onglet
               [a-30,b+30-ONX.th].forEach(x=>scene.add(v3Box(s,x,x+ONX.th,-prof,g.T+20,c-tabT,zN,om(Dp/1200,.03)))); } // joues Onyx aux deux bouts
-            else scene.add(v3Box(s,a-30,b+30,-prof,g.T+40,c-20,c,M.white)); }
+            else scene.add(v3Box(s,a-30,b+30,-prof,g.T+40,c-17,c+3,M.white)); }
           if(o.type==="Fenêtre"&&o.ret!=="0"&&cut!=="ecorche"&&lay.pla!==false){ const em=finMat(w,paintColor(w)), z0=o.y>0?c:c; [[a,a+12.5],[b-12.5,b]].forEach(q=>scene.add(v3Box(s,q[0],q[1],-prof,g.T,z0,d,em))); scene.add(v3Box(s,a,b,-prof,g.T,d-12.5,d,em)); }
           if(V.nuit===false){ const L=new T3.PointLight("#fff3dc",0.25,4); }
         } else if(o.type==="Porte"){
@@ -6590,7 +6595,7 @@ function libSwitch(id,fresh){ const L=libCur(); if(id===L.cur&&!fresh) return;
   L.cur=id; libMeta(L.items.find(i=>i.id===id),S); L.items.sort((a,b)=>(b.id===id)-(a.id===id)||b.t-a.t); libSet(L);
   S.cur=Math.min(S.cur||0,S.walls.length-1); migrate(); if(!fresh){ try{ runMig(); }catch(e){} } save(); renderAll(); renderHome(); }
 function libPanel(){ const L=libCur(), d=t=>new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
-  return `<div class="libbox"><div class="lib-h"><b>Mes projets</b><span class="cap">Appli v2.165 · ${L.items.length} projet(s) · ${clOn()?"sur cet appareil et dans le cloud":"enregistrés sur cet appareil"}</span></div>${cloudBox()}
+  return `<div class="libbox"><div class="lib-h"><b>Mes projets</b><span class="cap">Appli v2.166 · ${L.items.length} projet(s) · ${clOn()?"sur cet appareil et dans le cloud":"enregistrés sur cet appareil"}</span></div>${cloudBox()}
     <div class="lib-l">${L.items.map(it=>{ const on=it.id===L.cur; return `<div class="lib-i${on?" on":""}"><button type="button" class="lib-o" data-lib="open" data-id="${it.id}"><b>${esc(it.nom||"Projet")}</b><small>${it.pieces||0} pièce(s) · ${it.murs||0} mur(s) · ${d(it.t||Date.now())}${on?" · ouvert":""}</small></button>
       <button type="button" class="lib-m" data-lib="ren" data-id="${it.id}" aria-label="Renommer">✎</button><button type="button" class="lib-m" data-lib="dup" data-id="${it.id}" aria-label="Dupliquer">⧉</button>${on?"":`<button type="button" class="lib-m" data-lib="del" data-id="${it.id}" aria-label="Supprimer">🗑</button>`}</div>`; }).join("")}</div>
     <div class="lib-b"><button type="button" class="pri" data-lib="new">＋ Nouveau projet</button></div></div>`; }
